@@ -50,7 +50,12 @@
     "db:setup": "npm run db:local:reset",
     "evolve:genetic-params": "cd worker/rust_ai_core && caffeinate cargo run --release --bin evolve_params",
     "validate:genetic-params": "cd worker/rust_ai_core && caffeinate cargo test test_genetic_params_comparison -- --nocapture",
-    "test:ai-matrix:md": "cd worker/rust_ai_core && NUM_GAMES=50 cargo test test_ai_matrix -- --nocapture | node ../../scripts/format-ai-matrix-md.cjs"
+    "test:ai-matrix:md": "cd worker/rust_ai_core && NUM_GAMES=50 cargo test test_ai_matrix -- --nocapture | node ../../scripts/format-ai-matrix-md.cjs",
+    "deploy": "./scripts/deploy.sh",
+    "deploy:quick": "npm run build:cf && wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply connect-four-db --remote",
+    "db:shell": "wrangler d1 execute connect-four-db --interactive",
+    "logs": "wrangler tail --format pretty"
   },
   "dependencies": {
     "better-sqlite3": "^12.2.0",

@@ -68,6 +68,13 @@ jobs:
         env:
           GITHUB_SHA: ${{ github.sha }}
 
+      - name: Run database migrations
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply connect-four-db --remote
+
       - name: Deploy Frontend
         uses: cloudflare/wrangler-action@v3
         with:

@@ -10,6 +10,8 @@ This directory contains comprehensive documentation for the Connect Four project
 - **[AI-SYSTEM.md](./AI-SYSTEM.md)** - Complete AI system guide including Classic AI, ML AI, testing, and development history
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development workflow, testing strategies, troubleshooting, and best practices
 - **[GAME-GUIDE.md](./GAME-GUIDE.md)** - Game rules, strategy, historical context, and user information
+- **[CLOUDFLARE-DEPLOYMENT.md](./CLOUDFLARE-DEPLOYMENT.md)** - Complete Cloudflare deployment guide
+- **[CLOUDFLARE-QUICK-REFERENCE.md](./CLOUDFLARE-QUICK-REFERENCE.md)** - Quick reference for Cloudflare commands and troubleshooting
 
 ### Additional Files
 
@@ -23,6 +25,7 @@ This directory contains comprehensive documentation for the Connect Four project
 2. Read [AI-SYSTEM.md](./AI-SYSTEM.md) for comprehensive AI implementation details
 3. Check [GAME-GUIDE.md](./GAME-GUIDE.md) for game mechanics and strategy
 4. Use [DEVELOPMENT.md](./DEVELOPMENT.md) for development workflow and troubleshooting
+5. Review [CLOUDFLARE-DEPLOYMENT.md](./CLOUDFLARE-DEPLOYMENT.md) for deployment information
 
 ### For AI Development
 

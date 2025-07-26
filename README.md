@@ -69,6 +69,7 @@ A modern web implementation of the classic Connect Four game with AI opponents, 
 - **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** – System design, components, deployment, and infrastructure
 - **[DEVELOPMENT.md](./docs/DEVELOPMENT.md)** – Development workflow, testing, troubleshooting, best practices
 - **[GAME-GUIDE.md](./docs/GAME-GUIDE.md)** – Game rules, strategy, and user info
+- **[CLOUDFLARE-DEPLOYMENT.md](./docs/CLOUDFLARE-DEPLOYMENT.md)** – Complete Cloudflare deployment guide
 - **[TODO.md](./docs/TODO.md)** – Project TODOs and improvements
 
 ## 🚀 Quick Start
@@ -98,6 +99,50 @@ The game will open at http://localhost:3000
 
 - The first run may take longer as it builds WebAssembly assets
 - If you encounter WASM build issues, run: `npm run build:wasm-assets`
+
+## 🚀 Deployment
+
+### Cloudflare Deployment
+
+Your Connect Four application is configured for deployment on Cloudflare Workers with D1 Database.
+
+#### Quick Deploy
+
+```bash
+# One-command deployment
+npm run deploy
+
+# Or use the script directly
+./scripts/deploy.sh
+```
+
+#### Manual Deployment
+
+```bash
+# Build for Cloudflare
+npm run build:cf
+
+# Run database migrations
+npm run db:migrate
+
+# Deploy to Cloudflare
+wrangler deploy
+```
+
+#### Useful Commands
+
+```bash
+# View deployment logs
+npm run logs
+
+# Database shell
+npm run db:shell
+
+# Check deployment status
+wrangler status
+```
+
+For complete deployment documentation, see **[CLOUDFLARE-DEPLOYMENT.md](./docs/CLOUDFLARE-DEPLOYMENT.md)**.
 
 ### Common Setup Issues
 
