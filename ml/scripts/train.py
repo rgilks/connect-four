@@ -23,7 +23,7 @@ class UnifiedTrainer:
         self.config = self.load_config()
         
         # Ensure directories exist
-        self.training_data_dir = Path.home() / "Desktop" / "rgou-training-data"
+        self.training_data_dir = Path.home() / "Desktop" / "connect-four-training-data"
         self.training_data_dir.mkdir(parents=True, exist_ok=True)
         
         self.weights_dir = Path.cwd() / "ml" / "data" / "weights"

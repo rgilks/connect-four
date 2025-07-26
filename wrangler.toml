@@ -1,4 +1,4 @@
-name = "rgou-main"
+name = "connect-four-main"
 main = ".open-next/worker.js"
 compatibility_date = "2025-06-14"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
@@ -16,12 +16,12 @@ enabled = true
 head_sampling_rate = 1
 
 [[routes]]
-pattern = "rgou.tre.systems/*"
+pattern = "connect-4.tre.systems/*"
 zone_name = "tre.systems"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "rgou-db"
+database_name = "connect-four-db"
 database_id = "f3b432c2-1e6e-48ce-8bc2-d81b4c3f5b12"
-preview_database_id = "rgou-db-preview"
+preview_database_id = "connect-four-db-preview"
 migrations_dir = "migrations"

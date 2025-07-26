@@ -1,9 +1,8 @@
-//! Genetic parameter evolution for EMM and Heuristic AIs
+//! Genetic parameter evolution for Connect Four AI
 
-use rand::seq::SliceRandom;
+use connect_four_ai_core::{genetic_params::GeneticParams, GameState, Player, AI};
+
 use rayon::prelude::*;
-use rgou_ai_core::Player;
-use rgou_ai_core::{genetic_params::GeneticParams, GameState, AI};
 use std::fs;
 
 const POPULATION_SIZE: usize = 50;
@@ -54,17 +53,11 @@ fn evaluate_params_tournament(evolved_params: &GeneticParams) -> f64 {
         .map(|_| {
             let mut game_state = GameState::new();
             let mut moves_played = 0;
-            let max_moves = 200;
+            let max_moves = 42; // Maximum moves in Connect Four (6x7 board)
 
             while !game_state.is_game_over() && moves_played < max_moves {
                 let current_player = game_state.current_player;
                 let is_evolved_turn = current_player == Player::Player2;
-
-                game_state.dice_roll = rgou_ai_core::dice::roll_dice();
-                if game_state.dice_roll == 0 {
-                    game_state.current_player = game_state.current_player.opponent();
-                    continue;
-                }
 
                 // Use different parameters based on whose turn it is
                 let test_params = if is_evolved_turn {
@@ -76,40 +69,25 @@ fn evaluate_params_tournament(evolved_params: &GeneticParams) -> f64 {
                 // Create a new game state with the test parameters
                 let mut test_state = GameState::with_genetic_params(test_params);
                 test_state.board = game_state.board.clone();
-                test_state.player1_pieces = game_state.player1_pieces.clone();
-                test_state.player2_pieces = game_state.player2_pieces.clone();
                 test_state.current_player = game_state.current_player;
-                test_state.dice_roll = game_state.dice_roll;
 
                 let mut ai = AI::new();
                 let (best_move, _) = ai.get_best_move(&test_state, 3);
 
-                if let Some(move_piece) = best_move {
-                    game_state.make_move(move_piece).ok();
+                if let Some(column) = best_move {
+                    game_state.make_move(column).ok();
                 } else {
-                    game_state.current_player = game_state.current_player.opponent();
+                    // No valid moves, game is a draw
+                    break;
                 }
                 moves_played += 1;
             }
 
             // Determine winner - evolved params are Player2
-            let p1_finished = game_state
-                .player1_pieces
-                .iter()
-                .filter(|p| p.square == 20)
-                .count();
-            let p2_finished = game_state
-                .player2_pieces
-                .iter()
-                .filter(|p| p.square == 20)
-                .count();
-
-            if p2_finished >= 7 {
-                true // Evolved params win
-            } else if p1_finished >= 7 {
-                false // Default params win
+            if let Some(winner) = game_state.get_winner() {
+                winner == Player::Player2 // Evolved params win
             } else {
-                // Game ended by move limit, evaluate final position
+                // Game ended in draw, evaluate final position
                 let evolved_eval = game_state.evaluate();
                 evolved_eval > 0 // Positive eval means Player2 (evolved) is winning
             }
@@ -127,143 +105,230 @@ fn validate_against_default(evolved_params: &GeneticParams, num_games: usize) ->
         .map(|_| {
             let mut game_state = GameState::new();
             let mut moves_played = 0;
-            let max_moves = 200;
+            let max_moves = 42;
+
             while !game_state.is_game_over() && moves_played < max_moves {
                 let current_player = game_state.current_player;
                 let is_evolved_turn = current_player == Player::Player2;
-                game_state.dice_roll = rgou_ai_core::dice::roll_dice();
-                if game_state.dice_roll == 0 {
-                    game_state.current_player = game_state.current_player.opponent();
-                    continue;
-                }
+
                 let test_params = if is_evolved_turn {
                     evolved_params.clone()
                 } else {
                     default_params.clone()
                 };
+
                 let mut test_state = GameState::with_genetic_params(test_params);
                 test_state.board = game_state.board.clone();
-                test_state.player1_pieces = game_state.player1_pieces.clone();
-                test_state.player2_pieces = game_state.player2_pieces.clone();
                 test_state.current_player = game_state.current_player;
-                test_state.dice_roll = game_state.dice_roll;
+
                 let mut ai = AI::new();
                 let (best_move, _) = ai.get_best_move(&test_state, 3);
-                if let Some(move_piece) = best_move {
-                    game_state.make_move(move_piece).ok();
+
+                if let Some(column) = best_move {
+                    game_state.make_move(column).ok();
                 } else {
-                    game_state.current_player = game_state.current_player.opponent();
+                    break;
                 }
                 moves_played += 1;
             }
-            let p1_finished = game_state
-                .player1_pieces
-                .iter()
-                .filter(|p| p.square == 20)
-                .count();
-            let p2_finished = game_state
-                .player2_pieces
-                .iter()
-                .filter(|p| p.square == 20)
-                .count();
-            if p2_finished >= 7 {
-                true
-            } else if p1_finished >= 7 {
-                false
+
+            if let Some(winner) = game_state.get_winner() {
+                winner == Player::Player2
             } else {
                 let evolved_eval = game_state.evaluate();
                 evolved_eval > 0
             }
         })
         .collect();
+
     let wins = results.iter().filter(|&&won| won).count();
     wins as f64 / num_games as f64
 }
 
-fn main() {
-    println!("\n=== Genetic Parameter Evolution for EMM AI (Tournament Style) ===");
-    println!("🚀 Optimizing CPU usage for maximum performance...");
-    optimize_cpu_usage();
+fn crossover(parent1: &GeneticParams, parent2: &GeneticParams) -> GeneticParams {
+    let mut child = GeneticParams::default();
 
-    let start_time = std::time::Instant::now();
-    let mut rng = rand::thread_rng();
+    // Simple uniform crossover
+    if rand::random::<f64>() < CROSSOVER_RATE {
+        child.center_control_weight = parent1.center_control_weight;
+    } else {
+        child.center_control_weight = parent2.center_control_weight;
+    }
+
+    if rand::random::<f64>() < CROSSOVER_RATE {
+        child.piece_count_weight = parent1.piece_count_weight;
+    } else {
+        child.piece_count_weight = parent2.piece_count_weight;
+    }
+
+    if rand::random::<f64>() < CROSSOVER_RATE {
+        child.threat_weight = parent1.threat_weight;
+    } else {
+        child.threat_weight = parent2.threat_weight;
+    }
+
+    if rand::random::<f64>() < CROSSOVER_RATE {
+        child.mobility_weight = parent1.mobility_weight;
+    } else {
+        child.mobility_weight = parent2.mobility_weight;
+    }
+
+    if rand::random::<f64>() < CROSSOVER_RATE {
+        child.vertical_control_weight = parent1.vertical_control_weight;
+    } else {
+        child.vertical_control_weight = parent2.vertical_control_weight;
+    }
+
+    if rand::random::<f64>() < CROSSOVER_RATE {
+        child.horizontal_control_weight = parent1.horizontal_control_weight;
+    } else {
+        child.horizontal_control_weight = parent2.horizontal_control_weight;
+    }
+
+    child
+}
+
+fn mutate(params: &mut GeneticParams) {
+    if rand::random::<f64>() < MUTATION_RATE {
+        params.center_control_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
+    }
+    if rand::random::<f64>() < MUTATION_RATE {
+        params.piece_count_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
+    }
+    if rand::random::<f64>() < MUTATION_RATE {
+        params.threat_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
+    }
+    if rand::random::<f64>() < MUTATION_RATE {
+        params.mobility_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
+    }
+    if rand::random::<f64>() < MUTATION_RATE {
+        params.vertical_control_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
+    }
+    if rand::random::<f64>() < MUTATION_RATE {
+        params.horizontal_control_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
+    }
+}
+
+fn main() {
+    optimize_cpu_usage();
+    println!("🧬 Starting Connect Four AI parameter evolution");
+    println!("Population size: {}", POPULATION_SIZE);
+    println!("Generations: {}", GENERATIONS);
+    println!("Games per evaluation: {}", GAMES_PER_EVAL);
+
     let mut population: Vec<GeneticParams> = (0..POPULATION_SIZE)
-        .map(|_| GeneticParams::default().random_mutation(1.0, 2.0))
+        .map(|_| GeneticParams::random())
         .collect();
-    let mut best_score = 0.0;
+
+    let mut best_fitness = 0.0;
     let mut best_params = GeneticParams::default();
 
-    for gen in 0..GENERATIONS {
-        println!("\n🧬 Generation {}", gen + 1);
-        let gen_start = std::time::Instant::now();
+    for generation in 0..GENERATIONS {
+        println!("\n🔄 Generation {}", generation + 1);
 
-        // Tournament evaluation against default parameters
-        let scored: Vec<(f64, GeneticParams)> = population
+        // Evaluate fitness for all individuals
+        let fitness_scores: Vec<f64> = population
             .par_iter()
-            .map(|p| {
-                let score = evaluate_params_tournament(p);
-                (score, p.clone())
-            })
+            .map(|params| evaluate_params_tournament(params))
             .collect();
 
-        let mut scored = scored;
-        scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+        // Find best individual
+        let (best_idx, &best_score) = fitness_scores
+            .iter()
+            .enumerate()
+            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+            .unwrap();
 
-        let (top_score, top_params) = &scored[0];
-        let gen_duration = gen_start.elapsed();
+        if best_score > best_fitness {
+            best_fitness = best_score;
+            best_params = population[best_idx].clone();
+            println!("🏆 New best fitness: {:.3}", best_fitness);
+        }
 
-        println!("  ⏱️  Generation time: {:.2}s", gen_duration.as_secs_f64());
-        println!("  🏆 Best score vs defaults: {:.2}", top_score);
         println!(
-            "  📊 Average score: {:.2}",
-            scored.iter().map(|(s, _)| s).sum::<f64>() / scored.len() as f64
+            "📊 Average fitness: {:.3}",
+            fitness_scores.iter().sum::<f64>() / fitness_scores.len() as f64
         );
+        println!("🏆 Best fitness: {:.3}", best_score);
 
-        if *top_score > best_score {
-            best_score = *top_score;
-            best_params = top_params.clone();
-            println!("  🎉 New best score achieved!");
+        // Selection: Keep top 20% and tournament select the rest
+        let elite_count = POPULATION_SIZE / 5;
+        let mut new_population = Vec::new();
+
+        // Keep elite individuals
+        let mut indexed_fitness: Vec<(usize, f64)> = fitness_scores
+            .iter()
+            .enumerate()
+            .map(|(i, &f)| (i, f))
+            .collect();
+        indexed_fitness.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
+
+        for i in 0..elite_count {
+            new_population.push(population[indexed_fitness[i].0].clone());
         }
 
-        // Elitism: keep top 2
-        let mut new_population = vec![scored[0].1.clone(), scored[1].1.clone()];
-
-        // Fill rest with crossover/mutation
+        // Tournament selection for the rest
         while new_population.len() < POPULATION_SIZE {
-            let parent1 = scored.choose(&mut rng).unwrap().1.clone();
-            let parent2 = scored.choose(&mut rng).unwrap().1.clone();
-            let mut child = parent1.crossover(&parent2, CROSSOVER_RATE);
-            child = child.random_mutation(MUTATION_RATE, MUTATION_STRENGTH);
-            new_population.push(child);
+            let tournament_size = 3;
+            let mut tournament = Vec::new();
+
+            for _ in 0..tournament_size {
+                let idx = rand::random::<usize>() % POPULATION_SIZE;
+                tournament.push((idx, fitness_scores[idx]));
+            }
+
+            let winner_idx = tournament
+                .iter()
+                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+                .unwrap()
+                .0;
+            new_population.push(population[winner_idx].clone());
         }
+
+        // Crossover and mutation
+        for i in elite_count..POPULATION_SIZE {
+            if rand::random::<f64>() < CROSSOVER_RATE {
+                let parent1_idx = rand::random::<usize>() % POPULATION_SIZE;
+                let parent2_idx = rand::random::<usize>() % POPULATION_SIZE;
+                new_population[i] = crossover(&population[parent1_idx], &population[parent2_idx]);
+            }
+            mutate(&mut new_population[i]);
+        }
+
         population = new_population;
     }
 
-    let total_duration = start_time.elapsed();
-
-    println!("\n🎉 === Evolution Complete ===");
-    println!("⏱️  Total time: {:.2}s", total_duration.as_secs_f64());
-    println!("🏆 Best win rate vs defaults: {:.2}", best_score);
-    println!("🔧 Best parameters: {:#?}", best_params);
-
-    // Post-evolution validation
-    println!("\n🔬 Validating best evolved parameters against default with 1000 games...");
-    let validation_games = 1000;
-    let win_rate = validate_against_default(&best_params, validation_games);
+    println!("\n🎯 Evolution complete!");
+    println!("🏆 Best fitness achieved: {:.3}", best_fitness);
+    println!("📋 Best parameters:");
     println!(
-        "Evolved win rate over {} games: {:.2}%",
-        validation_games,
-        win_rate * 100.0
+        "  Center control weight: {:.3}",
+        best_params.center_control_weight
     );
-    if win_rate > 0.55 {
-        let out_path = "../../ml/data/genetic_params/evolved.json";
-        fs::write(
-            out_path,
-            serde_json::to_string_pretty(&best_params).unwrap(),
-        )
-        .unwrap();
-        println!("💾 Saved best parameters to {}", out_path);
-    } else {
-        println!("⚠️  Evolved parameters did not outperform default by a significant margin. Not saving.");
-    }
+    println!(
+        "  Piece count weight: {:.3}",
+        best_params.piece_count_weight
+    );
+    println!("  Threat weight: {:.3}", best_params.threat_weight);
+    println!("  Mobility weight: {:.3}", best_params.mobility_weight);
+    println!(
+        "  Vertical control weight: {:.3}",
+        best_params.vertical_control_weight
+    );
+    println!(
+        "  Horizontal control weight: {:.3}",
+        best_params.horizontal_control_weight
+    );
+
+    // Validate against default parameters
+    let validation_score = validate_against_default(&best_params, 1000);
+    println!(
+        "✅ Validation score: {:.3} (vs default params)",
+        validation_score
+    );
+
+    // Save evolved parameters
+    let evolved_json = serde_json::to_string_pretty(&best_params).unwrap();
+    fs::write("ml/data/genetic_params/evolved.json", evolved_json).unwrap();
+    println!("💾 Evolved parameters saved to ml/data/genetic_params/evolved.json");
 }

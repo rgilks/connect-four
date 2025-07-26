@@ -84,6 +84,6 @@ temp_training_data.json
 test_pytorch_weights*.json
 
 # Training data directory
-~/Desktop/rgou-training-data/
+~/Desktop/connect-four-training-data/
 
 /test_state.json

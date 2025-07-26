@@ -1,16 +1,11 @@
-use rgou_ai_core::{
-    wasm_api::{
-        convert_request_to_game_state, AIResponse, Diagnostics, GameStateRequest,
-        MoveEvaluationWasm, Timings,
-    },
-    AI,
-};
-use serde::Serialize;
+use connect_four_ai_core::{GameState, MoveEvaluation, Player, AI};
+use console_error_panic_hook;
+use js_sys::Date;
+use serde::{Deserialize, Serialize};
 use worker::*;
 
-const AI_SEARCH_DEPTH: u8 = 3;
-const VERSION: &str = "2.0.0-pure-rust";
-const CORS_MAX_AGE: &str = "86400";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const AI_SEARCH_DEPTH: u8 = 4;
 
 #[derive(Serialize)]
 struct HealthResponse {
@@ -19,80 +14,86 @@ struct HealthResponse {
     version: String,
 }
 
+#[derive(Deserialize)]
+struct ConnectFourGameState {
+    board: Vec<Vec<String>>,
+    current_player: String,
+}
+
+#[derive(Serialize)]
+struct AIResponse {
+    r#move: Option<u8>,
+    evaluation: i32,
+    thinking: String,
+    timings: Timings,
+    diagnostics: Diagnostics,
+}
+
+#[derive(Serialize)]
+struct Timings {
+    ai_move_calculation: u32,
+    total_handler_time: u32,
+}
+
+#[derive(Serialize)]
+struct Diagnostics {
+    search_depth: u8,
+    valid_moves: Vec<u8>,
+    move_evaluations: Vec<MoveEvaluationWasm>,
+    transposition_hits: usize,
+    nodes_evaluated: u64,
+}
+
+#[derive(Serialize)]
+struct MoveEvaluationWasm {
+    column: u8,
+    score: f32,
+    move_type: String,
+}
+
+impl From<&MoveEvaluation> for MoveEvaluationWasm {
+    fn from(eval: &MoveEvaluation) -> Self {
+        MoveEvaluationWasm {
+            column: eval.column,
+            score: eval.score,
+            move_type: eval.move_type.clone(),
+        }
+    }
+}
+
 fn cors_headers_with_origin(origin: &Option<String>, env: &Env) -> Result<Headers> {
-    let headers = Headers::new();
-    
-    let allowed_origins = if is_development(env) {
-        vec![
-            "http://localhost:3000",
-            "http://localhost:3001", 
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:3001",
-        ]
-    } else {
-        vec![
-            "https://rgou.tre.systems",
-            "https://www.rgou.tre.systems",
-        ]
-    };
-    
-    let cors_origin = if let Some(origin_str) = origin {
-        if allowed_origins.contains(&origin_str.as_str()) {
-            origin_str.clone()
-        } else {
-            if is_development(env) {
-                "http://localhost:3000".to_string()
-            } else {
-                "https://rgou.tre.systems".to_string()
-            }
-        }
-    } else {
-        if is_development(env) {
-            "http://localhost:3000".to_string()
-        } else {
-            "https://rgou.tre.systems".to_string()
-        }
-    };
-    
-    headers.set("Access-Control-Allow-Origin", &cors_origin)?;
-    headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")?;
+    let mut headers = Headers::new();
     headers.set(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization",
+        "Access-Control-Allow-Origin",
+        &origin.clone().unwrap_or_else(|| "*".to_string()),
     )?;
-    headers.set("Access-Control-Max-Age", CORS_MAX_AGE)?;
-    headers.set("Content-Type", "application/json")?;
+    headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")?;
+    headers.set("Access-Control-Allow-Headers", "Content-Type")?;
+    headers.set("Access-Control-Max-Age", "86400")?;
     Ok(headers)
 }
 
 fn is_development(env: &Env) -> bool {
-    env.var("ENVIRONMENT")
-        .map(|var| var.to_string())
-        .unwrap_or_else(|_| "production".to_string())
-        != "production"
+    match env.var("ENVIRONMENT") {
+        Ok(val) => val.to_string() == "development",
+        Err(_) => false,
+    }
 }
 
 async fn handle_ai_move(mut req: Request, start_time: f64, env: &Env) -> Result<Response> {
-    let game_state_request: GameStateRequest = req.json().await?;
     let is_dev = is_development(env);
 
-    let p1_on_board = game_state_request
-        .player1_pieces
-        .iter()
-        .filter(|p| p.square >= 0)
-        .count();
-    let p2_on_board = game_state_request
-        .player2_pieces
-        .iter()
-        .filter(|p| p.square >= 0)
-        .count();
+    let game_state_request: ConnectFourGameState = req.json().await?;
 
     console_log!(
-        "[AI] Player: {}, Dice: {}, P1 pieces: {}, P2 pieces: {}",
+        "[AI] Player: {}, Board size: {}x{}",
         game_state_request.current_player,
-        game_state_request.dice_roll.unwrap_or(0),
-        p1_on_board,
-        p2_on_board
+        game_state_request.board.len(),
+        if !game_state_request.board.is_empty() {
+            game_state_request.board[0].len()
+        } else {
+            0
+        }
     );
 
     let ai_start = js_sys::Date::now();
@@ -152,9 +153,9 @@ async fn handle_ai_move(mut req: Request, start_time: f64, env: &Env) -> Result<
         console_log!("[AI] Dev mode: Top 3 move evaluations:");
         for (i, eval) in move_evaluations.iter().take(3).enumerate() {
             console_log!(
-                "  {}: piece={}, score={:.1}, type={}",
+                "  {}: column={}, score={:.1}, type={}",
                 i + 1,
-                eval.piece_index,
+                                    eval.column,
                 eval.score,
                 eval.move_type
             );
@@ -162,6 +163,31 @@ async fn handle_ai_move(mut req: Request, start_time: f64, env: &Env) -> Result<
     }
 
     Response::from_json(&response)
+}
+
+fn convert_request_to_game_state(request: &ConnectFourGameState) -> GameState {
+    let mut game_state = GameState::new();
+
+    game_state.current_player = if request.current_player == "Player1" {
+        Player::Player1
+    } else {
+        Player::Player2
+    };
+
+    // Convert the board from the request format to our internal format
+    for (col, column) in request.board.iter().enumerate() {
+        for (row, cell) in column.iter().enumerate() {
+            if col < 7 && row < 6 {
+                game_state.board[col][row] = match cell.as_str() {
+                    "Player1" => connect_four_ai_core::Cell::Player1,
+                    "Player2" => connect_four_ai_core::Cell::Player2,
+                    _ => connect_four_ai_core::Cell::Empty,
+                };
+            }
+        }
+    }
+
+    game_state
 }
 
 fn handle_health() -> Result<Response> {
@@ -178,24 +204,24 @@ fn handle_health() -> Result<Response> {
 pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     console_error_panic_hook::set_once();
 
-    let url = req.url()?;
-    let method = req.method();
-    let path = url.path();
-    console_log!("[Worker] {} {}", method, path);
+    let origin = req.headers().get("Origin").ok().flatten();
+    let cors_headers = cors_headers_with_origin(&origin, &env)?;
 
-    let origin = req.headers().get("Origin").unwrap_or_default();
-
-    if method == Method::Options {
-        return Ok(Response::empty()?.with_headers(cors_headers_with_origin(&origin, &env)?));
+    if req.method() == Method::Options {
+        return Response::empty()
+            .map(|resp| resp.with_headers(cors_headers))
+            .map_err(|e| e.into());
     }
 
     let start_time = js_sys::Date::now();
+    let url = req.url()?;
+    let path = url.path();
 
-    let result = match (method, path) {
-        (Method::Post, "/ai-move") => handle_ai_move(req, start_time, &env).await,
-        (Method::Get, "/health") => handle_health(),
-        _ => Ok(Response::error("Not Found", 404)?),
+    let response = match path {
+        "/health" => handle_health()?,
+        "/ai/move" => handle_ai_move(req, start_time, &env).await?,
+        _ => Response::error("Not Found", 404)?,
     };
 
-    result.and_then(|response| Ok(response.with_headers(cors_headers_with_origin(&origin, &env)?)))
+    Ok(response.with_headers(cors_headers))
 }

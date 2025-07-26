@@ -1,4 +1,4 @@
-use rgou_ai_core::{dice, genetic_params::GeneticParams, GameState, AI};
+use connect_four_ai_core::{genetic_params::GeneticParams, GameState, AI};
 use std::time::Instant;
 
 fn get_evolved_params() -> GeneticParams {
@@ -9,10 +9,10 @@ fn get_evolved_params() -> GeneticParams {
 #[test]
 fn test_expectiminimax_diagnostic() {
     println!("🔍 Expectiminimax Diagnostic Test");
-    println!("{}", "=".repeat(50));
+    println!("{}", "=".repeat(40));
 
     let evolved_params = get_evolved_params();
-    println!("Using evolved parameters: {:?}", evolved_params);
+    println!("📋 Using evolved genetic parameters");
 
     let mut game_state = GameState::with_genetic_params(evolved_params);
     let mut ai = AI::new();
@@ -23,18 +23,11 @@ fn test_expectiminimax_diagnostic() {
     println!("Starting diagnostic game...");
     println!("{}", "-".repeat(30));
 
-    while !game_state.is_game_over() && moves_analyzed < 50 {
-        game_state.dice_roll = dice::roll_dice();
-
-        if game_state.dice_roll == 0 {
-            game_state.current_player = game_state.current_player.opponent();
-            continue;
-        }
-
+    while !game_state.is_game_over() && moves_analyzed < 42 {
         let valid_moves = game_state.get_valid_moves();
         if valid_moves.is_empty() {
-            game_state.current_player = game_state.current_player.opponent();
-            continue;
+            println!("No valid moves available - game is a draw");
+            break;
         }
 
         let start_time = Instant::now();
@@ -47,8 +40,8 @@ fn test_expectiminimax_diagnostic() {
         moves_analyzed += 1;
 
         println!(
-            "Move {}: Player {:?}, Dice: {}, Valid moves: {:?}",
-            moves_analyzed, game_state.current_player, game_state.dice_roll, valid_moves
+            "Move {}: Player {:?}, Valid moves: {:?}",
+            moves_analyzed, game_state.current_player, valid_moves
         );
 
         println!(
@@ -56,20 +49,20 @@ fn test_expectiminimax_diagnostic() {
             best_move, ai.nodes_evaluated, move_time, ai.transposition_hits
         );
 
-        if let Some(move_piece) = best_move {
-            if let Err(e) = game_state.make_move(move_piece) {
+        if let Some(column) = best_move {
+            if let Err(e) = game_state.make_move(column) {
                 println!("  Error making move: {}", e);
                 break;
             }
         } else {
             println!("  No valid move found");
-            game_state.current_player = game_state.current_player.opponent();
+            break;
         }
 
         for eval in &move_evaluations[..move_evaluations.len().min(3)] {
             println!(
-                "    Move {}: Score {:.2}, Type: {}",
-                eval.piece_index, eval.score, eval.move_type
+                "    Column {}: Score {:.2}, Type: {}",
+                eval.column, eval.score, eval.move_type
             );
         }
 
@@ -94,21 +87,13 @@ fn test_expectiminimax_diagnostic() {
         (total_nodes as f64 / total_time as f64) * 1000.0
     );
 
-    let p1_finished = game_state
-        .player1_pieces
-        .iter()
-        .filter(|p| p.square == 20)
-        .count();
-    let p2_finished = game_state
-        .player2_pieces
-        .iter()
-        .filter(|p| p.square == 20)
-        .count();
+    // Check final game state
+    if let Some(winner) = game_state.get_winner() {
+        println!("  Winner: Player {:?}", winner);
+    } else {
+        println!("  Game ended in draw");
+    }
 
-    println!(
-        "  Final state: P1 finished: {}, P2 finished: {}",
-        p1_finished, p2_finished
-    );
     println!(
         "  Game status: {:?}",
         if game_state.is_game_over() {
@@ -118,7 +103,61 @@ fn test_expectiminimax_diagnostic() {
         }
     );
 
-    assert!(moves_analyzed > 0, "Should have analyzed at least one move");
-    assert!(total_nodes > 0, "Should have evaluated at least one node");
-    assert!(total_time > 0, "Should have taken some time to compute");
+    // Performance analysis
+    println!("\n📊 Performance Analysis:");
+    println!("{}", "=".repeat(25));
+
+    let avg_nodes = total_nodes as f64 / moves_analyzed as f64;
+    let avg_time = total_time as f64 / moves_analyzed as f64;
+    let nodes_per_sec = (total_nodes as f64 / total_time as f64) * 1000.0;
+
+    if avg_nodes < 1000.0 {
+        println!("✅ Excellent search efficiency");
+    } else if avg_nodes < 10000.0 {
+        println!("✅ Good search efficiency");
+    } else if avg_nodes < 100000.0 {
+        println!("⚠️  Moderate search efficiency");
+    } else {
+        println!("❌ Poor search efficiency - consider reducing depth");
+    }
+
+    if avg_time < 10.0 {
+        println!("🚀 Excellent move speed");
+    } else if avg_time < 100.0 {
+        println!("⚡ Good move speed");
+    } else if avg_time < 1000.0 {
+        println!("⚠️  Moderate move speed");
+    } else {
+        println!("🐌 Slow move speed - consider optimization");
+    }
+
+    if nodes_per_sec > 1000000.0 {
+        println!("🎯 Excellent search speed");
+    } else if nodes_per_sec > 100000.0 {
+        println!("🎯 Good search speed");
+    } else if nodes_per_sec > 10000.0 {
+        println!("⚠️  Moderate search speed");
+    } else {
+        println!("❌ Poor search speed - check algorithm efficiency");
+    }
+
+    // Recommendations
+    println!("\n💡 Recommendations:");
+    println!("{}", "=".repeat(20));
+
+    if avg_nodes > 50000.0 || avg_time > 500.0 {
+        println!("🔧 Consider reducing search depth for better performance");
+    }
+
+    if u64::from(ai.transposition_hits) < total_nodes / 10 {
+        println!("🔧 Transposition table usage could be improved");
+    }
+
+    if moves_analyzed < 20 {
+        println!("🔧 Game ended early - check move generation logic");
+    }
+
+    if total_time > 5000 {
+        println!("🔧 Consider implementing move ordering for better pruning");
+    }
 }

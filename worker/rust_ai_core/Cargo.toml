@@ -1,11 +1,11 @@
 [package]
-name = "rgou-ai-core"
+name = "connect-four-ai-core"
 version = "1.0.0"
 edition = "2021"
 authors = ["Robert Gilks"]
 description = "Connect Four AI core logic"
 license = "MIT"
-repository = "https://github.com/robertgilks/rgou-cloudflare"
+repository = "https://github.com/robertgilks/connect-four"
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false
@@ -14,7 +14,7 @@ wasm-opt = false
 crate-type = ["cdylib", "rlib"]
 
 [[bin]]
-name = "rgou-ai-core"
+name = "connect-four-ai-core"
 path = "src/main.rs"
 
 [[bin]]
@@ -53,6 +53,7 @@ lazy_static = "1.4"
 ndarray = "0.15"
 chrono = { version = "0.4", features = ["serde"] }
 rayon = "1.8"
+tempfile = "3.8"
 
 [profile.release]
 opt-level = 3

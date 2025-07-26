@@ -89,7 +89,7 @@ export default function ConnectFour() {
   return (
     <>
       <a
-        href="https://github.com/rgilks/rgou-cloudflare"
+        href="https://github.com/rgilks/connect-four"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="GitHub Repository"

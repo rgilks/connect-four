@@ -44,7 +44,7 @@ class TrainingConfig:
         self.unified_config = self.load_unified_config()
 
         # Ensure training data directory exists
-        self.training_data_dir = Path.home() / "Desktop" / "rgou-training-data"
+        self.training_data_dir = Path.home() / "Desktop" / "connect-four-training-data"
         self.training_data_dir.mkdir(parents=True, exist_ok=True)
 
         # Ensure weights directory exists

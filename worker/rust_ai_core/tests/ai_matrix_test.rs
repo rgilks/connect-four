@@ -1,5 +1,5 @@
 use rayon::prelude::*;
-use rgou_ai_core::{dice, genetic_params::GeneticParams, ml_ai::MLAI, GameState, Player, AI};
+use connect_four_ai_core::{genetic_params::GeneticParams, ml_ai::MLAI, GameState, Player, AI};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -105,7 +105,7 @@ impl AIPlayer for RandomAI {
         if valid_moves.is_empty() {
             None
         } else {
-            let random_index = (dice::roll_dice() as usize) % valid_moves.len();
+            let random_index = rand::random::<usize>() % valid_moves.len();
             Some(valid_moves[random_index] as usize)
         }
     }
@@ -187,9 +187,7 @@ impl MLAIPlayer {
             return Err(format!("Weights file not found: {}", weights_file).into());
         }
 
-        let (value_weights, policy_weights) = load_ml_weights(weights_file)?;
         let mut ai = MLAI::new();
-        ai.load_pretrained(&value_weights, &policy_weights);
 
         Ok(Self { ai })
     }
@@ -207,23 +205,14 @@ impl AIPlayer for MLAIPlayer {
 }
 
 fn evaluate_position(game_state: &GameState, player: Player) -> f32 {
-    let mut score = 0.0;
-
-    let pieces = if player == Player::Player1 {
-        &game_state.player1_pieces
-    } else {
-        &game_state.player2_pieces
-    };
-
-    for piece in pieces {
-        if piece.square == 20 {
-            score += 100.0; // Finished pieces are very valuable
-        } else if piece.square >= 0 {
-            score += piece.square as f32; // Advancement bonus
-        }
+    // For Connect Four, we can use the built-in evaluation function
+    // and adjust it based on the player
+    let base_evaluation = game_state.evaluate() as f32;
+    
+    match player {
+        Player::Player1 => base_evaluation,
+        Player::Player2 => -base_evaluation,
     }
-
-    score
 }
 
 fn load_ml_weights(weights_file: &str) -> Result<(Vec<f32>, Vec<f32>), Box<dyn std::error::Error>> {
@@ -265,15 +254,9 @@ fn play_game(
     let mut moves_played = 0;
     let mut ai1_time_ms = 0;
     let mut ai2_time_ms = 0;
-    let max_moves = 200; // Prevent infinite games
+    let max_moves = 42; // Maximum moves in Connect Four (6x7 board)
 
     while !game_state.is_game_over() && moves_played < max_moves {
-        game_state.dice_roll = dice::roll_dice();
-
-        if game_state.dice_roll == 0 {
-            game_state.current_player = game_state.current_player.opponent();
-            continue;
-        }
 
         let best_move = if game_state.current_player == Player::Player1 {
             if ai1_plays_first {
@@ -307,38 +290,26 @@ fn play_game(
 
         if let Some(move_index) = best_move {
             if game_state.make_move(move_index as u8).is_err() {
-                // Invalid move, skip turn
-                game_state.current_player = game_state.current_player.opponent();
+                // No valid moves, game is a draw
+                break;
             }
         } else {
-            // No valid moves, skip turn
-            game_state.current_player = game_state.current_player.opponent();
+            // No valid moves, game is a draw
+            break;
         }
 
         moves_played += 1;
     }
 
-    let p1_finished = game_state
-        .player1_pieces
-        .iter()
-        .filter(|p| p.square == 20)
-        .count();
-    let p2_finished = game_state
-        .player2_pieces
-        .iter()
-        .filter(|p| p.square == 20)
-        .count();
-
-    let winner = if p1_finished >= 7 {
-        Player::Player1
-    } else if p2_finished >= 7 {
-        Player::Player2
+    let winner = if let Some(winner) = game_state.get_winner() {
+        winner
     } else {
-        // Game ended without clear winner (max moves reached)
-        if p1_finished > p2_finished {
-            Player::Player1
-        } else {
+        // Game ended in draw, evaluate final position
+        let final_eval = game_state.evaluate();
+        if final_eval > 0 {
             Player::Player2
+        } else {
+            Player::Player1
         }
     };
 

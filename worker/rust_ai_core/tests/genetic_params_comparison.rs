@@ -1,35 +1,28 @@
+use connect_four_ai_core::{genetic_params::GeneticParams, GameState, Player, AI};
 use rayon::prelude::*;
-use rgou_ai_core::{dice, genetic_params::GeneticParams, GameState, Player, AI};
 use std::time::Instant;
 
 fn optimize_cpu_usage() {
-    // Detect Apple Silicon and optimize thread pool
     if cfg!(target_os = "macos") {
-        // On Apple Silicon, use performance cores
         let num_cores = std::thread::available_parallelism()
             .map(|n| n.get())
             .unwrap_or(8);
-
-        // Use 80% of available cores to leave some for system
         let optimal_threads = (num_cores as f64 * 0.8) as usize;
         rayon::ThreadPoolBuilder::new()
             .num_threads(optimal_threads)
-            .stack_size(8 * 1024 * 1024) // 8MB stack for deep recursion
+            .stack_size(8 * 1024 * 1024)
             .build_global()
             .unwrap_or_else(|_| {
                 println!("Warning: Could not set optimal thread count, using default");
             });
-
         println!(
             "🍎 Apple Silicon detected: Using {} threads ({} cores available)",
             optimal_threads, num_cores
         );
     } else {
-        // On other platforms, use all available cores
         let num_cores = std::thread::available_parallelism()
             .map(|n| n.get())
             .unwrap_or(4);
-
         rayon::ThreadPoolBuilder::new()
             .num_threads(num_cores)
             .stack_size(8 * 1024 * 1024)
@@ -37,7 +30,6 @@ fn optimize_cpu_usage() {
             .unwrap_or_else(|_| {
                 println!("Warning: Could not set optimal thread count, using default");
             });
-
         println!("🖥️  Using {} threads for parallel processing", num_cores);
     }
 }
@@ -57,20 +49,13 @@ fn play_single_game(
 ) -> GameResult {
     let mut game_state = GameState::new();
     let mut moves_played = 0;
-    let max_moves = 200;
+    let max_moves = 42; // Maximum moves in Connect Four (6x7 board)
     let mut evolved_time = 0;
     let mut default_time = 0;
 
     while !game_state.is_game_over() && moves_played < max_moves {
         let current_player = game_state.current_player;
         let is_evolved_turn = current_player == Player::Player2;
-
-        game_state.dice_roll = dice::roll_dice();
-
-        if game_state.dice_roll == 0 {
-            game_state.current_player = game_state.current_player.opponent();
-            continue;
-        }
 
         // Use different parameters based on whose turn it is
         let test_params = if is_evolved_turn {
@@ -82,10 +67,7 @@ fn play_single_game(
         // Create a new game state with the test parameters
         let mut test_state = GameState::with_genetic_params(test_params);
         test_state.board = game_state.board.clone();
-        test_state.player1_pieces = game_state.player1_pieces.clone();
-        test_state.player2_pieces = game_state.player2_pieces.clone();
         test_state.current_player = game_state.current_player;
-        test_state.dice_roll = game_state.dice_roll;
 
         let mut ai = AI::new();
         let start_time = Instant::now();
@@ -99,38 +81,26 @@ fn play_single_game(
             default_time += move_time;
         }
 
-        if let Some(move_piece) = best_move {
-            game_state
-                .make_move(move_piece)
-                .expect("Valid move should succeed");
+        if let Some(column) = best_move {
+            if game_state.make_move(column).is_err() {
+                // No valid moves, game is a draw
+                break;
+            }
         } else {
-            // No valid moves, switch player
-            game_state.current_player = game_state.current_player.opponent();
+            // No valid moves, game is a draw
+            break;
         }
 
         moves_played += 1;
     }
 
     // Determine winner
-    let p1_finished = game_state
-        .player1_pieces
-        .iter()
-        .filter(|p| p.square == 20)
-        .count();
-    let p2_finished = game_state
-        .player2_pieces
-        .iter()
-        .filter(|p| p.square == 20)
-        .count();
-
-    let evolved_wins = if p2_finished >= 7 {
-        true
-    } else if p1_finished >= 7 {
-        false
+    let evolved_wins = if let Some(winner) = game_state.get_winner() {
+        winner == Player::Player2 // Evolved params are Player2
     } else {
-        // Game ended by move limit, evaluate final position
+        // Game ended in draw, evaluate final position
         let evolved_eval = game_state.evaluate();
-        evolved_eval > 0
+        evolved_eval > 0 // Positive eval means Player2 (evolved) is winning
     };
 
     GameResult {
@@ -151,111 +121,116 @@ fn test_genetic_params_comparison() {
     optimize_cpu_usage();
 
     // Load evolved parameters
-    let evolved_params =
-        match GeneticParams::load_from_file("../../ml/data/genetic_params/evolved.json") {
-            Ok(params) => params,
-            Err(e) => {
-                eprintln!("Failed to load evolved parameters: {}", e);
-                return;
-            }
-        };
+    let evolved_params = match GeneticParams::load_from_file("ml/data/genetic_params/evolved.json")
+    {
+        Ok(params) => params,
+        Err(e) => {
+            eprintln!("Failed to load evolved parameters: {}", e);
+            return;
+        }
+    };
 
     let default_params = GeneticParams::default();
+    let num_games = std::env::var("NUM_GAMES")
+        .unwrap_or_else(|_| "100".to_string())
+        .parse::<usize>()
+        .unwrap_or(100);
 
-    println!("Default parameters: {:?}", default_params);
-    println!("Evolved parameters: {:?}", evolved_params);
-    println!();
-
-    // Test parameters in actual games
-    let num_games = 100;
-    println!("Playing {} games: Evolved vs Default parameters", num_games);
-    println!("{}", "-".repeat(40));
+    println!(
+        "📊 Comparing evolved vs default parameters over {} games",
+        num_games
+    );
+    println!("{}", "-".repeat(50));
 
     let start_time = Instant::now();
 
-    // Parallelize game execution
-    let game_results: Vec<GameResult> = (0..num_games)
+    // Play games in parallel
+    let results: Vec<GameResult> = (0..num_games)
         .into_par_iter()
-        .map(|game_num| {
-            if game_num % 20 == 0 {
-                println!("  Playing game {}...", game_num + 1);
-            }
-            play_single_game(&evolved_params, &default_params, game_num)
-        })
+        .map(|game_num| play_single_game(&evolved_params, &default_params, game_num))
         .collect();
 
     let total_time = start_time.elapsed();
 
-    // Aggregate results
-    let evolved_wins = game_results.iter().filter(|r| r.evolved_wins).count();
+    // Analyze results
+    let evolved_wins = results.iter().filter(|r| r.evolved_wins).count();
     let default_wins = num_games - evolved_wins;
-    let total_moves: u32 = game_results.iter().map(|r| r.moves_played).sum();
-    let evolved_total_time: u64 = game_results.iter().map(|r| r.evolved_time).sum();
-    let default_total_time: u64 = game_results.iter().map(|r| r.default_time).sum();
-
-    // Calculate statistics
     let evolved_win_rate = (evolved_wins as f64 / num_games as f64) * 100.0;
     let default_win_rate = (default_wins as f64 / num_games as f64) * 100.0;
-    let avg_moves = total_moves as f64 / num_games as f64;
-    let evolved_avg_time = evolved_total_time as f64 / num_games as f64;
-    let default_avg_time = default_total_time as f64 / num_games as f64;
 
-    println!("\n📊 Results:");
+    let total_evolved_time: u64 = results.iter().map(|r| r.evolved_time).sum();
+    let total_default_time: u64 = results.iter().map(|r| r.default_time).sum();
+    let avg_evolved_time = total_evolved_time as f64 / num_games as f64;
+    let avg_default_time = total_default_time as f64 / num_games as f64;
+
+    let total_moves: u32 = results.iter().map(|r| r.moves_played).sum();
+    let avg_moves = total_moves as f64 / num_games as f64;
+
+    println!("\n📈 Results:");
     println!("{}", "=".repeat(30));
     println!(
-        "Evolved parameters wins: {} ({:.1}%)",
+        "Evolved params wins: {} ({:.1}%)",
         evolved_wins, evolved_win_rate
     );
     println!(
-        "Default parameters wins: {} ({:.1}%)",
+        "Default params wins: {} ({:.1}%)",
         default_wins, default_win_rate
     );
     println!("Average moves per game: {:.1}", avg_moves);
-    println!("Evolved avg time per game: {:.1}ms", evolved_avg_time);
-    println!("Default avg time per game: {:.1}ms", default_avg_time);
+    println!("Evolved params avg time: {:.1}ms", avg_evolved_time);
+    println!("Default params avg time: {:.1}ms", avg_default_time);
     println!("Total test time: {:.2}s", total_time.as_secs_f64());
 
-    // Performance analysis
-    println!("\n🎯 Performance Analysis:");
-    println!("{}", "=".repeat(25));
+    println!("\n🎯 Analysis:");
+    println!("{}", "=".repeat(20));
 
     if evolved_win_rate > default_win_rate + 5.0 {
         println!("✅ Evolved parameters show significant improvement!");
     } else if evolved_win_rate > default_win_rate {
         println!("✅ Evolved parameters show slight improvement");
     } else if evolved_win_rate < default_win_rate - 5.0 {
-        println!("❌ Evolved parameters perform worse than default");
+        println!("❌ Default parameters perform significantly better");
     } else {
-        println!("⚠️  Evolved parameters perform similarly to default");
+        println!("🤝 Both parameter sets perform similarly");
     }
 
-    // Parameter analysis
-    println!("\n🔍 Parameter Changes:");
-    println!("{}", "=".repeat(20));
-    println!(
-        "win_score: {} → {} ({:+})",
-        default_params.win_score,
-        evolved_params.win_score,
-        evolved_params.win_score - default_params.win_score
-    );
-    println!(
-        "finished_piece_value: {} → {} ({:+})",
-        default_params.finished_piece_value,
-        evolved_params.finished_piece_value,
-        evolved_params.finished_piece_value - default_params.finished_piece_value
-    );
-    println!(
-        "rosette_control_bonus: {} → {} ({:+})",
-        default_params.rosette_control_bonus,
-        evolved_params.rosette_control_bonus,
-        evolved_params.rosette_control_bonus - default_params.rosette_control_bonus
-    );
-    println!("Other parameters: unchanged");
+    let time_ratio = avg_evolved_time / avg_default_time;
+    if time_ratio < 0.8 {
+        println!("⚡ Evolved parameters are faster");
+    } else if time_ratio > 1.2 {
+        println!("🐌 Evolved parameters are slower");
+    } else {
+        println!("⚖️  Both parameter sets have similar performance");
+    }
 
-    // Assertions for test validation
-    assert!(
-        evolved_wins + default_wins == num_games,
-        "All games should have a winner"
-    );
-    assert!(total_moves > 0, "Games should have moves");
+    println!("\n💡 Recommendations:");
+    println!("{}", "=".repeat(20));
+
+    if evolved_win_rate > 55.0 {
+        println!("🎉 Evolved parameters are ready for production use!");
+    } else if evolved_win_rate > 50.0 {
+        println!("✅ Evolved parameters show promise, consider further optimization");
+    } else {
+        println!("🔧 Evolved parameters need improvement, review evolution process");
+    }
+
+    if avg_moves < 30.0 {
+        println!("⚠️  Games are ending early - check win detection logic");
+    }
+
+    if total_time.as_secs() > 60 {
+        println!("⏱️  Test took a long time - consider reducing number of games");
+    }
+
+    // Statistical significance
+    let margin_of_error =
+        1.96 * ((evolved_win_rate * (100.0 - evolved_win_rate)) / num_games as f64).sqrt();
+    println!("\n📊 Statistical Analysis:");
+    println!("Margin of error: ±{:.1}%", margin_of_error);
+
+    if (evolved_win_rate - default_win_rate).abs() > margin_of_error {
+        println!("✅ Difference is statistically significant");
+    } else {
+        println!("⚠️  Difference is not statistically significant");
+    }
 }

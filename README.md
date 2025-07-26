@@ -1,6 +1,6 @@
 # Connect Four
 
-[![CI/CD](https://github.com/rgilks/rgou-cloudflare/actions/workflows/deploy.yml/badge.svg)](https://github.com/rgilks/rgou-cloudflare/actions/workflows/deploy.yml)
+[![CI/CD](https://github.com/rgilks/connect-four/actions/workflows/deploy.yml/badge.svg)](https://github.com/rgilks/connect-four/actions/workflows/deploy.yml)
 
 <div align="center">
  <img src="/docs/screenshot.png" alt="Connect Four Screenshot" width="415" />
@@ -9,47 +9,44 @@
   <hr />
 </div>
 
-## 🚧 **WORK IN PROGRESS - NOT YET FUNCTIONAL** 🚧
+## ✅ **CONVERSION COMPLETE - FULLY FUNCTIONAL** ✅
 
-**This repository is currently being converted from the [Royal Game of Ur](https://github.com/rgilks/rgou-cloudflare) to Connect Four. The conversion is incomplete and the game is not yet playable.**
+**A modern web implementation of the classic Connect Four game with AI opponents, offline support, and beautiful animations.**
 
-### Current Status
+### ✅ **Conversion Status - COMPLETE**
 
 - ✅ **Frontend UI**: Updated to Connect Four terminology and interface
-- ✅ **User-facing text**: All references changed from "Royal Game of Ur" to "Connect Four"
+- ✅ **User-facing text**: All references updated for Connect Four
 - ✅ **Documentation**: Updated to reflect Connect Four game
-- ❌ **Core game logic**: Still implements Royal Game of Ur (21-square board, dice, piece movement)
-- ❌ **AI system**: Still uses expectiminimax algorithm (designed for dice-based games)
-- ❌ **Game mechanics**: Still uses piece-based movement instead of column-based dropping
+- ✅ **Core game logic**: Implemented Connect Four (6x7 board, column-based dropping)
+- ✅ **AI system**: Converted to minimax algorithm (perfect for deterministic Connect Four)
+- ✅ **Game mechanics**: Column-based dropping with proper win detection
+- ✅ **Rust AI core**: Fully converted with genetic algorithm training
+- ✅ **Tests**: All backend tests passing
 
-### 🎯 **TODO List**
+### 🎯 **Key Features Implemented**
 
-#### **Critical Backend Changes Needed:**
+#### **Connect Four Game Logic:**
 
-1. **Replace 21-square board with 6x7 Connect 4 board**
-2. **Remove dice system entirely** (Connect 4 is deterministic)
-3. **Replace piece movement with column-based dropping**
-4. **Replace expectiminimax with minimax** (Connect 4 has no chance elements)
-5. **Implement Connect 4 win detection** (4 in a row, not race to finish)
-6. **Remove all track-based logic** (Royal Game of Ur specific)
+- 6x7 board with column-based piece dropping
+- Win detection for 4-in-a-row (horizontal, vertical, diagonal)
+- Draw detection when board is full
+- Proper turn management
 
-#### **Frontend Updates Needed:**
+#### **AI System:**
 
-1. **Replace `pieceMove()` sound with `pieceDrop()`**
-2. **Update game logic to handle column selection instead of piece movement**
-3. **Remove remaining Royal Game of Ur specific UI elements**
+- Minimax algorithm with alpha-beta pruning
+- Genetic algorithm for parameter optimization
+- Multiple AI difficulty levels
+- Transposition table for performance
+- Heuristic evaluation functions
 
-#### **Testing & Validation:**
+#### **Training & Evolution:**
 
-1. **Update all tests** to reflect Connect 4 mechanics
-2. **Rewrite AI tests** for minimax instead of expectiminimax
-3. **Update e2e tests** for column-based gameplay
-
-### **⚠️ Important Notes:**
-
-- The frontend appears ready but will not work until the backend is converted
-- The AI system needs complete rewriting for Connect 4
-- This is a significant architectural change requiring major refactoring
+- Genetic algorithm training for AI parameters
+- Performance evaluation and comparison
+- Automated testing and benchmarking
+- Parameter optimization for different strategies
 
 ---
 
@@ -87,8 +84,8 @@ A modern web implementation of the classic Connect Four game with AI opponents, 
 ### Development Setup
 
 ```bash
-git clone https://github.com/rgilks/rgou-cloudflare.git
-cd rgou-cloudflare
+git clone https://github.com/rgilks/connect-four.git
+cd connect-four
 npm install
 npm run db:setup
 npm run build:wasm-assets
@@ -112,21 +109,33 @@ See [DEVELOPMENT.md](./docs/DEVELOPMENT.md) for detailed solutions.
 
 ## 🤖 AI System
 
-The project features a minimax-based AI opponent for Connect Four, running entirely in the browser via WebAssembly. See [ARCHITECTURE.md](./docs/ARCHITECTURE.md) for details.
+The project features a minimax-based AI opponent for Connect Four, running entirely in the browser via WebAssembly. The AI system includes:
+
+- **Minimax Algorithm**: Perfect for deterministic Connect Four
+- **Alpha-Beta Pruning**: Optimized search performance
+- **Genetic Algorithm Training**: Automated parameter optimization
+- **Multiple Difficulty Levels**: From random to expert play
+- **Transposition Tables**: Memory-efficient caching
+
+See [ARCHITECTURE.md](./docs/ARCHITECTURE.md) for detailed system design.
 
 ## 🧠 AI Development
 
-Train and improve the Connect Four AI with minimax and optional ML approaches:
+Train and improve the Connect Four AI with genetic algorithms:
 
 ```bash
-# Run quick AI test
-yarn run test:ai-quick
+# Run genetic algorithm training
+cd worker/rust_ai_core
+cargo run --bin train train 50 100 0.1 0.2 0.7 10
 
-# Run standard AI test
-yarn run test:ai
+# Evaluate AI performance
+cargo run --bin train evaluate 100
+
+# Run AI comparison tests
+cargo test test_ai_matrix -- --nocapture
 ```
 
-**Note**: ML training requires GPU acceleration (CUDA or Apple Metal). Rust training works on any system but is slower.
+**Note**: The genetic algorithm training optimizes AI parameters for Connect Four strategy.
 
 ## 🧪 Testing
 

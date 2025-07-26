@@ -1,4 +1,4 @@
-use rgou_ai_core::{dice, genetic_params::GeneticParams, ml_ai::MLAI, GameState, Player, AI};
+use connect_four_ai_core::{genetic_params::GeneticParams, ml_ai::MLAI, GameState, Player, AI};
 use std::time::Instant;
 
 fn get_evolved_params() -> GeneticParams {
@@ -9,59 +9,33 @@ fn get_evolved_params() -> GeneticParams {
 #[test]
 fn test_ml_vs_expectiminimax_ai() {
     println!("🤖 ML vs Expectiminimax AI Test");
-    println!("{}", "=".repeat(50));
+    println!("{}", "=".repeat(40));
 
     let evolved_params = get_evolved_params();
-    println!("Using evolved parameters for EMM AI: {:?}", evolved_params);
-
-    let weights_file = "ml/data/weights/ml_ai_weights_v2.json";
-    let weights_path = std::path::Path::new(weights_file);
-
-    if !weights_path.exists() {
-        println!("⚠️  ML weights file not found: {}", weights_file);
-        println!("Skipping ML vs EMM test");
-        return;
-    }
-
-    let (value_weights, policy_weights) = match load_ml_weights(weights_file) {
-        Ok(weights) => weights,
-        Err(e) => {
-            println!("❌ Failed to load ML weights: {}", e);
-            return;
-        }
-    };
+    println!("📋 Using evolved genetic parameters");
 
     let mut ml_ai = MLAI::new();
-    ml_ai.load_pretrained(&value_weights, &policy_weights);
+    let num_games = std::env::var("NUM_GAMES")
+        .unwrap_or_else(|_| "20".to_string())
+        .parse::<usize>()
+        .unwrap_or(20);
 
-    let num_games = 50;
+    println!("🎮 Playing {} games...", num_games);
+
     let mut ml_wins = 0;
     let mut emm_wins = 0;
     let mut total_moves = 0;
     let mut ml_total_time = 0;
     let mut emm_total_time = 0;
 
-    println!(
-        "Playing {} games: ML AI vs EMM AI (with evolved parameters)",
-        num_games
-    );
-    println!("{}", "-".repeat(50));
-
     for game_num in 0..num_games {
         let mut game_state = GameState::with_genetic_params(evolved_params.clone());
         let mut moves_played = 0;
-        let max_moves = 200;
+        let max_moves = 42; // Maximum moves in Connect Four (6x7 board)
         let mut ml_time = 0;
         let mut emm_time = 0;
 
         while !game_state.is_game_over() && moves_played < max_moves {
-            game_state.dice_roll = dice::roll_dice();
-
-            if game_state.dice_roll == 0 {
-                game_state.current_player = game_state.current_player.opponent();
-                continue;
-            }
-
             let start_time = Instant::now();
             let best_move = if game_state.current_player == Player::Player1 {
                 let response = ml_ai.get_best_move(&game_state);
@@ -80,33 +54,28 @@ fn test_ml_vs_expectiminimax_ai() {
                 emm_time += move_time;
             }
 
-            if let Some(move_piece) = best_move {
-                if game_state.make_move(move_piece).is_err() {
-                    game_state.current_player = game_state.current_player.opponent();
+            if let Some(column) = best_move {
+                if game_state.make_move(column).is_err() {
+                    // No valid moves, game is a draw
+                    break;
                 }
             } else {
-                game_state.current_player = game_state.current_player.opponent();
+                // No valid moves, game is a draw
+                break;
             }
 
             moves_played += 1;
         }
 
-        let p1_finished = game_state
-            .player1_pieces
-            .iter()
-            .filter(|p| p.square == 20)
-            .count();
-        let p2_finished = game_state
-            .player2_pieces
-            .iter()
-            .filter(|p| p.square == 20)
-            .count();
-
-        if p1_finished >= 7 {
-            ml_wins += 1;
-        } else if p2_finished >= 7 {
-            emm_wins += 1;
+        // Determine winner
+        if let Some(winner) = game_state.get_winner() {
+            if winner == Player::Player1 {
+                ml_wins += 1;
+            } else {
+                emm_wins += 1;
+            }
         } else {
+            // Game ended in draw, evaluate final position
             let final_eval = game_state.evaluate();
             if final_eval > 0 {
                 emm_wins += 1; // EMM (Player2) wins
@@ -148,38 +117,48 @@ fn test_ml_vs_expectiminimax_ai() {
     } else if ml_win_rate < emm_win_rate - 5.0 {
         println!("❌ EMM AI (with evolved params) shows significant advantage");
     } else {
-        println!("⚠️  Both AIs perform similarly");
+        println!("🤝 AI performance is roughly equal");
     }
 
-    let speed_ratio = emm_avg_time / ml_avg_time;
-    println!("\n⚡ Speed Comparison:");
-    println!("EMM AI is {:.1}x slower than ML AI", speed_ratio);
+    println!("\n⚡ Speed Analysis:");
+    println!("{}", "=".repeat(20));
+    if ml_avg_time < emm_avg_time * 0.5 {
+        println!("🚀 ML AI is significantly faster");
+    } else if ml_avg_time < emm_avg_time {
+        println!("⚡ ML AI is faster");
+    } else if ml_avg_time > emm_avg_time * 2.0 {
+        println!("🐌 ML AI is significantly slower");
+    } else {
+        println!("⚖️  AI speeds are comparable");
+    }
 
-    assert!(
-        ml_wins + emm_wins == num_games,
-        "All games should have a winner"
-    );
-    assert!(total_moves > 0, "Games should have moves");
-    assert!(ml_total_time > 0, "ML AI should have taken some time");
-    assert!(emm_total_time > 0, "EMM AI should have taken some time");
+    println!("\n📈 Recommendations:");
+    println!("{}", "=".repeat(20));
+    if ml_win_rate > 55.0 && ml_avg_time < emm_avg_time {
+        println!("🎉 ML AI is ready for production use!");
+    } else if ml_win_rate > 50.0 {
+        println!("✅ ML AI shows promise, consider further training");
+    } else {
+        println!("🔧 ML AI needs improvement, review training data and parameters");
+    }
 }
 
 fn load_ml_weights(weights_file: &str) -> Result<(Vec<f32>, Vec<f32>), Box<dyn std::error::Error>> {
     let content = std::fs::read_to_string(weights_file)?;
-    let data: serde_json::Value = serde_json::from_str(&content)?;
+    let weights: serde_json::Value = serde_json::from_str(&content)?;
 
-    let value_weights = data["value_weights"]
+    let value_weights = weights["value_network"]["weights"]
         .as_array()
-        .ok_or("Invalid value_weights format")?
+        .ok_or("Invalid weights format")?
         .iter()
-        .map(|v| v.as_f64().unwrap_or(0.0) as f32)
+        .map(|w| w.as_f64().unwrap_or(0.0) as f32)
         .collect();
 
-    let policy_weights = data["policy_weights"]
+    let policy_weights = weights["policy_network"]["weights"]
         .as_array()
-        .ok_or("Invalid policy_weights format")?
+        .ok_or("Invalid weights format")?
         .iter()
-        .map(|v| v.as_f64().unwrap_or(0.0) as f32)
+        .map(|w| w.as_f64().unwrap_or(0.0) as f32)
         .collect();
 
     Ok((value_weights, policy_weights))

@@ -1,11 +1,11 @@
-use super::{GameState, Player, BOARD_SIZE, PIECES_PER_PLAYER, ROSETTE_SQUARES};
+use super::{Cell, GameState, Player, COLS, ROWS};
 use ndarray::Array1;
 
-pub const SIZE: usize = 150;
+pub const SIZE: usize = 100;
 
 #[derive(Clone, Debug)]
 pub struct GameFeatures {
-    pub features: [f32; 150],
+    pub features: [f32; 100],
 }
 
 impl GameFeatures {
@@ -13,182 +13,86 @@ impl GameFeatures {
         let mut features = [0.0; SIZE];
         let mut idx = 0;
 
-        // Piece positions for player 1 (14 features)
-        for piece in &state.player1_pieces {
-            if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                features[idx] = piece.square as f32 / 20.0;
-            } else if piece.square == 20 {
-                features[idx] = 1.0;
-            } else {
-                features[idx] = -1.0;
+        // Board occupancy (42 features - 6 rows × 7 columns)
+        for col in 0..COLS {
+            for row in 0..ROWS {
+                features[idx] = match state.board[col][row] {
+                    Cell::Empty => 0.0,
+                    Cell::Player1 => 1.0,
+                    Cell::Player2 => -1.0,
+                };
+                idx += 1;
             }
-            idx += 1;
-        }
-
-        // Piece positions for player 2 (14 features)
-        for piece in &state.player2_pieces {
-            if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                features[idx] = piece.square as f32 / 20.0;
-            } else if piece.square == 20 {
-                features[idx] = 1.0;
-            } else {
-                features[idx] = -1.0;
-            }
-            idx += 1;
-        }
-
-        // Board occupancy (21 features)
-        for square in &state.board {
-            features[idx] = match square {
-                Some(p) => {
-                    if p.player == Player::Player1 {
-                        1.0
-                    } else {
-                        -1.0
-                    }
-                }
-                None => 0.0,
-            };
-            idx += 1;
         }
 
         // Strategic features
-        features[idx] = Self::rosette_control_score(state) as f32;
+        features[idx] = Self::center_control_score(state, Player::Player1) as f32;
         idx += 1;
 
-        features[idx] = Self::pieces_on_board_count(state, Player::Player1) as f32;
+        features[idx] = Self::center_control_score(state, Player::Player2) as f32;
         idx += 1;
 
-        features[idx] = Self::pieces_on_board_count(state, Player::Player2) as f32;
+        features[idx] = Self::pieces_count(state, Player::Player1) as f32;
         idx += 1;
 
-        features[idx] = Self::finished_pieces_count(state, Player::Player1) as f32;
+        features[idx] = Self::pieces_count(state, Player::Player2) as f32;
         idx += 1;
 
-        features[idx] = Self::finished_pieces_count(state, Player::Player2) as f32;
+        features[idx] = Self::threat_score(state, Player::Player1) as f32;
         idx += 1;
 
-        features[idx] = Self::average_position_score(state, Player::Player1);
+        features[idx] = Self::threat_score(state, Player::Player2) as f32;
         idx += 1;
 
-        features[idx] = Self::average_position_score(state, Player::Player2);
+        features[idx] = Self::mobility_score(state, Player::Player1) as f32;
         idx += 1;
 
-        features[idx] = Self::safety_score(state, Player::Player1) as f32;
+        features[idx] = Self::mobility_score(state, Player::Player2) as f32;
         idx += 1;
 
-        features[idx] = Self::safety_score(state, Player::Player2) as f32;
+        features[idx] = Self::vertical_control_score(state, Player::Player1) as f32;
         idx += 1;
 
-        features[idx] = Self::center_lane_control(state, Player::Player1) as f32;
+        features[idx] = Self::vertical_control_score(state, Player::Player2) as f32;
         idx += 1;
 
-        features[idx] = Self::center_lane_control(state, Player::Player2) as f32;
+        features[idx] = Self::horizontal_control_score(state, Player::Player1) as f32;
         idx += 1;
 
-        features[idx] = if state.current_player == Player::Player1 {
-            1.0
-        } else {
-            -1.0
-        };
+        features[idx] = Self::horizontal_control_score(state, Player::Player2) as f32;
         idx += 1;
 
-        features[idx] = state.dice_roll as f32 / 4.0;
+        features[idx] = Self::diagonal_control_score(state, Player::Player1) as f32;
         idx += 1;
 
-        // Valid moves count
-        features[idx] = state.get_valid_moves().len() as f32 / PIECES_PER_PLAYER as f32;
+        features[idx] = Self::diagonal_control_score(state, Player::Player2) as f32;
         idx += 1;
 
-        // Capture opportunities
-        features[idx] = Self::capture_opportunities(state, Player::Player1) as f32;
+        features[idx] = Self::blocking_score(state, Player::Player1) as f32;
         idx += 1;
 
-        features[idx] = Self::capture_opportunities(state, Player::Player2) as f32;
+        features[idx] = Self::blocking_score(state, Player::Player2) as f32;
         idx += 1;
 
-        // Vulnerability to capture
-        features[idx] = Self::vulnerability_to_capture(state, Player::Player1) as f32;
+        features[idx] = Self::height_advantage_score(state, Player::Player1) as f32;
         idx += 1;
 
-        features[idx] = Self::vulnerability_to_capture(state, Player::Player2) as f32;
+        features[idx] = Self::height_advantage_score(state, Player::Player2) as f32;
         idx += 1;
 
-        // Progress towards finish
-        features[idx] = Self::progress_towards_finish(state, Player::Player1);
-        idx += 1;
-
-        features[idx] = Self::progress_towards_finish(state, Player::Player2);
-        idx += 1;
-
-        // NEW: Advanced strategic features
-        features[idx] = Self::mobility_score(state, Player::Player1);
-        idx += 1;
-
-        features[idx] = Self::mobility_score(state, Player::Player2);
-        idx += 1;
-
-        features[idx] = Self::development_score(state, Player::Player1);
-        idx += 1;
-
-        features[idx] = Self::development_score(state, Player::Player2);
-        idx += 1;
-
-        features[idx] = Self::tactical_opportunities(state, Player::Player1) as f32;
-        idx += 1;
-
-        features[idx] = Self::tactical_opportunities(state, Player::Player2) as f32;
-        idx += 1;
-
-        features[idx] = Self::rosette_safety_score(state, Player::Player1);
-        idx += 1;
-
-        features[idx] = Self::rosette_safety_score(state, Player::Player2);
-        idx += 1;
-
-        features[idx] = Self::center_control_score(state, Player::Player1);
-        idx += 1;
-
-        features[idx] = Self::center_control_score(state, Player::Player2);
-        idx += 1;
-
-        features[idx] = Self::piece_coordination_score(state, Player::Player1);
-        idx += 1;
-
-        features[idx] = Self::piece_coordination_score(state, Player::Player2);
-        idx += 1;
-
-        features[idx] = Self::attack_pressure_score(state, Player::Player1);
-        idx += 1;
-
-        features[idx] = Self::attack_pressure_score(state, Player::Player2);
-        idx += 1;
-
-        features[idx] = Self::defensive_structure_score(state, Player::Player1);
-        idx += 1;
-
-        features[idx] = Self::defensive_structure_score(state, Player::Player2);
-        idx += 1;
-
-        features[idx] = Self::endgame_evaluation(state, Player::Player1);
-        idx += 1;
-
-        features[idx] = Self::endgame_evaluation(state, Player::Player2);
-        idx += 1;
-
-        features[idx] = Self::time_advantage_score(state, Player::Player1);
-        idx += 1;
-
-        features[idx] = Self::time_advantage_score(state, Player::Player2);
-        idx += 1;
-
-        features[idx] = Self::material_balance_score(state);
+        features[idx] = Self::material_balance_score(state) as f32;
         idx += 1;
 
         features[idx] = Self::positional_advantage_score(state, Player::Player1);
         idx += 1;
 
         features[idx] = Self::positional_advantage_score(state, Player::Player2);
+        idx += 1;
+
+        features[idx] = Self::endgame_evaluation(state, Player::Player1);
+        idx += 1;
+
+        features[idx] = Self::endgame_evaluation(state, Player::Player2);
         idx += 1;
 
         // Fill remaining features with zeros
@@ -209,415 +113,241 @@ impl GameFeatures {
         Array1::from_vec(self.features.to_vec())
     }
 
-    fn rosette_control_score(state: &GameState) -> i32 {
+    fn pieces_count(state: &GameState, player: Player) -> i32 {
+        let mut count = 0;
+        for col in 0..COLS {
+            for row in 0..ROWS {
+                if state.board[col][row] == Cell::from_player(player) {
+                    count += 1;
+                }
+            }
+        }
+        count
+    }
+
+    fn center_control_score(state: &GameState, player: Player) -> i32 {
         let mut score = 0;
-        for &rosette in &ROSETTE_SQUARES {
-            if let Some(occupant) = state.board[rosette as usize] {
-                score += if occupant.player == Player::Player1 {
-                    1
-                } else {
-                    -1
-                };
+        // Center columns (2, 3, 4) are most valuable
+        for col in [2, 3, 4] {
+            for row in 0..ROWS {
+                if state.board[col][row] == Cell::from_player(player) {
+                    score += match col {
+                        3 => 3,     // Center column
+                        2 | 4 => 2, // Adjacent to center
+                        _ => 1,
+                    };
+                }
             }
         }
         score
     }
 
-    fn pieces_on_board_count(state: &GameState, player: Player) -> i32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
+    fn threat_score(state: &GameState, player: Player) -> i32 {
+        let mut threats = 0;
+        for col in 0..COLS {
+            for row in 0..ROWS {
+                if state.board[col][row] == Cell::from_player(player) {
+                    // Check for potential winning lines
+                    let directions = [(1, 0), (0, 1), (1, 1), (1, -1)];
+                    for (dcol, drow) in directions {
+                        let mut consecutive = 1;
+                        let mut blocked = 0;
 
-        pieces
-            .iter()
-            .filter(|p| p.square >= 0 && p.square < 20)
-            .count() as i32
-    }
+                        // Count in positive direction
+                        let mut c = col as i32 + dcol;
+                        let mut r = row as i32 + drow;
+                        while c >= 0 && c < COLS as i32 && r >= 0 && r < ROWS as i32 {
+                            if state.board[c as usize][r as usize] == Cell::from_player(player) {
+                                consecutive += 1;
+                                c += dcol;
+                                r += drow;
+                            } else {
+                                if state.board[c as usize][r as usize] != Cell::Empty {
+                                    blocked += 1;
+                                }
+                                break;
+                            }
+                        }
 
-    fn finished_pieces_count(state: &GameState, player: Player) -> i32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
+                        // Count in negative direction
+                        c = col as i32 - dcol;
+                        r = row as i32 - drow;
+                        while c >= 0 && c < COLS as i32 && r >= 0 && r < ROWS as i32 {
+                            if state.board[c as usize][r as usize] == Cell::from_player(player) {
+                                consecutive += 1;
+                                c -= dcol;
+                                r -= drow;
+                            } else {
+                                if state.board[c as usize][r as usize] != Cell::Empty {
+                                    blocked += 1;
+                                }
+                                break;
+                            }
+                        }
 
-        pieces.iter().filter(|p| p.square == 20).count() as i32
-    }
-
-    fn average_position_score(state: &GameState, player: Player) -> f32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        let track = if player == Player::Player1 {
-            &[3, 2, 1, 0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-        } else {
-            &[19, 18, 17, 16, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15]
-        };
-
-        let mut total_score = 0.0;
-        let mut count = 0;
-
-        for piece in pieces {
-            if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                if let Some(track_pos) = track.iter().position(|&s| s as i8 == piece.square) {
-                    total_score += track_pos as f32;
-                    count += 1;
-                }
-            }
-        }
-
-        if count > 0 {
-            total_score / count as f32
-        } else {
-            0.0
-        }
-    }
-
-    fn safety_score(state: &GameState, player: Player) -> i32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        pieces
-            .iter()
-            .filter(|p| p.square >= 0 && p.square < BOARD_SIZE as i8)
-            .filter(|p| ROSETTE_SQUARES.contains(&(p.square as u8)))
-            .count() as i32
-    }
-
-    fn center_lane_control(state: &GameState, player: Player) -> i32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        pieces
-            .iter()
-            .filter(|p| p.square >= 4 && p.square <= 11)
-            .count() as i32
-    }
-
-    fn capture_opportunities(state: &GameState, player: Player) -> i32 {
-        let mut opportunities = 0;
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        for piece in pieces {
-            if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                let square = piece.square as u8;
-                if !ROSETTE_SQUARES.contains(&square) {
-                    opportunities += 1;
-                }
-            }
-        }
-
-        opportunities
-    }
-
-    fn vulnerability_to_capture(state: &GameState, player: Player) -> i32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        pieces
-            .iter()
-            .filter(|p| p.square >= 0 && p.square < BOARD_SIZE as i8)
-            .filter(|p| !ROSETTE_SQUARES.contains(&(p.square as u8)))
-            .count() as i32
-    }
-
-    fn progress_towards_finish(state: &GameState, player: Player) -> f32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        let track = if player == Player::Player1 {
-            &[3, 2, 1, 0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-        } else {
-            &[19, 18, 17, 16, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15]
-        };
-
-        let mut total_progress = 0.0;
-        let mut count = 0;
-
-        for piece in pieces {
-            if piece.square == 20 {
-                total_progress += 1.0;
-                count += 1;
-            } else if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                if let Some(track_pos) = track.iter().position(|&s| s as i8 == piece.square) {
-                    total_progress += track_pos as f32 / track.len() as f32;
-                    count += 1;
-                }
-            }
-        }
-
-        if count > 0 {
-            total_progress / count as f32
-        } else {
-            0.0
-        }
-    }
-
-    // NEW: Advanced strategic features
-    fn mobility_score(state: &GameState, player: Player) -> f32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        let mut mobility = 0.0;
-        for piece in pieces {
-            if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                let track = if player == Player::Player1 {
-                    &[3, 2, 1, 0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-                } else {
-                    &[19, 18, 17, 16, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15]
-                };
-
-                if let Some(track_pos) = track.iter().position(|&s| s as i8 == piece.square) {
-                    let remaining_steps = track.len() - track_pos;
-                    mobility += remaining_steps as f32;
-                }
-            }
-        }
-        mobility / PIECES_PER_PLAYER as f32
-    }
-
-    fn development_score(state: &GameState, player: Player) -> f32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        let mut developed_pieces = 0;
-        for piece in pieces {
-            if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                developed_pieces += 1;
-            }
-        }
-        developed_pieces as f32 / PIECES_PER_PLAYER as f32
-    }
-
-    fn tactical_opportunities(state: &GameState, player: Player) -> i32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        let mut opportunities = 0;
-        for piece in pieces {
-            if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                let square = piece.square as u8;
-                if !ROSETTE_SQUARES.contains(&square) {
-                    opportunities += 1;
-                }
-            }
-        }
-        opportunities
-    }
-
-    fn rosette_safety_score(state: &GameState, player: Player) -> f32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        let mut safety_score = 0.0;
-        for piece in pieces {
-            if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                if ROSETTE_SQUARES.contains(&(piece.square as u8)) {
-                    safety_score += 1.0;
-                }
-            }
-        }
-        safety_score / PIECES_PER_PLAYER as f32
-    }
-
-    fn center_control_score(state: &GameState, player: Player) -> f32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        let mut center_control = 0.0;
-        for piece in pieces {
-            if piece.square >= 4 && piece.square <= 11 {
-                center_control += 1.0;
-            }
-        }
-        center_control / PIECES_PER_PLAYER as f32
-    }
-
-    fn piece_coordination_score(state: &GameState, player: Player) -> f32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        let mut coordination = 0.0;
-        let mut on_board_pieces = Vec::new();
-
-        for piece in pieces {
-            if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                on_board_pieces.push(piece.square);
-            }
-        }
-
-        for i in 0..on_board_pieces.len() {
-            for j in (i + 1)..on_board_pieces.len() {
-                let distance = (on_board_pieces[i] - on_board_pieces[j]).abs();
-                if distance <= 3 {
-                    coordination += 1.0;
-                }
-            }
-        }
-
-        if on_board_pieces.len() > 1 {
-            coordination / (on_board_pieces.len() * (on_board_pieces.len() - 1) / 2) as f32
-        } else {
-            0.0
-        }
-    }
-
-    fn attack_pressure_score(state: &GameState, player: Player) -> f32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        let opponent_pieces = if player == Player::Player1 {
-            &state.player2_pieces
-        } else {
-            &state.player1_pieces
-        };
-
-        let mut pressure = 0.0;
-        let mut valid_pieces = 0;
-
-        for piece in pieces {
-            if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                valid_pieces += 1;
-                for opponent_piece in opponent_pieces {
-                    if opponent_piece.square >= 0 && opponent_piece.square < BOARD_SIZE as i8 {
-                        let distance = (piece.square - opponent_piece.square).abs();
-                        if distance <= 4 {
-                            pressure += 1.0 / (distance as f32 + 1.0);
+                        // Score based on consecutive pieces and blocking
+                        match consecutive {
+                            4 => threats += 1000, // Winning line
+                            3 => {
+                                if blocked == 0 {
+                                    threats += 100
+                                } else {
+                                    threats += 10
+                                }
+                            }
+                            2 => {
+                                if blocked == 0 {
+                                    threats += 10
+                                } else {
+                                    threats += 1
+                                }
+                            }
+                            _ => {}
                         }
                     }
                 }
             }
         }
-
-        // Normalize by the number of valid pieces to keep values reasonable
-        if valid_pieces > 0 {
-            pressure / valid_pieces as f32
-        } else {
-            0.0
-        }
+        threats
     }
 
-    fn defensive_structure_score(state: &GameState, player: Player) -> f32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        let mut defensive_score = 0.0;
-        for piece in pieces {
-            if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                if ROSETTE_SQUARES.contains(&(piece.square as u8)) {
-                    defensive_score += 2.0;
-                } else {
-                    defensive_score += 0.5;
+    fn mobility_score(state: &GameState, player: Player) -> i32 {
+        let mut mobility = 0;
+        for col in 0..COLS {
+            if state.can_place_in_column(col) {
+                // Test the move
+                let mut test_state = state.clone();
+                if test_state.make_move(col as u8).is_ok() {
+                    // Check if this creates a threat
+                    let threat_score = Self::threat_score(&test_state, player);
+                    mobility += threat_score / 10; // Normalize
                 }
             }
         }
-        defensive_score / PIECES_PER_PLAYER as f32
+        mobility
     }
 
-    fn endgame_evaluation(state: &GameState, player: Player) -> f32 {
-        let finished_pieces = Self::finished_pieces_count(state, player);
-        let total_pieces = PIECES_PER_PLAYER as i32;
-        finished_pieces as f32 / total_pieces as f32
-    }
-
-    fn time_advantage_score(state: &GameState, player: Player) -> f32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
-
-        let mut time_score = 0.0;
-        for piece in pieces {
-            if piece.square == 20 {
-                time_score += 1.0;
-            } else if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                time_score += 0.5;
+    fn vertical_control_score(state: &GameState, player: Player) -> i32 {
+        let mut score = 0;
+        for col in 0..COLS {
+            let mut consecutive = 0;
+            for row in 0..ROWS {
+                if state.board[col][row] == Cell::from_player(player) {
+                    consecutive += 1;
+                } else {
+                    consecutive = 0;
+                }
+                score += consecutive;
             }
         }
-        time_score / PIECES_PER_PLAYER as f32
+        score
     }
 
-    fn material_balance_score(state: &GameState) -> f32 {
-        let p1_finished = Self::finished_pieces_count(state, Player::Player1);
-        let p2_finished = Self::finished_pieces_count(state, Player::Player2);
-        (p1_finished - p2_finished) as f32 / PIECES_PER_PLAYER as f32
+    fn horizontal_control_score(state: &GameState, player: Player) -> i32 {
+        let mut score = 0;
+        for row in 0..ROWS {
+            let mut consecutive = 0;
+            for col in 0..COLS {
+                if state.board[col][row] == Cell::from_player(player) {
+                    consecutive += 1;
+                } else {
+                    consecutive = 0;
+                }
+                score += consecutive;
+            }
+        }
+        score
+    }
+
+    fn diagonal_control_score(state: &GameState, player: Player) -> i32 {
+        let mut score = 0;
+        let directions = [(1, 1), (1, -1)]; // Diagonal directions
+
+        for start_col in 0..COLS {
+            for start_row in 0..ROWS {
+                for (dcol, drow) in directions {
+                    let mut consecutive = 0;
+                    let mut c = start_col as i32;
+                    let mut r = start_row as i32;
+
+                    while c >= 0 && c < COLS as i32 && r >= 0 && r < ROWS as i32 {
+                        if state.board[c as usize][r as usize] == Cell::from_player(player) {
+                            consecutive += 1;
+                        } else {
+                            consecutive = 0;
+                        }
+                        score += consecutive;
+                        c += dcol;
+                        r += drow;
+                    }
+                }
+            }
+        }
+        score
+    }
+
+    fn blocking_score(state: &GameState, player: Player) -> i32 {
+        let opponent = player.opponent();
+        let mut blocks = 0;
+
+        // Count how many opponent threats we can block
+        for col in 0..COLS {
+            if state.can_place_in_column(col) {
+                let mut test_state = state.clone();
+                if test_state.make_move(col as u8).is_ok() {
+                    let opponent_threats = Self::threat_score(&test_state, opponent);
+                    blocks += opponent_threats / 10;
+                }
+            }
+        }
+        blocks
+    }
+
+    fn height_advantage_score(state: &GameState, player: Player) -> i32 {
+        let mut score = 0;
+        for col in 0..COLS {
+            for row in 0..ROWS {
+                if state.board[col][row] == Cell::from_player(player) {
+                    // Higher pieces (lower row numbers) are more valuable
+                    score += (ROWS - row) as i32;
+                }
+            }
+        }
+        score
+    }
+
+    fn material_balance_score(state: &GameState) -> i32 {
+        let p1_pieces = Self::pieces_count(state, Player::Player1);
+        let p2_pieces = Self::pieces_count(state, Player::Player2);
+        p2_pieces - p1_pieces
     }
 
     fn positional_advantage_score(state: &GameState, player: Player) -> f32 {
-        let pieces = if player == Player::Player1 {
-            &state.player1_pieces
-        } else {
-            &state.player2_pieces
-        };
+        let center_score = Self::center_control_score(state, player) as f32;
+        let height_score = Self::height_advantage_score(state, player) as f32;
+        let threat_score = Self::threat_score(state, player) as f32;
 
-        let track = if player == Player::Player1 {
-            &[3, 2, 1, 0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-        } else {
-            &[19, 18, 17, 16, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15]
-        };
+        (center_score * 0.3 + height_score * 0.2 + threat_score * 0.5) / 100.0
+    }
 
-        let mut positional_score = 0.0;
-        for piece in pieces {
-            if piece.square >= 0 && piece.square < BOARD_SIZE as i8 {
-                if let Some(track_pos) = track.iter().position(|&s| s as i8 == piece.square) {
-                    positional_score += track_pos as f32 / track.len() as f32;
-                }
-            }
+    fn endgame_evaluation(state: &GameState, player: Player) -> f32 {
+        let total_pieces =
+            Self::pieces_count(state, Player::Player1) + Self::pieces_count(state, Player::Player2);
+        let max_pieces = (ROWS * COLS) as i32;
+
+        if total_pieces > max_pieces * 3 / 4 {
+            // Endgame - focus on immediate threats
+            Self::threat_score(state, player) as f32 / 1000.0
+        } else {
+            // Opening/middlegame - focus on position
+            Self::positional_advantage_score(state, player)
         }
-        positional_score / PIECES_PER_PLAYER as f32
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::GameState;
 
     #[test]
     fn test_features_size() {
@@ -627,307 +357,79 @@ mod tests {
     }
 
     #[test]
-    fn test_features_initial_state() {
+    fn test_empty_board_features() {
         let state = GameState::new();
         let features = GameFeatures::from_game_state(&state);
-        assert_eq!(features.features[0], -1.0);
-        assert_eq!(features.features[13], -1.0);
-    }
 
-    #[test]
-    fn test_piece_position_features() {
-        let mut state = GameState::new();
-
-        // Move some pieces to specific positions
-        state.player1_pieces[0].square = 5;
-        state.player1_pieces[1].square = 10;
-        state.player2_pieces[0].square = 15;
-
-        let features = GameFeatures::from_game_state(&state);
-
-        assert_eq!(features.features.len(), SIZE);
-
-        // Verify that some features reflect the piece positions
-        let mut found_position_features = false;
-        for &feature in &features.features {
-            if feature == 5.0 / 20.0 || feature == 10.0 / 20.0 || feature == 15.0 / 20.0 {
-                found_position_features = true;
-                break;
-            }
+        // First 42 features should be 0.0 (empty board)
+        for i in 0..42 {
+            assert_eq!(features.features[i], 0.0);
         }
-        assert!(
-            found_position_features,
-            "Should have position-based features"
-        );
     }
 
     #[test]
-    fn test_board_occupancy_features() {
+    fn test_piece_count_features() {
         let mut state = GameState::new();
-
-        // Place pieces on board
-        state.player1_pieces[0].square = 5;
-        state.player2_pieces[0].square = 10;
-
-        let features = GameFeatures::from_game_state(&state);
-
-        assert_eq!(features.features.len(), SIZE);
-    }
-
-    #[test]
-    fn test_finished_pieces_features() {
-        let mut state = GameState::new();
-
-        // Finish some pieces
-        state.player1_pieces[0].square = 20;
-        state.player1_pieces[1].square = 20;
-        state.player2_pieces[0].square = 20;
-
-        let features = GameFeatures::from_game_state(&state);
-
-        // Check finished pieces count features
-        let p1_finished_idx = 32; // Strategic features start around here
-        let p2_finished_idx = 34;
-
-        // These indices might need adjustment based on exact feature ordering
-        // The test verifies the feature extraction works, not exact positions
-        assert!(features.features.len() > p1_finished_idx);
-        assert!(features.features.len() > p2_finished_idx);
-    }
-
-    #[test]
-    fn test_rosette_control_score() {
-        let mut state = GameState::new();
-
-        // Place pieces on rosette squares
-        state.player1_pieces[0].square = 0; // Rosette square
-        state.player2_pieces[0].square = 7; // Rosette square
-
-        let features = GameFeatures::from_game_state(&state);
-
-        // Rosette control should be computed
-        // The exact feature index depends on the feature ordering
-        // This test verifies the feature extraction completes successfully
-        assert_eq!(features.features.len(), SIZE);
-    }
-
-    #[test]
-    fn test_current_player_feature() {
-        let mut state = GameState::new();
-
-        // Test player 1's turn
+        state.make_move(3).unwrap(); // Player 1 places a piece
         state.current_player = Player::Player1;
-        let features1 = GameFeatures::from_game_state(&state);
+        state.make_move(4).unwrap(); // Player 1 places another piece
 
-        // Test player 2's turn
-        state.current_player = Player::Player2;
-        let features2 = GameFeatures::from_game_state(&state);
-
-        // Current player feature should be different
-        // Find the current player feature (usually around feature 50-60)
-        let mut found_difference = false;
-        for i in 0..SIZE {
-            if (features1.features[i] - features2.features[i]).abs() > 1e-6 {
-                found_difference = true;
-                break;
-            }
-        }
-        assert!(
-            found_difference,
-            "Current player feature should be different"
-        );
-    }
-
-    #[test]
-    fn test_dice_roll_feature() {
-        let mut state = GameState::new();
-
-        // Test different dice rolls
-        state.dice_roll = 0;
-        let features0 = GameFeatures::from_game_state(&state);
-
-        state.dice_roll = 4;
-        let features4 = GameFeatures::from_game_state(&state);
-
-        // Dice roll feature should be different
-        let mut found_difference = false;
-        for i in 0..SIZE {
-            if (features0.features[i] - features4.features[i]).abs() > 1e-6 {
-                found_difference = true;
-                break;
-            }
-        }
-        assert!(found_difference, "Dice roll feature should be different");
-    }
-
-    #[test]
-    fn test_valid_moves_count_feature() {
-        let mut state = GameState::new();
-
-        // Initial state should have 7 valid moves
-        state.dice_roll = 1;
         let features = GameFeatures::from_game_state(&state);
 
-        // Valid moves count should be normalized
-        // This test verifies the feature extraction works
-        assert_eq!(features.features.len(), SIZE);
+        // Should have 2 pieces for Player 1
+        let p1_pieces_idx = 44; // Strategic features start at 42, pieces_count is at index 44
+        assert_eq!(features.features[p1_pieces_idx], 2.0);
     }
 
     #[test]
-    fn test_feature_normalization() {
+    fn test_center_control_features() {
+        let mut state = GameState::new();
+        state.make_move(3).unwrap(); // Player 1 places in center
+
+        let features = GameFeatures::from_game_state(&state);
+
+        // Center control should be computed
+        let center_control_idx = 42; // First strategic feature
+        assert!(features.features[center_control_idx] > 0.0);
+    }
+
+    #[test]
+    fn test_threat_score_features() {
+        let mut state = GameState::new();
+        // Create a threat
+        state.make_move(0).unwrap();
+        state.current_player = Player::Player1;
+        state.make_move(1).unwrap();
+        state.current_player = Player::Player1;
+        state.make_move(2).unwrap();
+
+        let features = GameFeatures::from_game_state(&state);
+
+        // Threat score should be computed
+        let threat_score_idx = 44; // Threat score feature index
+        assert!(features.features[threat_score_idx] > 0.0);
+    }
+
+    #[test]
+    fn test_features_normalization() {
         let state = GameState::new();
         let features = GameFeatures::from_game_state(&state);
 
-        // All features should be in reasonable ranges (allow flexibility for strategic features)
+        // All features should be within bounds
         for (i, &feature) in features.features.iter().enumerate() {
-            assert!(
-                feature >= -15.0 && feature <= 15.0,
-                "Feature {} out of range: {}",
-                i,
-                feature
-            );
+            assert!(feature >= -10.0, "Feature {} is too low: {}", i, feature);
+            assert!(feature <= 10.0, "Feature {} is too high: {}", i, feature);
         }
     }
 
     #[test]
-    fn test_feature_consistency() {
-        let state = GameState::new();
-
-        // Extract features multiple times
-        let features1 = GameFeatures::from_game_state(&state);
-        let features2 = GameFeatures::from_game_state(&state);
-
-        // Should be identical for same state
-        for i in 0..SIZE {
-            assert!(
-                (features1.features[i] - features2.features[i]).abs() < 1e-6,
-                "Features should be consistent: index {}, values {} vs {}",
-                i,
-                features1.features[i],
-                features2.features[i]
-            );
-        }
-    }
-
-    #[test]
-    fn test_feature_array_conversion() {
+    fn test_features_no_nan_or_infinite() {
         let state = GameState::new();
         let features = GameFeatures::from_game_state(&state);
-        let array = features.to_array();
 
-        assert_eq!(array.len(), SIZE);
-        for i in 0..SIZE {
-            assert!((array[i] - features.features[i]).abs() < 1e-6);
-        }
-    }
-
-    #[test]
-    fn test_capture_opportunities_feature() {
-        let mut state = GameState::new();
-
-        // Create capture opportunity
-        state.player1_pieces[0].square = 5;
-        state.player2_pieces[0].square = 5;
-
-        let features = GameFeatures::from_game_state(&state);
-
-        // Capture opportunities should be computed
-        assert_eq!(features.features.len(), SIZE);
-    }
-
-    #[test]
-    fn test_vulnerability_to_capture_feature() {
-        let mut state = GameState::new();
-
-        // Create vulnerable position
-        state.player1_pieces[0].square = 5;
-        state.player2_pieces[0].square = 4; // One move away
-
-        let features = GameFeatures::from_game_state(&state);
-
-        // Vulnerability should be computed
-        assert_eq!(features.features.len(), SIZE);
-    }
-
-    #[test]
-    fn test_progress_towards_finish_feature() {
-        let mut state = GameState::new();
-
-        // Move pieces towards finish
-        state.player1_pieces[0].square = 15; // Close to finish
-        state.player1_pieces[1].square = 5; // Midway
-
-        let features = GameFeatures::from_game_state(&state);
-
-        // Progress should be computed
-        assert_eq!(features.features.len(), SIZE);
-    }
-
-    #[test]
-    fn test_advanced_strategic_features() {
-        let mut state = GameState::new();
-
-        // Create complex position
-        state.player1_pieces[0].square = 7; // Rosette
-        state.player1_pieces[1].square = 10; // Center
-        state.player2_pieces[0].square = 15; // Near finish
-
-        let features = GameFeatures::from_game_state(&state);
-
-        // All advanced features should be computed
-        assert_eq!(features.features.len(), SIZE);
-
-        // Check that no features are NaN or infinite
         for (i, &feature) in features.features.iter().enumerate() {
             assert!(!feature.is_nan(), "Feature {} is NaN", i);
             assert!(!feature.is_infinite(), "Feature {} is infinite", i);
         }
-    }
-
-    #[test]
-    fn test_feature_completeness() {
-        let state = GameState::new();
-        let features = GameFeatures::from_game_state(&state);
-
-        // All 150 features should be filled
-        let non_zero_count = features.features.iter().filter(|&&x| x != 0.0).count();
-
-        // Should have reasonable number of non-zero features
-        // (not all zero, but not all non-zero either)
-        assert!(
-            non_zero_count > 10,
-            "Too few non-zero features: {}",
-            non_zero_count
-        );
-        assert!(
-            non_zero_count < SIZE,
-            "All features should not be non-zero: {}",
-            non_zero_count
-        );
-    }
-
-    #[test]
-    fn test_feature_sensitivity() {
-        let mut state = GameState::new();
-
-        // Test that small changes in game state produce different features
-        let features1 = GameFeatures::from_game_state(&state);
-
-        // Change current player
-        state.current_player = Player::Player2;
-        let features2 = GameFeatures::from_game_state(&state);
-
-        // Should be different
-        let mut differences = 0;
-        for i in 0..SIZE {
-            if (features1.features[i] - features2.features[i]).abs() > 1e-6 {
-                differences += 1;
-            }
-        }
-
-        assert!(
-            differences > 0,
-            "Features should be sensitive to game state changes"
-        );
     }
 }

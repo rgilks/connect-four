@@ -1,4 +1,6 @@
-use rgou_ai_core::training::{Trainer, TrainingConfig};
+use connect_four_ai_core::training::{
+    evaluate_ai_performance, train_genetic_algorithm, TrainingConfig,
+};
 use std::env;
 use std::time::Instant;
 
@@ -6,7 +8,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
-        println!("Usage: {} <train|generate_data> [config_file]", args[0]);
+        println!("Usage: {} <train|evaluate> [config_file]", args[0]);
+        println!();
+        println!("Commands:");
+        println!("  train     - Run genetic algorithm training");
+        println!("  evaluate  - Evaluate AI performance");
         return Ok(());
     }
 
@@ -14,110 +20,128 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match command.as_str() {
         "train" => {
-            // Full training mode
-            let num_games = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(1000);
-            let epochs = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(100);
-            let learning_rate = args.get(4).and_then(|s| s.parse().ok()).unwrap_or(0.001);
-            let batch_size = args.get(5).and_then(|s| s.parse().ok()).unwrap_or(32);
-            let depth = args.get(6).and_then(|s| s.parse().ok()).unwrap_or(3);
-            let output_file = args
-                .get(7)
-                .cloned()
-                .unwrap_or_else(|| "ml_ai_weights_rust.json".to_string());
+            // Genetic algorithm training mode
+            let population_size = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(50);
+            let generations = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(100);
+            let mutation_rate = args.get(4).and_then(|s| s.parse().ok()).unwrap_or(0.1);
+            let mutation_strength = args.get(5).and_then(|s| s.parse().ok()).unwrap_or(0.2);
+            let crossover_rate = args.get(6).and_then(|s| s.parse().ok()).unwrap_or(0.7);
+            let games_per_evaluation = args.get(7).and_then(|s| s.parse().ok()).unwrap_or(10);
 
-            println!("=== Rust ML AI Training ===");
-            println!("Games: {}", num_games);
-            println!("Epochs: {}", epochs);
-            println!("Learning Rate: {}", learning_rate);
-            println!("Batch Size: {}", batch_size);
-            println!("Search Depth: {}", depth);
-            println!("Output: {}", output_file);
-            println!("==========================");
+            println!("=== Connect Four AI Genetic Training ===");
+            println!("Population size: {}", population_size);
+            println!("Generations: {}", generations);
+            println!("Mutation rate: {}", mutation_rate);
+            println!("Mutation strength: {}", mutation_strength);
+            println!("Crossover rate: {}", crossover_rate);
+            println!("Games per evaluation: {}", games_per_evaluation);
+            println!("========================================");
 
             let start_time = Instant::now();
 
             let config = TrainingConfig {
-                num_games,
-                epochs,
-                batch_size,
-                learning_rate,
-                validation_split: 0.2,
-                depth,
-                seed: 42,
-                output_file: "temp_training_data.json".to_string(),
+                population_size,
+                generations,
+                mutation_rate,
+                mutation_strength,
+                crossover_rate,
+                tournament_size: 3,
+                games_per_evaluation,
+                max_moves_per_game: 42,
             };
 
-            let mut trainer = Trainer::new(config);
-
-            println!("\nGenerating training data...");
-            let training_data = trainer.generate_training_data();
-
-            println!("\nStarting training...");
-            let metadata = trainer.train(&training_data);
-
-            println!("\nSaving weights...");
-            trainer.save_weights(&output_file, &metadata)?;
+            println!("\n🧬 Starting genetic algorithm training...");
+            let result = train_genetic_algorithm(config);
 
             let total_time = start_time.elapsed();
 
             println!("\n=== Training Complete ===");
             println!("Total time: {:.2} seconds", total_time.as_secs_f64());
+            println!("Best fitness: {:.3}", result.best_fitness);
+            println!("Generations completed: {}", result.generation_history.len());
+            println!("Best parameters:");
             println!(
-                "Training time: {:.2} seconds",
-                metadata.training_time_seconds
+                "  Center control weight: {:.3}",
+                result.best_params.center_control_weight
             );
-            println!("Samples generated: {}", metadata.num_training_samples);
-            println!("Weights saved to: {}", output_file);
+            println!(
+                "  Piece count weight: {:.3}",
+                result.best_params.piece_count_weight
+            );
+            println!("  Threat weight: {:.3}", result.best_params.threat_weight);
+            println!(
+                "  Mobility weight: {:.3}",
+                result.best_params.mobility_weight
+            );
+            println!(
+                "  Vertical control weight: {:.3}",
+                result.best_params.vertical_control_weight
+            );
+            println!(
+                "  Horizontal control weight: {:.3}",
+                result.best_params.horizontal_control_weight
+            );
             println!("========================");
+
+            // Save the best parameters
+            let output_file = "ml/data/genetic_params/evolved.json";
+            if let Some(parent) = std::path::Path::new(output_file).parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            result.best_params.save_to_file(output_file)?;
+            println!("💾 Best parameters saved to: {}", output_file);
         }
 
-        "generate_data" => {
-            // Data generation only mode (for hybrid training)
-            let config_file = args
-                .get(2)
-                .ok_or("Config file required for generate_data")?;
+        "evaluate" => {
+            // AI performance evaluation mode
+            let num_games = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(100);
 
-            let config_content = std::fs::read_to_string(config_file)?;
-            let config: TrainingConfig = serde_json::from_str(&config_content)?;
-            
-            // Ensure the output directory exists
-            if let Some(output_path) = std::path::Path::new(&config.output_file).parent() {
-                std::fs::create_dir_all(output_path)?;
-            }
-
-            println!("=== Rust Data Generation ===");
-            println!("Games: {}", config.num_games);
-            println!("Depth: {}", config.depth);
-            println!("Output: {}", config.output_file);
-            println!("===========================");
+            println!("=== Connect Four AI Performance Evaluation ===");
+            println!("Games: {}", num_games);
+            println!("=============================================");
 
             let start_time = Instant::now();
 
-            let trainer = Trainer::new(config.clone());
+            // Load evolved parameters if available
+            let evolved_params =
+                connect_four_ai_core::genetic_params::GeneticParams::load_from_file(
+                    "ml/data/genetic_params/evolved.json",
+                )
+                .unwrap_or_else(|_| connect_four_ai_core::genetic_params::GeneticParams::default());
 
-            println!("\n🎮 Starting game generation and data preparation...");
-            let training_data = trainer.generate_training_data();
+            println!("\n📊 Evaluating AI performance...");
+            let performance = evaluate_ai_performance(&evolved_params, num_games);
 
-            // Save training data
-            println!("\n💾 Saving training data...");
-            let output_data = serde_json::to_string_pretty(&training_data)?;
-            std::fs::write(&config.output_file, output_data)?;
+            let total_time = start_time.elapsed();
 
-            let generation_time = start_time.elapsed();
-
-            println!("\n=== Data Generation Complete ===");
+            println!("\n=== Evaluation Results ===");
+            println!("Total time: {:.2} seconds", total_time.as_secs_f64());
             println!(
-                "Generation time: {:.2} seconds",
-                generation_time.as_secs_f64()
+                "Win rate: {:.1}%",
+                performance.get("win_rate").unwrap_or(&0.0) * 100.0
             );
-            println!("Generated {} training samples", training_data.len());
-            println!("Output saved to: {}", config.output_file);
-            println!("================================");
+            println!(
+                "Draw rate: {:.1}%",
+                performance.get("draw_rate").unwrap_or(&0.0) * 100.0
+            );
+            println!(
+                "Loss rate: {:.1}%",
+                performance.get("loss_rate").unwrap_or(&0.0) * 100.0
+            );
+            println!(
+                "Average moves: {:.1}",
+                performance.get("avg_moves").unwrap_or(&0.0)
+            );
+            println!(
+                "Average time per move: {:.1}ms",
+                performance.get("avg_time_ms").unwrap_or(&0.0)
+            );
+            println!("==========================");
         }
 
         _ => {
             println!("Unknown command: {}", command);
-            println!("Available commands: train, generate_data");
+            println!("Available commands: train, evaluate");
         }
     }
 

@@ -1,4 +1,4 @@
-use rgou_ai_core::{GameState, AI};
+use connect_four_ai_core::{GameState, AI};
 use std::env;
 use std::fs;
 use std::process;

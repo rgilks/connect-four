@@ -12,9 +12,9 @@ test.beforeAll(async () => {
   }
 });
 
-async function startGame(page: Page, mode: 'classic' | 'ml' | 'watch' = 'classic') {
+async function startGame(page: Page) {
   await page.goto('/');
-  await page.getByTestId(`mode-select-${mode}`).click();
+  // The game starts directly without mode selection
   await expect(page.getByTestId('game-board')).toBeVisible();
 }
 
@@ -96,38 +96,25 @@ async function verifyDatabaseSave(expectedGameType: string, expectedWinner: stri
 }
 
 test.describe('Core Game Functionality', () => {
-  test('can start a classic game and see initial state', async ({ page }) => {
-    await startGame(page, 'classic');
-    await expect(page.getByTestId('game-status-text')).toContainText('Your turn');
+  test('can start a game and see initial state', async ({ page }) => {
+    await startGame(page);
     await expect(page.getByTestId('game-board')).toBeVisible();
-  });
-
-  test('can start ML game and see AI opponent', async ({ page }) => {
-    await startGame(page, 'ml');
-    await expect(page.getByTestId('game-status-text')).toContainText('Your turn');
-    await expect(page.getByTestId('game-board')).toBeVisible();
-  });
-
-  test('can start watch mode and see AI vs AI', async ({ page }) => {
-    await startGame(page, 'watch');
-    await expect(page.getByTestId('game-status-text')).toContainText("'s turn");
-    // In watch mode, AI should make moves automatically
-    await page.waitForTimeout(2000);
-    await expect(page.getByTestId('game-status-text')).not.toBeEmpty();
+    await expect(page.getByRole('heading', { name: 'Connect 4' })).toBeVisible();
+    await expect(page.getByText('Drop your pieces to get four in a row!')).toBeVisible();
   });
 });
 
 test.describe('Game Interactions', () => {
   test.beforeEach(async ({ page }) => {
-    await startGame(page, 'classic');
+    await startGame(page);
   });
 
   test('can click on board columns', async ({ page }) => {
-    const gameBoard = page.getByTestId('game-board-component');
+    const gameBoard = page.getByTestId('game-board');
     await expect(gameBoard).toBeVisible();
 
     // Click on a column to drop a piece
-    await page.getByTestId('column-3').click();
+    await page.getByTestId('square-3-5').click();
 
     // Wait a moment for the move to complete
     await page.waitForTimeout(500);
@@ -138,7 +125,7 @@ test.describe('Game Interactions', () => {
 
   test('can make a move by clicking on a column', async ({ page }) => {
     // Click on a column to drop a piece
-    await page.getByTestId('column-3').click();
+    await page.getByTestId('square-3-5').click();
     await page.waitForTimeout(500);
 
     // Should see some change in game state
@@ -146,7 +133,7 @@ test.describe('Game Interactions', () => {
   });
 
   test('can toggle sound settings', async ({ page }) => {
-    const soundToggle = page.getByTestId('sound-toggle');
+    const soundToggle = page.getByTestId('toggle-sound');
     await expect(soundToggle).toBeVisible();
 
     // Click to toggle
@@ -158,7 +145,7 @@ test.describe('Game Interactions', () => {
   });
 
   test('can open and close help panel', async ({ page }) => {
-    await page.getByTestId('help-button').click();
+    await page.getByTestId('how-to-play').click();
     await expect(page.getByTestId('help-panel')).toBeVisible();
     await expect(page.getByTestId('help-close')).toBeVisible();
 
@@ -169,33 +156,41 @@ test.describe('Game Interactions', () => {
 
 test.describe('Game Completion and Database Saves', () => {
   async function simulateGameWin(page: Page) {
-    // Use the dev button to create a near-winning state
-    await page.getByTestId('create-near-winning-state').click();
+    // Make moves to create a winning scenario
+    // Player 1: column 0
+    await page.getByTestId('square-0-5').click();
+    await page.waitForTimeout(200);
 
-    // Wait for the state to be created
-    await page.waitForTimeout(500);
+    // Player 2: column 1
+    await page.getByTestId('square-1-5').click();
+    await page.waitForTimeout(200);
 
-    // Make a move to get closer to winning
-    await page.evaluate(() => {
-      const store = (window as any).useGameStore.getState();
-      store.actions.makeMove(3); // Make a move in column 3
-    });
+    // Player 1: column 0
+    await page.getByTestId('square-0-4').click();
+    await page.waitForTimeout(200);
 
-    // Wait for the move to process
-    await page.waitForTimeout(500);
+    // Player 2: column 1
+    await page.getByTestId('square-1-4').click();
+    await page.waitForTimeout(200);
 
-    // Make the winning move
-    await page.evaluate(() => {
-      const store = (window as any).useGameStore.getState();
-      store.actions.makeMove(6); // Move the last piece
-    });
+    // Player 1: column 0
+    await page.getByTestId('square-0-3').click();
+    await page.waitForTimeout(200);
+
+    // Player 2: column 1
+    await page.getByTestId('square-1-3').click();
+    await page.waitForTimeout(200);
+
+    // Player 1: column 0 (winning move)
+    await page.getByTestId('square-0-2').click();
+    await page.waitForTimeout(200);
 
     // Wait for game completion
     await waitForGameCompletion(page);
   }
 
   test('completes a game and shows completion overlay', async ({ page }) => {
-    await startGame(page, 'classic');
+    await startGame(page);
     await simulateGameWin(page);
 
     // Verify completion overlay
@@ -208,8 +203,8 @@ test.describe('Game Completion and Database Saves', () => {
     await expect(page.getByTestId('wins-count')).toContainText('1');
   });
 
-  test('saves completed classic game to database', async ({ page }) => {
-    await startGame(page, 'classic');
+  test('saves completed game to database', async ({ page }) => {
+    await startGame(page);
     await simulateGameWin(page);
 
     // Verify the game was saved to database
@@ -219,45 +214,25 @@ test.describe('Game Completion and Database Saves', () => {
     expect(savedGame.gameType).toBe('classic');
   });
 
-  test('saves completed ML game to database', async ({ page }) => {
-    await startGame(page, 'ml');
-    await simulateGameWin(page);
-
-    const savedGame = await verifyDatabaseSave('ml');
-    expect(savedGame).toBeTruthy();
-    expect(savedGame.winner).toBe('player1');
-    expect(savedGame.gameType).toBe('ml');
-  });
-
-  test('saves completed watch game to database', async ({ page }) => {
-    await startGame(page, 'watch');
-    await simulateGameWin(page);
-
-    const savedGame = await verifyDatabaseSave('watch');
-    expect(savedGame).toBeTruthy();
-    expect(savedGame.winner).toBe('player1');
-    expect(savedGame.gameType).toBe('watch');
-  });
-
   test('can reset game after completion', async ({ page }) => {
-    await startGame(page, 'classic');
+    await startGame(page);
     await simulateGameWin(page);
 
     // Click reset button
     await page.getByTestId('reset-game-button').click();
 
-    // Should return to mode selection
-    await expect(page.getByTestId('ai-model-selection')).toBeVisible();
+    // Should return to game board
+    await expect(page.getByTestId('game-board')).toBeVisible();
   });
 });
 
 test.describe('Error Handling and Edge Cases', () => {
   test('handles rapid column clicks gracefully', async ({ page }) => {
-    await startGame(page, 'classic');
+    await startGame(page);
 
-    // Rapidly click on columns
-    for (let i = 0; i < 5; i++) {
-      await page.getByTestId(`column-${i}`).click();
+    // Rapidly click on different columns
+    for (let i = 0; i < 3; i++) {
+      await page.getByTestId(`square-${i}-5`).click();
       await page.waitForTimeout(50);
     }
 
@@ -266,11 +241,11 @@ test.describe('Error Handling and Edge Cases', () => {
   });
 
   test('handles rapid column selections gracefully', async ({ page }) => {
-    await startGame(page, 'classic');
+    await startGame(page);
 
     // Rapidly click on different columns
     for (let i = 0; i < 3; i++) {
-      await page.getByTestId(`column-${i}`).click();
+      await page.getByTestId(`square-${i}-5`).click();
       await page.waitForTimeout(50);
     }
 
@@ -279,10 +254,10 @@ test.describe('Error Handling and Edge Cases', () => {
   });
 
   test('maintains game state during navigation', async ({ page }) => {
-    await startGame(page, 'classic');
+    await startGame(page);
 
     // Make some game progress
-    await page.getByTestId('column-3').click();
+    await page.getByTestId('square-3-5').click();
     await page.waitForTimeout(500);
 
     // Navigate away and back
@@ -292,15 +267,11 @@ test.describe('Error Handling and Edge Cases', () => {
     // Wait for the page to load and game state to be restored
     await page.waitForTimeout(1000);
 
-    // Should either be in a game (game state is persisted) or back to mode selection
-    const gameBoard = page.getByTestId('game-board');
-    const modeSelection = page.getByTestId('ai-model-selection');
+    // Should be back to game board
+    await expect(page.getByTestId('game-board')).toBeVisible();
 
-    // Check if either is visible (both are valid outcomes)
-    const gameBoardVisible = await gameBoard.isVisible();
-    const modeSelectionVisible = await modeSelection.isVisible();
-
-    expect(gameBoardVisible || modeSelectionVisible).toBe(true);
+    // Game board should be visible
+    await expect(page.getByTestId('game-board')).toBeVisible();
   });
 });
 
@@ -308,12 +279,12 @@ test.describe('Mobile Responsiveness', () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
   test('game is fully functional on mobile', async ({ page }) => {
-    await startGame(page, 'classic');
+    await startGame(page);
 
     // Verify all key elements are visible and functional
     await expect(page.getByTestId('game-board')).toBeVisible();
-    await expect(page.getByTestId('sound-toggle')).toBeVisible();
-    await expect(page.getByTestId('help-button')).toBeVisible();
+    await expect(page.getByTestId('toggle-sound')).toBeVisible();
+    await expect(page.getByTestId('how-to-play')).toBeVisible();
 
     // Test basic interactions
     await page.getByTestId('column-3').click();

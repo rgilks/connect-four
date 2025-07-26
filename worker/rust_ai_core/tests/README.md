@@ -249,7 +249,7 @@ fn test_new_feature() {
 
 ```rust
 // tests/new_test.rs
-use rgou_ai_core::*;
+use connect_four_ai_core::*;
 
 #[test]
 fn test_new_integration() {

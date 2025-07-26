@@ -295,7 +295,7 @@ cargo install wasm-pack --version 0.12.1 --locked
 # Clean and rebuild
 cd worker/rust_ai_core
 cargo clean
-wasm-pack build --target web --out-name rgou_ai_worker -- --features wasm
+wasm-pack build --target web --out-name connect_four_ai_worker -- --features wasm
 ```
 
 #### ML AI Not Working
@@ -367,7 +367,7 @@ npm run nuke
 
    ```bash
    git clone <repository>
-   cd rgou-cloudflare
+   cd connect-four
    npm install
    ```
 
