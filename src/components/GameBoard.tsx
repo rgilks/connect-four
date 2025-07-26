@@ -167,6 +167,7 @@ export default function GameBoard({
                   style={{ cursor: isClickable ? 'pointer' : 'default' }}
                   whileHover={isClickable ? { scale: 1.02 } : {}}
                   transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  data-testid={`column-${colIndex}`}
                 >
                   {column.map((cell, rowIndex) => (
                     <GameSquare

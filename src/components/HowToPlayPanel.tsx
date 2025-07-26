@@ -35,6 +35,7 @@ export default function HowToPlayPanel({ isOpen, onClose }: HowToPlayPanelProps)
                 className="p-1.5 glass-dark rounded-lg text-white/70 hover:text-white transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                data-testid="help-close"
               >
                 <X className="w-4 h-4" />
               </motion.button>
@@ -160,7 +161,7 @@ export default function HowToPlayPanel({ isOpen, onClose }: HowToPlayPanelProps)
                 <button
                   onClick={onClose}
                   className="px-6 py-2 bg-gradient-to-r from-red-600 to-yellow-600 text-white rounded-lg font-bold hover:from-red-700 hover:to-yellow-700 transition-all duration-200 shadow-lg focus:outline-none focus:ring-2 focus:ring-red-400"
-                  data-testid="help-close"
+                  data-testid="help-close-bottom"
                 >
                   Close
                 </button>
