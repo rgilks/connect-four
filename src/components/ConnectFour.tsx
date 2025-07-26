@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ExternalLink, Github } from 'lucide-react';
+import Image from 'next/image';
 import { useGameStore, useGameState, useGameActions } from '@/lib/game-store';
 import { soundEffects } from '@/lib/sound-effects';
 import GameBoard from './GameBoard';
@@ -88,16 +89,34 @@ export default function ConnectFour() {
 
   return (
     <>
-      <a
-        href="https://github.com/rgilks/connect-four"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="GitHub Repository"
-        className="fixed bottom-5 right-4 z-50 opacity-60 hover:opacity-100 transition-opacity"
-        data-testid="github-link"
-      >
-        <Github className="w-6 h-6" />
-      </a>
+      <div className="fixed bottom-5 right-4 z-50 flex items-center space-x-3">
+        <a
+          href="https://ko-fi.com/N4N31DPNUS"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Buy me a coffee"
+          className="opacity-60 hover:opacity-100 transition-opacity"
+          data-testid="ko-fi-link"
+        >
+          <Image
+            height={36}
+            width={120}
+            style={{ border: '0px', height: '36px' }}
+            src="https://storage.ko-fi.com/cdn/kofi2.png?v=6"
+            alt="Buy Me a Coffee at ko-fi.com"
+          />
+        </a>
+        <a
+          href="https://github.com/rgilks/connect-four"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GitHub Repository"
+          className="opacity-60 hover:opacity-100 transition-opacity"
+          data-testid="github-link"
+        >
+          <Github className="w-6 h-6" />
+        </a>
+      </div>
       <AnimatedBackground />
       <div className="relative min-h-screen w-full flex items-center justify-center p-4 pb-24">
         {!isStandalone && (
