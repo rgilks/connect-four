@@ -1,0 +1,154 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { ExternalLink, Github } from 'lucide-react';
+import { useGameStore, useGameState, useGameActions } from '@/lib/game-store';
+import { soundEffects } from '@/lib/sound-effects';
+import GameBoard from './GameBoard';
+import AnimatedBackground from './AnimatedBackground';
+import HowToPlayPanel from './HowToPlayPanel';
+
+function isStandalonePWA() {
+  if (typeof window === 'undefined') return false;
+  const nav = window.navigator as Navigator & { standalone?: boolean };
+  return window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true;
+}
+
+export default function ConnectFour() {
+  const gameState = useGameState();
+  const { makeAIMove, reset } = useGameActions();
+  const aiThinking = useGameStore(state => state.aiThinking);
+
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [showHowToPlay, setShowHowToPlay] = useState(false);
+
+  useEffect(() => {
+    setIsStandalone(isStandalonePWA());
+  }, []);
+
+  useEffect(() => {
+    soundEffects.setEnabled(soundEnabled);
+  }, [soundEnabled]);
+
+  // Log initial game state
+  useEffect(() => {
+    // Game initialized
+  }, []);
+
+  // Handle AI moves
+  useEffect(() => {
+    if (
+      gameState.gameStatus === 'playing' &&
+      gameState.currentPlayer === 'player2' &&
+      !aiThinking
+    ) {
+      const timer = setTimeout(() => {
+        try {
+          makeAIMove();
+        } catch (error) {
+          console.error('AI move failed:', error);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [gameState.gameStatus, gameState.currentPlayer, aiThinking, makeAIMove]);
+
+  // Handle game completion sounds
+  useEffect(() => {
+    if (gameState.gameStatus === 'finished' && gameState.winner) {
+      setTimeout(() => {
+        if (gameState.winner === 'player1') {
+          soundEffects.gameWin();
+        } else {
+          soundEffects.gameLoss();
+        }
+      }, 500);
+    }
+  }, [gameState.gameStatus, gameState.winner]);
+
+  const handleReset = () => {
+    reset();
+  };
+
+  const toggleSound = () => {
+    const newState = soundEffects.toggle();
+    setSoundEnabled(newState);
+  };
+
+  const handleShowHowToPlay = () => {
+    setShowHowToPlay(true);
+  };
+
+  const handleCloseHowToPlay = () => {
+    setShowHowToPlay(false);
+  };
+
+  return (
+    <>
+      <a
+        href="https://github.com/rgilks/rgou-cloudflare"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="GitHub Repository"
+        className="fixed bottom-5 right-4 z-50 opacity-60 hover:opacity-100 transition-opacity"
+        data-testid="github-link"
+      >
+        <Github className="w-6 h-6" />
+      </a>
+      <AnimatedBackground />
+      <div className="relative min-h-screen w-full flex items-center justify-center p-4 pb-24">
+        {!isStandalone && (
+          <div className="hidden md:block absolute top-4 right-4 z-50">
+            <button
+              onClick={() => {
+                window.open(
+                  '/',
+                  'GamePopout',
+                  'width=420,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no'
+                );
+              }}
+              className="glass-dark rounded-lg px-4 py-2 flex items-center space-x-2 text-white/80 hover:text-white font-semibold shadow-lg backdrop-blur-md border border-white/10 transition-colors"
+              title="Pop Out Game"
+            >
+              <ExternalLink className="w-4 h-4 mr-1" />
+              <span>Pop Out Game</span>
+            </button>
+          </div>
+        )}
+
+        <div className="w-full max-w-md">
+          <motion.div
+            className="text-center mb-6"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h1 className="text-3xl font-bold text-white mb-2 neon-text">Connect 4</h1>
+            <p className="text-gray-300 text-sm">Drop your pieces to get four in a row!</p>
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-500 mt-2">
+                Status: {gameState.gameStatus} | Player: {gameState.currentPlayer} | AI Thinking:{' '}
+                {aiThinking ? 'Yes' : 'No'}
+              </div>
+            )}
+          </motion.div>
+
+          <GameBoard
+            gameState={gameState}
+            aiThinking={aiThinking}
+            onResetGame={handleReset}
+            soundEnabled={soundEnabled}
+            onToggleSound={toggleSound}
+            onShowHowToPlay={handleShowHowToPlay}
+            data-testid="game-board-component"
+          />
+        </div>
+      </div>
+
+      <HowToPlayPanel isOpen={showHowToPlay} onClose={handleCloseHowToPlay} />
+    </>
+  );
+}

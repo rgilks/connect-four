@@ -1,0 +1,10 @@
+{
+  "win_score": 10000,
+
+  "position_weight": 15,
+  "safety_bonus": 25,
+
+  "advancement_bonus": 5,
+
+  "center_column_bonus": 2
+}

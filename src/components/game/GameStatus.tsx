@@ -1,0 +1,108 @@
+'use client';
+
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { GameState } from '@/lib/types';
+import { Crown, Zap, Trophy, XCircle } from 'lucide-react';
+
+interface GameStatusProps {
+  gameState: GameState;
+  aiThinking: boolean;
+}
+
+export default function GameStatus({ gameState, aiThinking }: GameStatusProps) {
+  const getStatusMessage = () => {
+    if (gameState.gameStatus === 'finished') {
+      if (gameState.winner) {
+        return {
+          text: gameState.winner === 'player1' ? 'Red Wins!' : 'Yellow Wins!',
+          icon: gameState.winner === 'player1' ? Trophy : Zap,
+          color: gameState.winner === 'player1' ? 'text-red-400' : 'text-yellow-400',
+        };
+      } else {
+        return {
+          text: 'Draw!',
+          icon: XCircle,
+          color: 'text-gray-400',
+        };
+      }
+    }
+
+    if (gameState.currentPlayer === 'player1') {
+      return {
+        text: "Red's turn",
+        icon: Crown,
+        color: 'text-red-400',
+      };
+    } else {
+      if (aiThinking) {
+        return {
+          text: 'Yellow thinking...',
+          icon: Zap,
+          color: 'text-yellow-400',
+        };
+      }
+      return {
+        text: "Yellow's turn",
+        icon: Zap,
+        color: 'text-yellow-400',
+      };
+    }
+  };
+
+  const status = getStatusMessage();
+  const StatusIcon = status.icon;
+  const isValidIcon =
+    typeof StatusIcon === 'function' || (typeof StatusIcon === 'object' && StatusIcon !== null);
+
+  return (
+    <div className="text-center mb-3">
+      <div className="mt-2 h-10 flex flex-col justify-start relative pt-1">
+        <motion.div
+          className="flex items-center justify-center space-x-2 h-6"
+          animate={{ scale: aiThinking ? [1, 1.05, 1] : 1 }}
+          transition={{ repeat: aiThinking ? Infinity : 0, duration: 1 }}
+        >
+          {isValidIcon ? (
+            <StatusIcon className={cn('w-4 h-4', status.color)} data-testid="game-status-icon" />
+          ) : null}
+          <span
+            className={cn('font-bold text-lg', status.color, 'neon-text')}
+            data-testid="game-status-text"
+          >
+            {status.text}
+          </span>
+        </motion.div>
+
+        <AnimatePresence>
+          {aiThinking && (
+            <motion.div
+              className="absolute bottom-1 left-0 right-0 flex justify-center space-x-1"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {[...Array(3)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="w-1.5 h-1.5 bg-yellow-400 rounded-full"
+                  animate={{
+                    y: [0, -6, 0],
+                    opacity: [0.3, 1, 0.3],
+                  }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 0.8,
+                    delay: i * 0.2,
+                    ease: 'easeInOut',
+                  }}
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}

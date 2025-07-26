@@ -1,0 +1,89 @@
+# dependencies
+node_modules/
+worker/node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# build and dist
+.next/
+out/
+dist/
+build/
+worker/build/
+worker/dist/
+worker/zig-out/
+worker/zig-cache/
+worker/*.o
+worker/*.a
+worker/.zig-cache/
+worker/rust_ai_core/pkg/
+worker/rust_ai_core/target/
+worker/ml_ai_core/pkg/
+worker/ml_ai_core/target/
+worker/target/
+.open-next/
+
+# test and coverage
+coverage/
+test-results/
+playwright-report/
+
+# misc
+.DS_Store
+Thumbs.db
+*.pem
+*.swp
+*.swo
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+
+# env files
+.env*
+.env.local
+
+# Cloudflare
+.wrangler/
+wrangler.toml.backup
+
+# Local DB and cache
+local.db
+*.sqlite
+*.db
+.cache/
+.parcel-cache/
+.turbo/
+.eslintcache
+
+# Rust and wasm-pack
+src/lib/wasm/
+public/wasm/
+Cargo.lock
+
+public/ml-weights.json
+ml/scripts/target/
+ml/scripts/pkg/
+
+*.pyc
+
+# PyTorch training temporary files
+temp_config.json
+temp_training_data.json
+test_pytorch_weights*.json
+
+# Training data directory
+~/Desktop/rgou-training-data/
+
+/test_state.json
