@@ -1,8 +1,8 @@
 {
-  "center_control_weight": 1.5,
-  "piece_count_weight": 0.3,
-  "threat_weight": 3.0,
-  "mobility_weight": 1.2,
-  "vertical_control_weight": 1.8,
-  "horizontal_control_weight": 1.4
+  "center_control_weight": 1.0,
+  "piece_count_weight": 0.5,
+  "threat_weight": 2.0,
+  "mobility_weight": 0.8,
+  "vertical_control_weight": 1.2,
+  "horizontal_control_weight": 1.0
 }

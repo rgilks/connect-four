@@ -71,6 +71,8 @@ export async function makeAIMove(gameState: GameState): Promise<number> {
 
   if (wasmAI.isReady) {
     try {
+      // Clear transposition table to ensure fresh calculations
+      wasmAI.clearTranspositionTable();
       const response = await wasmAI.getBestMove(gameState, 6);
       if (response.move !== null && response.move !== undefined) {
         console.log(
@@ -80,7 +82,7 @@ export async function makeAIMove(gameState: GameState): Promise<number> {
       }
     } catch (error) {
       console.warn('WASM AI failed, trying ML AI:', error);
-      
+
       try {
         const mlResponse = await wasmAI.getMLMove(gameState);
         if (mlResponse.move !== null && mlResponse.move !== undefined) {

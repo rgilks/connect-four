@@ -57,6 +57,7 @@ class WASMAIService {
   private isLoaded = false;
   private loadPromise: Promise<void> | null = null;
 
+
   async initialize(): Promise<void> {
     if (this.loadPromise) {
       return this.loadPromise;
@@ -76,9 +77,7 @@ class WASMAIService {
     try {
       // Use dynamic import to load the WASM module
       console.log('🔄 Loading WASM module...');
-      const wasmModule = (await import(
-        '/wasm/connect_four_ai_core.js'
-      )) as WASMModule;
+      const wasmModule = (await import('/wasm/connect_four_ai_core.js')) as WASMModule;
       console.log('🔄 WASM module imported, initializing...');
       await wasmModule.default();
       console.log('🔄 WASM module initialized, creating AI instance...');
@@ -105,12 +104,12 @@ class WASMAIService {
       board,
       current_player: gameState.currentPlayer === 'player1' ? 'player1' : 'player2',
       genetic_params: {
-        center_control_weight: 1.5,
-        piece_count_weight: 0.3,
-        threat_weight: 3.0,
-        mobility_weight: 1.2,
-        vertical_control_weight: 1.8,
-        horizontal_control_weight: 1.4,
+        center_control_weight: 1.0,
+        piece_count_weight: 0.5,
+        threat_weight: 2.0,
+        mobility_weight: 0.8,
+        vertical_control_weight: 1.2,
+        horizontal_control_weight: 1.0,
       },
     };
   }
@@ -253,7 +252,10 @@ export async function initializeWASMAI(): Promise<void> {
   try {
     const weightsResponse = await fetch('/ml/data/weights/test_weights.json');
     if (weightsResponse.ok) {
-      const weights = await weightsResponse.json() as { value_weights?: number[]; policy_weights?: number[] };
+      const weights = (await weightsResponse.json()) as {
+        value_weights?: number[];
+        policy_weights?: number[];
+      };
       if (weights.value_weights && weights.policy_weights) {
         await service.loadMLWeights(weights.value_weights, weights.policy_weights);
         console.log('✅ ML weights loaded successfully (test weights from another game)');

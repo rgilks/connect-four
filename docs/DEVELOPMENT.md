@@ -158,7 +158,7 @@ npm run test:rust
 # Run slow tests (depth 4)
 npm run test:rust:slow
 
-# Test specific ML models
+# Test specific ML models (disabled until training)
 npm run test:ml-v2
 npm run test:ml-hybrid
 ```

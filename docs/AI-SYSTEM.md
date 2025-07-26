@@ -17,6 +17,8 @@ The game now uses the advanced WASM AI system with fallback to JavaScript AI:
   - WASM AI: ~17ms per move, competitive play
   - JavaScript AI: ~1ms per move, basic play
 
+**Note**: ML AI models are not yet trained and are excluded from comparison tests until training is completed.
+
 ## Available WASM AI Infrastructure (Now Integrated)
 
 The codebase contains a complete Rust/WASM AI system that's now integrated:

@@ -1,5 +1,5 @@
+use connect_four_ai_core::{genetic_params::GeneticParams, GameState, Player, AI};
 use rayon::prelude::*;
-use connect_four_ai_core::{genetic_params::GeneticParams, ml_ai::MLAI, GameState, Player, AI};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -56,11 +56,8 @@ enum AIType {
     EMMDepth2,
     EMMDepth3,
     EMMDepth4,
-    MLFast,
-    MLV2,
-    MLV4,
-    MLHybrid,
-    MLPyTorchV5,
+    EMMDepth5,
+    EMMDepth6,
 }
 
 impl AIType {
@@ -72,24 +69,12 @@ impl AIType {
             AIType::EMMDepth2 => "EMM-Depth2",
             AIType::EMMDepth3 => "EMM-Depth3",
             AIType::EMMDepth4 => "EMM-Depth4",
-            AIType::MLFast => "ML-Fast",
-            AIType::MLV2 => "ML-V2",
-            AIType::MLV4 => "ML-V4",
-            AIType::MLHybrid => "ML-Hybrid",
-            AIType::MLPyTorchV5 => "ML-PyTorch-V5",
+            AIType::EMMDepth5 => "EMM-Depth5",
+            AIType::EMMDepth6 => "EMM-Depth6",
         }
     }
 
-    fn weights_file(&self) -> Option<&'static str> {
-        match self {
-            AIType::MLFast => Some("../../ml/data/weights/ml_ai_weights_fast.json"),
-            AIType::MLV2 => Some("../../ml/data/weights/ml_ai_weights_v2.json"),
-            AIType::MLV4 => Some("../../ml/data/weights/ml_ai_weights_v4.json"),
-            AIType::MLHybrid => Some("../../ml/data/weights/ml_ai_weights_hybrid.json"),
-            AIType::MLPyTorchV5 => Some("../../ml/data/weights/ml_ai_weights_pytorch_v5.json"),
-            _ => None,
-        }
-    }
+
 }
 
 trait AIPlayer {
@@ -172,68 +157,15 @@ impl AIPlayer for ExpectiminimaxAI {
     }
 }
 
-struct MLAIPlayer {
-    ai: MLAI,
-}
-
-impl MLAIPlayer {
-    fn new(ai_type: &AIType) -> Result<Self, Box<dyn std::error::Error>> {
-        let weights_file = ai_type
-            .weights_file()
-            .ok_or("No weights file for AI type")?;
-        let weights_path = std::path::Path::new(weights_file);
-
-        if !weights_path.exists() {
-            return Err(format!("Weights file not found: {}", weights_file).into());
-        }
-
-        let mut ai = MLAI::new();
-
-        Ok(Self { ai })
-    }
-}
-
-impl AIPlayer for MLAIPlayer {
-    fn get_move(&mut self, game_state: &GameState) -> Option<usize> {
-        let response = self.ai.get_best_move(game_state);
-        response.r#move.map(|m| m as usize)
-    }
-
-    fn reset(&mut self) {
-        // ML AI doesn't need reset - weights are stateless
-    }
-}
-
 fn evaluate_position(game_state: &GameState, player: Player) -> f32 {
     // For Connect Four, we can use the built-in evaluation function
     // and adjust it based on the player
     let base_evaluation = game_state.evaluate() as f32;
-    
+
     match player {
         Player::Player1 => base_evaluation,
         Player::Player2 => -base_evaluation,
     }
-}
-
-fn load_ml_weights(weights_file: &str) -> Result<(Vec<f32>, Vec<f32>), Box<dyn std::error::Error>> {
-    let content = std::fs::read_to_string(weights_file)?;
-    let data: serde_json::Value = serde_json::from_str(&content)?;
-
-    let value_weights = data["value_weights"]
-        .as_array()
-        .ok_or("Invalid value_weights format")?
-        .iter()
-        .map(|v| v.as_f64().unwrap_or(0.0) as f32)
-        .collect();
-
-    let policy_weights = data["policy_weights"]
-        .as_array()
-        .ok_or("Invalid policy_weights format")?
-        .iter()
-        .map(|v| v.as_f64().unwrap_or(0.0) as f32)
-        .collect();
-
-    Ok((value_weights, policy_weights))
 }
 
 #[derive(Debug)]
@@ -257,7 +189,6 @@ fn play_game(
     let max_moves = 42; // Maximum moves in Connect Four (6x7 board)
 
     while !game_state.is_game_over() && moves_played < max_moves {
-
         let best_move = if game_state.current_player == Player::Player1 {
             if ai1_plays_first {
                 let start = Instant::now();
@@ -336,11 +267,23 @@ fn create_ai_player(ai_type: &AIType) -> Result<Box<dyn AIPlayer>, Box<dyn std::
                 Err("Depth 4 tests require RUN_SLOW_TESTS=1".into())
             }
         }
-        _ => {
-            // ML AI types
-            let ml_ai = MLAIPlayer::new(ai_type)?;
-            Ok(Box::new(ml_ai))
+        AIType::EMMDepth5 => {
+            // Only run depth 5 if explicitly requested
+            if std::env::var("RUN_SLOW_TESTS").is_ok() {
+                Ok(Box::new(ExpectiminimaxAI::new(5)))
+            } else {
+                Err("Depth 5 tests require RUN_SLOW_TESTS=1".into())
+            }
         }
+        AIType::EMMDepth6 => {
+            // Only run depth 6 if explicitly requested
+            if std::env::var("RUN_SLOW_TESTS").is_ok() {
+                Ok(Box::new(ExpectiminimaxAI::new(6)))
+            } else {
+                Err("Depth 6 tests require RUN_SLOW_TESTS=1".into())
+            }
+        }
+
     }
 }
 
@@ -430,23 +373,20 @@ fn test_ai_matrix() {
     );
     println!();
 
-    // Define AI types to test
+    // Define AI types to test (ML AI excluded until models are trained)
     let mut ai_types = vec![
         AIType::Random,
         AIType::Heuristic,
         AIType::EMMDepth1,
         AIType::EMMDepth2,
         AIType::EMMDepth3,
-        AIType::MLFast,
-        AIType::MLV2,
-        AIType::MLV4,
-        AIType::MLHybrid,
-        AIType::MLPyTorchV5,
     ];
 
-    // Add depth 4 only if slow tests are enabled
+    // Add depths 4-6 only if slow tests are enabled
     if std::env::var("RUN_SLOW_TESTS").is_ok() {
         ai_types.push(AIType::EMMDepth4);
+        ai_types.push(AIType::EMMDepth5);
+        ai_types.push(AIType::EMMDepth6);
     }
 
     println!("Testing {} AI types:", ai_types.len());
@@ -466,7 +406,10 @@ fn test_ai_matrix() {
         }
     }
 
-    println!("🎯 Running {} AI match combinations in parallel...", match_combinations.len());
+    println!(
+        "🎯 Running {} AI match combinations in parallel...",
+        match_combinations.len()
+    );
 
     let start_time = Instant::now();
 
@@ -579,10 +522,7 @@ fn test_ai_matrix() {
         );
         println!(
             "  Average time: {} {:.1}ms, {} {:.1}ms",
-            result.ai1,
-            result.ai1_avg_time_ms,
-            result.ai2,
-            result.ai2_avg_time_ms
+            result.ai1, result.ai1_avg_time_ms, result.ai2, result.ai2_avg_time_ms
         );
         println!();
     }
