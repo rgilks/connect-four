@@ -65,7 +65,6 @@ name = "connect-four-main"
 main = ".open-next/worker.js"
 compatibility_date = "2025-06-14"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
-account_id = "571f130502618993d848f58d27ae288d"
 
 [assets]
 directory = ".open-next/assets"
