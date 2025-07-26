@@ -72,6 +72,18 @@ export const useGameStore = create<GameStore>()(
                   state.pendingMove = { column: aiColumn, player: 'player2' };
                   state.aiThinking = false;
                 });
+
+                // Complete the AI move after animation delay
+                setTimeout(() => {
+                  const { gameState: updatedState, pendingMove } = get();
+                  if (pendingMove && pendingMove.player === 'player2') {
+                    const newState = makeMoveLogic(updatedState, pendingMove.column);
+                    set(state => {
+                      state.gameState = newState;
+                      state.pendingMove = null;
+                    });
+                  }
+                }, 800);
               }
             }
           }, 500);
