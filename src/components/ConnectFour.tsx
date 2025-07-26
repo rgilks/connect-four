@@ -126,7 +126,7 @@ export default function ConnectFour() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-3xl font-bold text-white mb-2 neon-text">Connect 4</h1>
+            <h1 className="text-4xl font-bold text-white mb-2 title-glow">Connect 4</h1>
             <p className="text-gray-300 text-sm">Drop your pieces to get four in a row!</p>
             {process.env.NODE_ENV === 'development' && (
               <div className="text-xs text-gray-500 mt-2">
