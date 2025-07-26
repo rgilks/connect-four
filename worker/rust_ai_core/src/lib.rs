@@ -220,65 +220,47 @@ impl GameState {
             return 0;
         }
 
-        // Use genetic parameters for weighted evaluation
-        let mut score = 0.0;
+        // Simple, effective evaluation function
+        let mut score = 0;
 
-        // Position evaluation (prefer center positions) - HIGHEST PRIORITY
-        let position_score = self.position_score(Player::Player2) - self.position_score(Player::Player1);
-        score += position_score as f32 * 10.0; // Very high weight for position - this should dominate
+        // Position evaluation - prefer center columns
+        for col in 0..COLS {
+            let column_value = match col {
+                3 => 100,    // Center column
+                2 | 4 => 50, // Adjacent to center
+                1 | 5 => 10, // Further from center
+                0 | 6 => 1,  // Edge columns
+                _ => 1,
+            };
 
-        // Center control evaluation (second priority)
-        let center_control_p1 = self.center_control_score(Player::Player1);
-        let center_control_p2 = self.center_control_score(Player::Player2);
-        score += (center_control_p2 - center_control_p1) as f32 * self.genetic_params.center_control_weight as f32;
-
-        // Threat evaluation (third priority)
-        let threat_p1 = self.threat_score(Player::Player1);
-        let threat_p2 = self.threat_score(Player::Player2);
-        score += (threat_p2 - threat_p1) as f32 * self.genetic_params.threat_weight as f32;
-
-        // Mobility evaluation
-        let mobility_p1 = self.mobility_score(Player::Player1);
-        let mobility_p2 = self.mobility_score(Player::Player2);
-        score += (mobility_p2 - mobility_p1) as f32 * self.genetic_params.mobility_weight as f32;
-
-        // Vertical control evaluation
-        let vertical_p1 = self.vertical_control_score(Player::Player1);
-        let vertical_p2 = self.vertical_control_score(Player::Player2);
-        score += (vertical_p2 - vertical_p1) as f32 * self.genetic_params.vertical_control_weight as f32;
-
-        // Horizontal control evaluation
-        let horizontal_p1 = self.horizontal_control_score(Player::Player1);
-        let horizontal_p2 = self.horizontal_control_score(Player::Player2);
-        score += (horizontal_p2 - horizontal_p1) as f32 * self.genetic_params.horizontal_control_weight as f32;
-
-        // Piece count evaluation (lower weight)
-        let piece_count_p1 = self.pieces_count(Player::Player1);
-        let piece_count_p2 = self.pieces_count(Player::Player2);
-        score += (piece_count_p2 - piece_count_p1) as f32 * self.genetic_params.piece_count_weight as f32;
-
-        // Additional strategic evaluations
-        score += self.blocking_score(Player::Player2) as f32 - self.blocking_score(Player::Player1) as f32;
-        score += self.height_advantage_score(Player::Player2) as f32 - self.height_advantage_score(Player::Player1) as f32;
-
-        #[cfg(feature = "wasm")]
-        {
-            use web_sys::console;
-            console::log_1(&format!("🔍 Evaluation: pos={}, center={}, threat={}, mobility={}, vert={}, horiz={}, pieces={}, total={}", 
-                position_score, 
-                center_control_p2 - center_control_p1,
-                threat_p2 - threat_p1,
-                mobility_p2 - mobility_p1,
-                vertical_p2 - vertical_p1,
-                horizontal_p2 - horizontal_p1,
-                piece_count_p2 - piece_count_p1,
-                score).into());
+            for row in 0..ROWS {
+                match self.board[col][row] {
+                    Cell::Player1 => {
+                        score += column_value * (ROWS - row) as i32;
+                    }
+                    Cell::Player2 => {
+                        score -= column_value * (ROWS - row) as i32;
+                    }
+                    Cell::Empty => {}
+                }
+            }
         }
 
-        score as i32
+        // Threat evaluation - check for potential wins
+        let threat_p1 = self.threat_score(Player::Player1);
+        let threat_p2 = self.threat_score(Player::Player2);
+        score += threat_p1 * 1000; // High weight for threats
+        score -= threat_p2 * 1000;
+
+        // The evaluation should be from the perspective of the current player
+        if self.current_player == Player::Player1 {
+            score = -score;
+        }
+
+        score
     }
 
-    fn position_score(&self, player: Player) -> i32 {
+    pub fn position_score(&self, player: Player) -> i32 {
         let mut score = 0;
 
         // Dramatically prefer center columns - this is crucial for Connect Four
@@ -301,7 +283,7 @@ impl GameState {
         score
     }
 
-    fn center_control_score(&self, player: Player) -> i32 {
+    pub fn center_control_score(&self, player: Player) -> i32 {
         let center_cols = [2, 3, 4];
         let mut score = 0;
 
@@ -316,7 +298,7 @@ impl GameState {
         score
     }
 
-    fn pieces_count(&self, player: Player) -> i32 {
+    pub fn pieces_count(&self, player: Player) -> i32 {
         let mut count = 0;
         for col in 0..COLS {
             for row in 0..ROWS {
@@ -328,7 +310,7 @@ impl GameState {
         count
     }
 
-    fn threat_score(&self, player: Player) -> i32 {
+    pub fn threat_score(&self, player: Player) -> i32 {
         let mut score = 0;
 
         // Check for immediate winning threats
@@ -675,8 +657,13 @@ impl AI {
         #[cfg(feature = "wasm")]
         {
             use web_sys::console;
-            console::log_1(&format!("🎯 Best move: column {} with score {:.2} (evaluated {} nodes, {} cache hits)", 
-                best_move, best_score, self.nodes_evaluated, self.transposition_hits).into());
+            console::log_1(
+                &format!(
+                    "🎯 Best move: column {} with score {:.2} (evaluated {} nodes, {} cache hits)",
+                    best_move, best_score, self.nodes_evaluated, self.transposition_hits
+                )
+                .into(),
+            );
         }
 
         (Some(best_move), move_evaluations)
@@ -772,7 +759,7 @@ impl HeuristicAI {
         for &col in &valid_moves {
             let mut next_state = state.clone();
             if next_state.make_move(col).is_ok() {
-                let score = -(next_state.evaluate() as f32);
+                let score = next_state.evaluate() as f32;
 
                 move_evaluations.push(MoveEvaluation {
                     column: col,
