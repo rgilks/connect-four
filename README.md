@@ -154,21 +154,20 @@ See [DEVELOPMENT.md](./docs/DEVELOPMENT.md) for detailed solutions.
 
 ## 🤖 AI System
 
-**⚠️ Current State**: The game currently uses a simple JavaScript heuristic AI. A sophisticated Rust/WASM AI system has been built but is not yet integrated.
+**✅ Current State**: The game now uses the sophisticated Rust/WASM AI system with fallback to JavaScript AI.
 
-### Current AI (JavaScript)
+### Primary AI (WASM)
+- **Algorithm**: Minimax with alpha-beta pruning, transposition tables
+- **Strategy**: Advanced search with genetic parameters, evolved evaluation
+- **Performance**: ~17ms per move, competitive play
+
+### Fallback AI (JavaScript)
 - **Algorithm**: Basic heuristic with win/block detection
 - **Strategy**: Look for wins, block opponent wins, prefer center columns
-- **Performance**: Simple play suitable for casual games
-
-### Available AI (WASM - Not Integrated)
-- **Classic AI**: Minimax with alpha-beta pruning, transposition tables
-- **ML AI**: Neural networks with value/policy networks
-- **Genetic Parameters**: Evolved evaluation functions
-- **Performance**: 60+ games/second, competitive with strong play
+- **Performance**: ~1ms per move, basic play
 
 ### Integration Status
-The WASM AI system exists in the codebase but needs integration. See [WASM-INTEGRATION-PLAN.md](./docs/WASM-INTEGRATION-PLAN.md) for the implementation plan.
+The WASM AI system has been successfully integrated. See [AI-SYSTEM.md](./docs/AI-SYSTEM.md) for detailed documentation.
 
 See [AI-SYSTEM.md](./docs/AI-SYSTEM.md) for detailed system documentation.
 

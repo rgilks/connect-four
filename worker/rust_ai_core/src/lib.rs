@@ -377,6 +377,12 @@ impl AI {
         state: &GameState,
         depth: u8,
     ) -> (Option<u8>, Vec<MoveEvaluation>) {
+        #[cfg(feature = "wasm")]
+        {
+            use web_sys::console;
+            console::log_1(&format!("🤖 WASM AI starting minimax search with depth: {}", depth).into());
+        }
+        
         self.nodes_evaluated = 0;
         self.transposition_hits = 0;
 
@@ -413,6 +419,13 @@ impl AI {
         }
 
         move_evaluations.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+
+        #[cfg(feature = "wasm")]
+        {
+            use web_sys::console;
+            console::log_1(&format!("✅ WASM AI completed search: chose column {}, evaluated {} nodes, {} transposition hits", 
+                best_move, self.nodes_evaluated, self.transposition_hits).into());
+        }
 
         (Some(best_move), move_evaluations)
     }

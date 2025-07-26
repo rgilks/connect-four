@@ -99,9 +99,9 @@ describe('Connect Four Game Logic', () => {
     expect(isDraw(currentGame.board) || currentGame.winner !== null).toBe(true);
   });
 
-  it('should make AI moves', () => {
+  it('should make AI moves', async () => {
     const game = initializeGame();
-    const aiMove = makeAIMove(game);
+    const aiMove = await makeAIMove(game);
 
     expect(aiMove).toBeGreaterThanOrEqual(0);
     expect(aiMove).toBeLessThan(7);

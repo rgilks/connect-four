@@ -73,3 +73,18 @@ global.sessionStorage = {
 vi.spyOn(console, 'log').mockImplementation(() => {});
 vi.spyOn(console, 'warn').mockImplementation(() => {});
 vi.spyOn(console, 'error').mockImplementation(() => {});
+
+// Mock WASM AI service for testing
+vi.mock('../wasm-ai-service', () => ({
+  getWASMAIService: vi.fn(() => ({
+    isReady: false,
+    initialize: vi.fn(),
+    getBestMove: vi.fn(),
+    getHeuristicMove: vi.fn(),
+    getMLMove: vi.fn(),
+    evaluatePosition: vi.fn(),
+    clearTranspositionTable: vi.fn(),
+    getTranspositionTableSize: vi.fn(),
+  })),
+  initializeWASMAI: vi.fn(),
+}));

@@ -1,0 +1,214 @@
+import { GameState } from './schemas';
+
+export interface WASMAIResponse {
+  move: number | null;
+  evaluations: Array<{
+    column: number;
+    score: number;
+    moveType: string;
+  }>;
+  nodesEvaluated: number;
+  transpositionHits: number;
+}
+
+export interface WASMHeuristicResponse {
+  move: number | null;
+  evaluations: Array<{
+    column: number;
+    score: number;
+    moveType: string;
+  }>;
+  nodesEvaluated: number;
+}
+
+export interface WASMMLResponse {
+  move: number | null;
+  evaluation: number;
+  thinking: string;
+  diagnostics: {
+    validMoves: number[];
+    moveEvaluations: Array<{
+      column: number;
+      score: number;
+      moveType: string;
+    }>;
+    valueNetworkOutput: number;
+    policyNetworkOutputs: number[];
+  };
+}
+
+interface WASMAIInstance {
+  get_best_move: (state: unknown, depth: number) => string;
+  get_heuristic_move: (state: unknown) => string;
+  get_ml_move: (state: unknown) => string;
+  evaluate_position: (state: unknown) => number;
+  clear_transposition_table: () => void;
+  get_transposition_table_size: () => number;
+}
+
+interface WASMModule {
+  default: () => Promise<void>;
+  ConnectFourAI: new () => WASMAIInstance;
+}
+
+class WASMAIService {
+  private ai: WASMAIInstance | null = null;
+  private isLoaded = false;
+  private loadPromise: Promise<void> | null = null;
+
+  async initialize(): Promise<void> {
+    if (this.loadPromise) {
+      return this.loadPromise;
+    }
+
+    this.loadPromise = this._initialize();
+    return this.loadPromise;
+  }
+
+  private async _initialize(): Promise<void> {
+    // Only load WASM in browser environment
+    if (typeof window === 'undefined') {
+      console.log('🔄 Skipping WASM AI initialization in non-browser environment');
+      return;
+    }
+
+    try {
+      // Use dynamic import to load the WASM module
+      const wasmModule = (await import('/wasm/connect_four_ai_core.js')) as WASMModule;
+      await wasmModule.default();
+      this.ai = new wasmModule.ConnectFourAI();
+      this.isLoaded = true;
+      console.log('✅ WASM AI loaded successfully');
+    } catch (error) {
+      console.error('❌ Failed to load WASM AI:', error);
+      throw new Error(`Failed to load WASM AI: ${error}`);
+    }
+  }
+
+  private convertGameStateToWASM(gameState: GameState): unknown {
+    // Convert TypeScript game state to WASM format
+    const board = gameState.board.map(col =>
+      col.map(cell => {
+        if (cell === null) return 'Empty'; // Empty
+        if (cell === 'player1') return 'Player1'; // Player1
+        return 'Player2'; // Player2
+      })
+    );
+
+    return {
+      board,
+      current_player: gameState.currentPlayer === 'player1' ? 'player1' : 'player2',
+      genetic_params: {
+        center_control_weight: 1.0,
+        piece_count_weight: 0.5,
+        threat_weight: 2.0,
+        mobility_weight: 0.8,
+        vertical_control_weight: 1.2,
+        horizontal_control_weight: 1.0,
+      },
+    };
+  }
+
+  async getBestMove(gameState: GameState, depth: number = 3): Promise<WASMAIResponse> {
+    if (!this.isLoaded || !this.ai) {
+      throw new Error('WASM AI not loaded');
+    }
+
+    const player = gameState.currentPlayer;
+    const board = gameState.board;
+    console.log(
+      `WASM AI: Starting move calculation | Player: ${player}, Depth: ${depth}, Board:`,
+      board
+    );
+
+    const start = performance.now();
+    try {
+      const wasmState = this.convertGameStateToWASM(gameState);
+      const result = this.ai.get_best_move(wasmState, depth);
+      const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+      const end = performance.now();
+      console.log(
+        `WASM AI: Move calculation complete | Player: ${player}, Depth: ${depth}, Move: ${parsed.get('move')}, Score: ${parsed.get('evaluations')?.[0]?.score ?? 'N/A'}, Nodes: ${parsed.get('nodes_evaluated')}, Cache hits: ${parsed.get('transposition_hits')}, Time: ${(end - start).toFixed(1)}ms`
+      );
+      return parsed;
+    } catch (error) {
+      console.error('WASM AI: Error during move calculation:', error);
+      throw new Error(`WASM AI calculation failed: ${error}`);
+    }
+  }
+
+  async getHeuristicMove(gameState: GameState): Promise<WASMHeuristicResponse> {
+    if (!this.isLoaded || !this.ai) {
+      throw new Error('WASM AI not loaded');
+    }
+
+    try {
+      const wasmState = this.convertGameStateToWASM(gameState);
+      const result = this.ai.get_heuristic_move(wasmState);
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    } catch (error) {
+      throw new Error(`WASM Heuristic AI calculation failed: ${error}`);
+    }
+  }
+
+  async getMLMove(gameState: GameState): Promise<WASMMLResponse> {
+    if (!this.isLoaded || !this.ai) {
+      throw new Error('WASM AI not loaded');
+    }
+
+    try {
+      const wasmState = this.convertGameStateToWASM(gameState);
+      const result = this.ai.get_ml_move(wasmState);
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    } catch (error) {
+      throw new Error(`WASM ML AI calculation failed: ${error}`);
+    }
+  }
+
+  async evaluatePosition(gameState: GameState): Promise<number> {
+    if (!this.isLoaded || !this.ai) {
+      throw new Error('WASM AI not loaded');
+    }
+
+    try {
+      const wasmState = this.convertGameStateToWASM(gameState);
+      return this.ai.evaluate_position(wasmState);
+    } catch (error) {
+      throw new Error(`WASM position evaluation failed: ${error}`);
+    }
+  }
+
+  get isReady(): boolean {
+    return this.isLoaded;
+  }
+
+  clearTranspositionTable(): void {
+    if (this.isLoaded && this.ai) {
+      this.ai.clear_transposition_table();
+    }
+  }
+
+  getTranspositionTableSize(): number {
+    if (this.isLoaded && this.ai) {
+      return this.ai.get_transposition_table_size();
+    }
+    return 0;
+  }
+}
+
+// Singleton instance
+let wasmAIInstance: WASMAIService | null = null;
+
+export function getWASMAIService(): WASMAIService {
+  if (!wasmAIInstance) {
+    wasmAIInstance = new WASMAIService();
+  }
+  return wasmAIInstance;
+}
+
+export async function initializeWASMAI(): Promise<void> {
+  const service = getWASMAIService();
+  await service.initialize();
+}
+
+export default WASMAIService;

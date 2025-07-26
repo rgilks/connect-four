@@ -1,4 +1,5 @@
 import { GameState, Player, Board, MoveRecord } from './schemas';
+import { getWASMAIService } from './wasm-ai-service';
 
 const ROWS = 6;
 const COLS = 7;
@@ -65,7 +66,29 @@ export function getValidMoves(board: Board): number[] {
     .filter(index => index !== -1);
 }
 
-export function makeAIMove(gameState: GameState): number {
+export async function makeAIMove(gameState: GameState): Promise<number> {
+  const wasmAI = getWASMAIService();
+
+  // Try WASM AI first
+  if (wasmAI.isReady) {
+    try {
+      const response = await wasmAI.getBestMove(gameState, 6);
+      if (response.move !== null && response.move !== undefined) {
+        console.log(
+          `🤖 WASM AI chose column ${response.move} (evaluated ${response.nodesEvaluated} nodes)`
+        );
+        return response.move;
+      }
+    } catch (error) {
+      console.warn('WASM AI failed, falling back to JavaScript AI:', error);
+    }
+  }
+
+  // Fallback to JavaScript AI
+  return makeAIMoveJavaScript(gameState);
+}
+
+function makeAIMoveJavaScript(gameState: GameState): number {
   const validMoves = getValidMoves(gameState.board);
   if (validMoves.length === 0) return -1;
 

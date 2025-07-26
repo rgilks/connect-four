@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { initializeGame, makeMove as makeMoveLogic, makeAIMove } from './game-logic';
+import { initializeWASMAI } from './wasm-ai-service';
 import type { GameState } from './types';
 
 const LATEST_VERSION = 1;
@@ -33,6 +34,11 @@ export const useGameStore = create<GameStore>()(
               state.aiThinking = false;
             });
           }
+          
+          // Initialize WASM AI in the background
+          initializeWASMAI().catch(error => {
+            console.warn('Failed to initialize WASM AI:', error);
+          });
         },
         makeMove: (column: number) => {
           const { gameState } = get();
@@ -53,7 +59,7 @@ export const useGameStore = create<GameStore>()(
             state.pendingMove = null;
           });
         },
-        makeAIMove: () => {
+        makeAIMove: async () => {
           const { gameState } = get();
           if (gameState.gameStatus !== 'playing' || gameState.currentPlayer !== 'player2') return;
 
@@ -62,11 +68,11 @@ export const useGameStore = create<GameStore>()(
           });
 
           // Add a small delay to make AI thinking visible
-          setTimeout(() => {
+          setTimeout(async () => {
             const currentState = get().gameState;
             if (currentState.gameStatus === 'playing' && currentState.currentPlayer === 'player2') {
               try {
-                const aiColumn = makeAIMove(currentState);
+                const aiColumn = await makeAIMove(currentState);
                 if (aiColumn !== -1) {
                   // Set pending move for AI animation
                   set(state => {
