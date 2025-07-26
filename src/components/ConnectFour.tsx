@@ -89,7 +89,7 @@ export default function ConnectFour() {
 
   return (
     <>
-      <div className="fixed bottom-5 right-4 z-50 flex items-center space-x-3">
+            <div className="fixed bottom-5 left-1/2 transform -translate-x-1/2 z-50">
         <a
           href="https://ko-fi.com/N4N31DPNUS"
           target="_blank"
@@ -98,25 +98,25 @@ export default function ConnectFour() {
           className="opacity-60 hover:opacity-100 transition-opacity"
           data-testid="ko-fi-link"
         >
-          <Image
-            height={36}
+          <Image 
+            height={36} 
             width={120}
-            style={{ border: '0px', height: '36px' }}
-            src="https://storage.ko-fi.com/cdn/kofi2.png?v=6"
-            alt="Buy Me a Coffee at ko-fi.com"
+            style={{ border: '0px', height: '36px' }} 
+            src="https://storage.ko-fi.com/cdn/kofi2.png?v=6" 
+            alt="Buy Me a Coffee at ko-fi.com" 
           />
         </a>
-        <a
-          href="https://github.com/rgilks/connect-four"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="GitHub Repository"
-          className="opacity-60 hover:opacity-100 transition-opacity"
-          data-testid="github-link"
-        >
-          <Github className="w-6 h-6" />
-        </a>
       </div>
+      <a
+        href="https://github.com/rgilks/connect-four"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="GitHub Repository"
+        className="fixed bottom-5 right-4 z-50 opacity-60 hover:opacity-100 transition-opacity"
+        data-testid="github-link"
+      >
+        <Github className="w-6 h-6" />
+      </a>
       <AnimatedBackground />
       <div className="relative min-h-screen w-full flex items-center justify-center p-4 pb-24">
         {!isStandalone && (
