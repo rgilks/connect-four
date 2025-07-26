@@ -15,7 +15,7 @@
     "type-check": "tsc --noEmit",
     "generate:sw": "GITHUB_SHA=$GITHUB_SHA node scripts/generate-sw.js",
     "build:wasm": "cd worker/rust_ai_core && wasm-pack build --target web --out-name connect_four_ai_worker -- --features wasm --no-default-features",
-    "build:wasm-assets": "npm run build:wasm && rm -rf public/wasm && mkdir -p public/wasm && cp worker/rust_ai_core/pkg/connect_four_ai_worker_bg.wasm public/wasm/connect_four_ai_worker_bg.wasm && cp worker/rust_ai_core/pkg/connect_four_ai_worker.js public/wasm/connect_four_ai_worker.js",
+    "build:wasm-assets": "npm run build:wasm && rm -rf public/wasm && mkdir -p public/wasm && cp worker/rust_ai_core/pkg/connect_four_ai_worker_bg.wasm public/wasm/connect_four_ai_worker_bg.wasm && cp worker/rust_ai_core/pkg/connect_four_ai_worker.js public/wasm/connect_four_ai_core.js",
     "build:rust-ai": "cd worker/rust_ai_core && cargo build --release",
     "nuke": "rm -rf .next .open-next .wrangler node_modules package-lock.json && npm install && npm run dev",
     "check": "npm run lint && npm run type-check && (cd worker/rust_ai_core && NUM_GAMES=4 cargo test test_ai_matrix -- --nocapture) && npm run test:coverage && npm run test:e2e",

@@ -74,7 +74,7 @@ class WASMAIService {
 
     try {
       // Use dynamic import to load the WASM module
-      const wasmModule = (await import(/* webpackIgnore: true */ '/wasm/connect_four_ai_worker.js')) as WASMModule;
+      const wasmModule = (await import(/* webpackIgnore: true */ '/wasm/connect_four_ai_core.js')) as WASMModule;
       await wasmModule.default();
       this.ai = new wasmModule.ConnectFourAI();
       this.isLoaded = true;
