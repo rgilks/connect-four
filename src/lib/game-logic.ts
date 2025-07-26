@@ -69,7 +69,6 @@ export function getValidMoves(board: Board): number[] {
 export async function makeAIMove(gameState: GameState): Promise<number> {
   const wasmAI = getWASMAIService();
 
-  // Try WASM AI first
   if (wasmAI.isReady) {
     try {
       const response = await wasmAI.getBestMove(gameState, 6);
@@ -84,7 +83,6 @@ export async function makeAIMove(gameState: GameState): Promise<number> {
     }
   }
 
-  // Fallback to JavaScript AI
   return makeAIMoveJavaScript(gameState);
 }
 

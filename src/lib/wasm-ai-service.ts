@@ -89,9 +89,9 @@ class WASMAIService {
     // Convert TypeScript game state to WASM format
     const board = gameState.board.map(col =>
       col.map(cell => {
-        if (cell === null) return 'Empty'; // Empty
-        if (cell === 'player1') return 'Player1'; // Player1
-        return 'Player2'; // Player2
+        if (cell === null) return 'Empty'; // Cell::Empty
+        if (cell === 'player1') return 'Player1'; // Cell::Player1
+        return 'Player2'; // Cell::Player2
       })
     );
 
@@ -127,10 +127,24 @@ class WASMAIService {
       const result = this.ai.get_best_move(wasmState, depth);
       const parsed = typeof result === 'string' ? JSON.parse(result) : result;
       const end = performance.now();
+
+      const move = parsed instanceof Map ? parsed.get('move') : parsed.move;
+      const nodesEvaluated =
+        parsed instanceof Map ? parsed.get('nodes_evaluated') : parsed.nodes_evaluated;
+      const transpositionHits =
+        parsed instanceof Map ? parsed.get('transposition_hits') : parsed.transposition_hits;
+      const evaluations = parsed instanceof Map ? parsed.get('evaluations') : parsed.evaluations;
+
       console.log(
-        `WASM AI: Move calculation complete | Player: ${player}, Depth: ${depth}, Move: ${parsed.get('move')}, Score: ${parsed.get('evaluations')?.[0]?.score ?? 'N/A'}, Nodes: ${parsed.get('nodes_evaluated')}, Cache hits: ${parsed.get('transposition_hits')}, Time: ${(end - start).toFixed(1)}ms`
+        `WASM AI: Move calculation complete | Player: ${player}, Depth: ${depth}, Move: ${move}, Score: ${evaluations?.[0]?.score ?? 'N/A'}, Nodes: ${nodesEvaluated}, Cache hits: ${transpositionHits}, Time: ${(end - start).toFixed(1)}ms`
       );
-      return parsed;
+
+      return {
+        move,
+        evaluations: evaluations || [],
+        nodesEvaluated,
+        transpositionHits,
+      };
     } catch (error) {
       console.error('WASM AI: Error during move calculation:', error);
       throw new Error(`WASM AI calculation failed: ${error}`);
