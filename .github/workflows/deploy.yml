@@ -26,7 +26,10 @@ jobs:
 
       - name: Install Rust tools
         run: |
-          cargo install wasm-pack --version 0.12.1 --locked || true
+          cargo install wasm-pack --version 0.13.1 --locked || true
+
+      - name: Install Wrangler
+        run: npm install -g wrangler
 
       - name: Cache Rust dependencies
         uses: actions/cache@v4

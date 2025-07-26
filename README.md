@@ -78,7 +78,7 @@ A modern web implementation of the classic Connect Four game with AI opponents, 
 
 - **Node.js 20+** ([Download](https://nodejs.org/)) - Required for Next.js 15
 - **Rust & Cargo** ([Install](https://www.rust-lang.org/tools/install)) - For WebAssembly compilation
-- **wasm-pack**: `cargo install wasm-pack --version 0.12.1 --locked` - For WASM builds
+- **wasm-pack**: `cargo install wasm-pack --version 0.13.1 --locked` - For WASM builds
 
 **Note**: This project was developed on an M1 Mac. While it should work on other platforms, some optimizations (especially for AI training) are specifically tuned for Apple Silicon.
 
