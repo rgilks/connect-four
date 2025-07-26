@@ -86,12 +86,11 @@ class WASMAIService {
   }
 
   private convertGameStateToWASM(gameState: GameState): unknown {
-    // Convert TypeScript game state to WASM format
     const board = gameState.board.map(col =>
       col.map(cell => {
-        if (cell === null) return 'Empty'; // Cell::Empty
-        if (cell === 'player1') return 'Player1'; // Cell::Player1
-        return 'Player2'; // Cell::Player2
+        if (cell === null) return 'Empty';
+        if (cell === 'player1') return 'Player1';
+        return 'Player2';
       })
     );
 
@@ -124,6 +123,7 @@ class WASMAIService {
     const start = performance.now();
     try {
       const wasmState = this.convertGameStateToWASM(gameState);
+      console.log('WASM AI: Converted state:', JSON.stringify(wasmState, null, 2));
       const result = this.ai.get_best_move(wasmState, depth);
       const parsed = typeof result === 'string' ? JSON.parse(result) : result;
       const end = performance.now();

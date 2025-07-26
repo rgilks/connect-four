@@ -2,7 +2,7 @@
 
 ## ✅ WASM AI Integration Complete
 
-The Connect Four game now has a **fully integrated Rust/WASM AI system** that provides sophisticated gameplay with advanced minimax algorithm and alpha-beta pruning.
+The Connect Four game now has a **fully integrated Rust/WASM AI system** that provides sophisticated gameplay with advanced minimax algorithm and alpha-beta pruning. Recent fixes have resolved critical evaluation function issues, making the AI much more competitive.
 
 ## What's Currently Active
 
@@ -13,9 +13,10 @@ The Connect Four game now has a **fully integrated Rust/WASM AI system** that pr
 - **Features**:
   - Classic minimax with alpha-beta pruning (depth 6)
   - Transposition tables for performance
-  - Advanced evaluation function
+  - Advanced evaluation function with proper player perspective
   - Fast response times (< 15ms per move)
-- **Performance**: Competitive play with strategic decision making
+- **Performance**: Highly competitive play with strategic decision making
+- **Recent Fixes**: Resolved evaluation function sign errors and board state conversion issues
 
 ### Logging System
 

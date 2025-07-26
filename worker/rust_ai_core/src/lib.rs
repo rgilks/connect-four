@@ -227,8 +227,8 @@ impl GameState {
                 if let Some(player) = self.board[col][row].to_player() {
                     let value = self.evaluate_position(col, row, player);
                     score += match player {
-                        Player::Player1 => value,
-                        Player::Player2 => -value,
+                        Player::Player1 => -value,
+                        Player::Player2 => value,
                     };
                 }
             }
@@ -381,6 +381,22 @@ impl AI {
         {
             use web_sys::console;
             console::log_1(&format!("🤖 WASM AI starting minimax search with depth: {}", depth).into());
+            
+            // Debug: Print board state
+            let mut board_str = String::from("Board state:\n");
+            for row in (0..ROWS).rev() {
+                for col in 0..COLS {
+                    let cell = match state.board[col][row] {
+                        Cell::Empty => ".",
+                        Cell::Player1 => "1",
+                        Cell::Player2 => "2",
+                    };
+                    board_str.push_str(cell);
+                    board_str.push(' ');
+                }
+                board_str.push('\n');
+            }
+            console::log_1(&board_str.into());
         }
         
         self.nodes_evaluated = 0;
