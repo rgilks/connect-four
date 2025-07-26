@@ -65,26 +65,44 @@ export const useGameStore = create<GameStore>()(
           setTimeout(() => {
             const currentState = get().gameState;
             if (currentState.gameStatus === 'playing' && currentState.currentPlayer === 'player2') {
-              const aiColumn = makeAIMove(currentState);
-              if (aiColumn !== -1) {
-                // Set pending move for AI animation
+              try {
+                const aiColumn = makeAIMove(currentState);
+                if (aiColumn !== -1) {
+                  // Set pending move for AI animation
+                  set(state => {
+                    state.pendingMove = { column: aiColumn, player: 'player2' };
+                    state.aiThinking = false;
+                  });
+
+                  // Complete the AI move after animation delay
+                  setTimeout(() => {
+                    const { gameState: updatedState, pendingMove } = get();
+                    if (pendingMove && pendingMove.player === 'player2') {
+                      const newState = makeMoveLogic(updatedState, pendingMove.column);
+                      set(state => {
+                        state.gameState = newState;
+                        state.pendingMove = null;
+                      });
+                    }
+                  }, 800);
+                } else {
+                  // No valid move found, reset thinking state
+                  console.warn('AI found no valid moves');
+                  set(state => {
+                    state.aiThinking = false;
+                  });
+                }
+              } catch (error) {
+                console.error('AI move calculation failed:', error);
                 set(state => {
-                  state.pendingMove = { column: aiColumn, player: 'player2' };
                   state.aiThinking = false;
                 });
-
-                // Complete the AI move after animation delay
-                setTimeout(() => {
-                  const { gameState: updatedState, pendingMove } = get();
-                  if (pendingMove && pendingMove.player === 'player2') {
-                    const newState = makeMoveLogic(updatedState, pendingMove.column);
-                    set(state => {
-                      state.gameState = newState;
-                      state.pendingMove = null;
-                    });
-                  }
-                }, 800);
               }
+            } else {
+              // Game state changed, reset thinking state
+              set(state => {
+                state.aiThinking = false;
+              });
             }
           }, 500);
         },

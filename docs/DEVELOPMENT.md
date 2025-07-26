@@ -99,6 +99,41 @@ npm run test:coverage
 
 ### Rust Testing
 
+### Recent Bug Fixes
+
+#### AI Move Stuck Issue (Fixed)
+
+**Problem**: The game would stop working during the AI's second turn, with the AI getting stuck in a "thinking" state.
+
+**Root Cause**: In the `makeAIMove` function in `src/lib/game-store.ts`, when the AI move calculation returned -1 (indicating no valid moves), the `aiThinking` state was never reset to false. This caused the AI to remain in a thinking state indefinitely.
+
+**Solution**: Added proper error handling and state reset logic:
+
+```typescript
+// Before: aiThinking state was never reset if aiColumn === -1
+if (aiColumn !== -1) {
+  set(state => {
+    state.pendingMove = { column: aiColumn, player: 'player2' };
+    state.aiThinking = false;
+  });
+}
+
+// After: Added proper error handling
+if (aiColumn !== -1) {
+  set(state => {
+    state.pendingMove = { column: aiColumn, player: 'player2' };
+    state.aiThinking = false;
+  });
+} else {
+  // No valid move found, reset thinking state
+  set(state => {
+    state.aiThinking = false;
+  });
+}
+```
+
+**Testing**: Added comprehensive error handling with try-catch blocks and console logging for debugging future issues.
+
 ```bash
 # Run Rust tests
 npm run test:rust

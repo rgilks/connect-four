@@ -6,6 +6,8 @@ async function startGame(page: Page) {
   await page.goto('/');
   // The game starts directly without mode selection
   await expect(page.getByTestId('game-board')).toBeVisible();
+  // Wait for the animation to complete (0.5s duration + buffer)
+  await page.waitForTimeout(600);
 }
 
 
