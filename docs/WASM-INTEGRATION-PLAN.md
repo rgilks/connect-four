@@ -148,9 +148,10 @@ makeAIMove: async () => {
 
 #### Step 1: Weight Loading
 
-- Load pre-trained ML weights
+- Load ML weights (currently using test weights from another game)
 - Support multiple model variants
 - Add model selection UI
+- TODO: Train neural network specifically for Connect Four
 
 #### Step 2: Training Integration
 

@@ -249,18 +249,18 @@ export async function initializeWASMAI(): Promise<void> {
   const service = getWASMAIService();
   await service.initialize();
 
-  // Try to load trained ML weights
+  // Try to load ML weights (currently using test weights from another game)
   try {
     const weightsResponse = await fetch('/ml/data/weights/test_weights.json');
     if (weightsResponse.ok) {
       const weights = await weightsResponse.json() as { value_weights?: number[]; policy_weights?: number[] };
       if (weights.value_weights && weights.policy_weights) {
         await service.loadMLWeights(weights.value_weights, weights.policy_weights);
-        console.log('✅ Trained ML weights loaded successfully');
+        console.log('✅ ML weights loaded successfully (test weights from another game)');
       }
     }
   } catch (error) {
-    console.warn('Could not load trained ML weights:', error);
+    console.warn('Could not load ML weights:', error);
   }
 }
 
