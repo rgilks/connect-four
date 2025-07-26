@@ -1,6 +1,23 @@
 # Development Guide
 
-This document provides a comprehensive guide for developing, testing, and maintaining the Connect Four project.
+## 🚨 Current AI Implementation Status
+
+**IMPORTANT**: The game currently uses a basic JavaScript heuristic AI, NOT the sophisticated Rust/WASM AI system that was built.
+
+### Current State
+
+- **Active AI**: Simple JavaScript heuristic in `src/lib/game-logic.ts`
+- **Available AI**: Advanced Rust/WASM system with minimax, neural networks, genetic algorithms
+- **Integration**: WASM AI exists but is not connected to the game
+
+### Next Steps for AI Integration
+
+1. Create `src/lib/wasm-ai-service.ts` to handle WASM module loading
+2. Replace JavaScript AI with WASM Classic AI
+3. Add AI type selection (Classic, ML, Heuristic)
+4. Implement fallback mechanisms
+
+See [TODO.md](./TODO.md) for detailed integration plan.
 
 ## Development Workflow
 

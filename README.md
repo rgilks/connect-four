@@ -154,15 +154,23 @@ See [DEVELOPMENT.md](./docs/DEVELOPMENT.md) for detailed solutions.
 
 ## 🤖 AI System
 
-The project features a minimax-based AI opponent for Connect Four, running entirely in the browser via WebAssembly. The AI system includes:
+**⚠️ Current State**: The game currently uses a simple JavaScript heuristic AI. A sophisticated Rust/WASM AI system has been built but is not yet integrated.
 
-- **Minimax Algorithm**: Perfect for deterministic Connect Four
-- **Alpha-Beta Pruning**: Optimized search performance
-- **Genetic Algorithm Training**: Automated parameter optimization
-- **Multiple Difficulty Levels**: From random to expert play
-- **Transposition Tables**: Memory-efficient caching
+### Current AI (JavaScript)
+- **Algorithm**: Basic heuristic with win/block detection
+- **Strategy**: Look for wins, block opponent wins, prefer center columns
+- **Performance**: Simple play suitable for casual games
 
-See [ARCHITECTURE.md](./docs/ARCHITECTURE.md) for detailed system design.
+### Available AI (WASM - Not Integrated)
+- **Classic AI**: Minimax with alpha-beta pruning, transposition tables
+- **ML AI**: Neural networks with value/policy networks
+- **Genetic Parameters**: Evolved evaluation functions
+- **Performance**: 60+ games/second, competitive with strong play
+
+### Integration Status
+The WASM AI system exists in the codebase but needs integration. See [WASM-INTEGRATION-PLAN.md](./docs/WASM-INTEGRATION-PLAN.md) for the implementation plan.
+
+See [AI-SYSTEM.md](./docs/AI-SYSTEM.md) for detailed system documentation.
 
 ## 🧠 AI Development
 

@@ -1,5 +1,62 @@
 # AI System Documentation
 
+**⚠️ CURRENT STATE: WASM AI NOT INTEGRATED**
+
+The sophisticated Rust/WASM AI system has been built but is **NOT currently being used** in the game. The game is running on a simple JavaScript heuristic AI instead.
+
+## Current Implementation (JavaScript Heuristic AI)
+
+The game currently uses a basic JavaScript AI in `src/lib/game-logic.ts`:
+
+- **Algorithm**: Simple heuristic with win/block detection
+- **Strategy**:
+  1. Look for winning moves
+  2. Block opponent wins
+  3. Prefer center columns (3, 2, 4, 1, 5, 0, 6)
+  4. Fallback to random moves
+- **Performance**: Basic play, no advanced search or evaluation
+
+## Available WASM AI Infrastructure (Not Used)
+
+The codebase contains a complete Rust/WASM AI system that's not integrated:
+
+- **Classic AI**: Minimax with alpha-beta pruning, transposition tables
+- **ML AI**: Neural networks with value/policy networks
+- **Genetic Parameters**: Evolved evaluation functions
+- **Training System**: Self-play training with GPU acceleration
+- **Performance**: 60+ games/second, competitive with strong play
+
+## Integration Plan
+
+### Phase 1: Basic WASM Integration
+
+1. **Import WASM module** in frontend
+2. **Replace JavaScript AI** with WASM Classic AI
+3. **Test integration** and performance
+4. **Update UI** to show AI thinking/analysis
+
+### Phase 2: Advanced Features
+
+1. **Add ML AI options** (PyTorch V5, ML-V2, etc.)
+2. **Implement AI selection** in game settings
+3. **Add move analysis** display
+4. **Performance monitoring**
+
+### Phase 3: Training Integration
+
+1. **In-browser training** capabilities
+2. **Model management** UI
+3. **Real-time AI improvement**
+
+## Next Steps
+
+1. **Immediate**: Create WASM integration service
+2. **Short-term**: Replace JavaScript AI with WASM Classic AI
+3. **Medium-term**: Add ML AI options and analysis
+4. **Long-term**: Full training system integration
+
+---
+
 This document describes the comprehensive AI system for Connect Four, including both Classic AI (minimax) and ML AI (neural network) implementations, performance analysis, testing strategies, and development history.
 
 ## Overview
