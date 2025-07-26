@@ -74,7 +74,7 @@ class WASMAIService {
 
     try {
       // Use dynamic import to load the WASM module
-      const wasmModule = (await import('/wasm/connect_four_ai_core.js')) as WASMModule;
+      const wasmModule = (await import('/wasm/connect_four_ai_worker.js')) as WASMModule;
       await wasmModule.default();
       this.ai = new wasmModule.ConnectFourAI();
       this.isLoaded = true;
@@ -96,7 +96,7 @@ class WASMAIService {
 
     return {
       board,
-      current_player: gameState.currentPlayer === 'player1' ? 'player1' : 'player2',
+      current_player: gameState.currentPlayer === 'player1' ? 'Player1' : 'Player2',
       genetic_params: {
         center_control_weight: 1.0,
         piece_count_weight: 0.5,
