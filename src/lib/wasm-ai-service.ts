@@ -96,7 +96,7 @@ class WASMAIService {
 
     return {
       board,
-      current_player: gameState.currentPlayer === 'player1' ? 'Player1' : 'Player2',
+      current_player: gameState.currentPlayer === 'player1' ? 'player1' : 'player2',
       genetic_params: {
         center_control_weight: 1.0,
         piece_count_weight: 0.5,
