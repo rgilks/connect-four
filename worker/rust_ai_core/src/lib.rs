@@ -211,8 +211,8 @@ impl GameState {
     pub fn evaluate(&self) -> i32 {
         if let Some(winner) = self.get_winner() {
             return match winner {
-                Player::Player1 => 1000,
-                Player::Player2 => -1000,
+                Player::Player1 => 10000,
+                Player::Player2 => -10000,
             };
         }
 
@@ -220,16 +220,80 @@ impl GameState {
             return 0;
         }
 
-        // Evaluate board position
+        // Use genetic parameters for weighted evaluation
+        let mut score = 0.0;
+
+        // Position evaluation (prefer center positions) - HIGHEST PRIORITY
+        let position_score = self.position_score(Player::Player2) - self.position_score(Player::Player1);
+        score += position_score as f32 * 10.0; // Very high weight for position - this should dominate
+
+        // Center control evaluation (second priority)
+        let center_control_p1 = self.center_control_score(Player::Player1);
+        let center_control_p2 = self.center_control_score(Player::Player2);
+        score += (center_control_p2 - center_control_p1) as f32 * self.genetic_params.center_control_weight as f32;
+
+        // Threat evaluation (third priority)
+        let threat_p1 = self.threat_score(Player::Player1);
+        let threat_p2 = self.threat_score(Player::Player2);
+        score += (threat_p2 - threat_p1) as f32 * self.genetic_params.threat_weight as f32;
+
+        // Mobility evaluation
+        let mobility_p1 = self.mobility_score(Player::Player1);
+        let mobility_p2 = self.mobility_score(Player::Player2);
+        score += (mobility_p2 - mobility_p1) as f32 * self.genetic_params.mobility_weight as f32;
+
+        // Vertical control evaluation
+        let vertical_p1 = self.vertical_control_score(Player::Player1);
+        let vertical_p2 = self.vertical_control_score(Player::Player2);
+        score += (vertical_p2 - vertical_p1) as f32 * self.genetic_params.vertical_control_weight as f32;
+
+        // Horizontal control evaluation
+        let horizontal_p1 = self.horizontal_control_score(Player::Player1);
+        let horizontal_p2 = self.horizontal_control_score(Player::Player2);
+        score += (horizontal_p2 - horizontal_p1) as f32 * self.genetic_params.horizontal_control_weight as f32;
+
+        // Piece count evaluation (lower weight)
+        let piece_count_p1 = self.pieces_count(Player::Player1);
+        let piece_count_p2 = self.pieces_count(Player::Player2);
+        score += (piece_count_p2 - piece_count_p1) as f32 * self.genetic_params.piece_count_weight as f32;
+
+        // Additional strategic evaluations
+        score += self.blocking_score(Player::Player2) as f32 - self.blocking_score(Player::Player1) as f32;
+        score += self.height_advantage_score(Player::Player2) as f32 - self.height_advantage_score(Player::Player1) as f32;
+
+        #[cfg(feature = "wasm")]
+        {
+            use web_sys::console;
+            console::log_1(&format!("🔍 Evaluation: pos={}, center={}, threat={}, mobility={}, vert={}, horiz={}, pieces={}, total={}", 
+                position_score, 
+                center_control_p2 - center_control_p1,
+                threat_p2 - threat_p1,
+                mobility_p2 - mobility_p1,
+                vertical_p2 - vertical_p1,
+                horizontal_p2 - horizontal_p1,
+                piece_count_p2 - piece_count_p1,
+                score).into());
+        }
+
+        score as i32
+    }
+
+    fn position_score(&self, player: Player) -> i32 {
         let mut score = 0;
+
+        // Dramatically prefer center columns - this is crucial for Connect Four
         for col in 0..COLS {
+            let column_value = match col {
+                3 => 100,    // Center column is extremely valuable
+                2 | 4 => 50, // Adjacent to center
+                1 | 5 => 10, // Further from center
+                0 | 6 => 1,  // Edge columns almost worthless
+                _ => 1,
+            };
+
             for row in 0..ROWS {
-                if let Some(player) = self.board[col][row].to_player() {
-                    let value = self.evaluate_position(col, row, player);
-                    score += match player {
-                        Player::Player1 => -value,
-                        Player::Player2 => value,
-                    };
+                if self.board[col][row] == Cell::from_player(player) {
+                    score += column_value * (ROWS - row) as i32; // Higher pieces worth more
                 }
             }
         }
@@ -237,91 +301,273 @@ impl GameState {
         score
     }
 
-    fn evaluate_position(&self, col: usize, row: usize, player: Player) -> i32 {
-        let directions = [
-            (1, 0),  // horizontal
-            (0, 1),  // vertical
-            (1, 1),  // diagonal /
-            (1, -1), // diagonal \
-        ];
+    fn center_control_score(&self, player: Player) -> i32 {
+        let center_cols = [2, 3, 4];
+        let mut score = 0;
 
-        let mut total_value = 0;
-        for (dcol, drow) in directions {
-            total_value += self.evaluate_direction(col, row, dcol, drow, player);
+        for &col in &center_cols {
+            for row in 0..ROWS {
+                if self.board[col][row] == Cell::from_player(player) {
+                    score += (ROWS - row) as i32; // Higher pieces are worth more
+                }
+            }
         }
 
-        total_value
+        score
     }
 
-    fn evaluate_direction(
+    fn pieces_count(&self, player: Player) -> i32 {
+        let mut count = 0;
+        for col in 0..COLS {
+            for row in 0..ROWS {
+                if self.board[col][row] == Cell::from_player(player) {
+                    count += 1;
+                }
+            }
+        }
+        count
+    }
+
+    fn threat_score(&self, player: Player) -> i32 {
+        let mut score = 0;
+
+        // Check for immediate winning threats
+        for col in 0..COLS {
+            for row in 0..ROWS {
+                if self.board[col][row] == Cell::Empty {
+                    // Test if placing a piece here would create a win
+                    let mut test_board = self.board;
+                    test_board[col][row] = Cell::from_player(player);
+
+                    // Check if this creates a win
+                    if self.check_win_at_test(&test_board, col, row, player) {
+                        score += 1000; // Immediate win threat
+                    } else {
+                        // Check for 3-in-a-row threats
+                        let threat_value = self.count_threats_at(&test_board, col, row, player);
+                        score += threat_value;
+                    }
+                }
+            }
+        }
+
+        score
+    }
+
+    fn count_threats_at(
         &self,
+        board: &[[Cell; ROWS]; COLS],
         col: usize,
         row: usize,
-        dcol: i32,
-        drow: i32,
         player: Player,
     ) -> i32 {
-        let mut consecutive = 0;
-        let mut blocked = 0;
+        let directions = [(1, 0), (0, 1), (1, 1), (1, -1)];
+        let mut total_threats = 0;
 
-        // Count consecutive pieces in positive direction
-        let mut c = col as i32;
-        let mut r = row as i32;
-        while c >= 0 && c < COLS as i32 && r >= 0 && r < ROWS as i32 {
-            if self.board[c as usize][r as usize] == Cell::from_player(player) {
-                consecutive += 1;
-                c += dcol;
-                r += drow;
-            } else {
-                if self.board[c as usize][r as usize] != Cell::Empty {
-                    blocked += 1;
+        for (dcol, drow) in directions {
+            let mut consecutive = 0;
+            let mut blocked = 0;
+
+            // Count in positive direction
+            let mut c = col as i32;
+            let mut r = row as i32;
+            while c >= 0 && c < COLS as i32 && r >= 0 && r < ROWS as i32 {
+                if board[c as usize][r as usize] == Cell::from_player(player) {
+                    consecutive += 1;
+                    c += dcol;
+                    r += drow;
+                } else {
+                    if board[c as usize][r as usize] != Cell::Empty {
+                        blocked += 1;
+                    }
+                    break;
                 }
-                break;
+            }
+
+            // Count in negative direction
+            c = col as i32 - dcol;
+            r = row as i32 - drow;
+            while c >= 0 && c < COLS as i32 && r >= 0 && r < ROWS as i32 {
+                if board[c as usize][r as usize] == Cell::from_player(player) {
+                    consecutive += 1;
+                    c -= dcol;
+                    r -= drow;
+                } else {
+                    if board[c as usize][r as usize] != Cell::Empty {
+                        blocked += 1;
+                    }
+                    break;
+                }
+            }
+
+            // Score based on consecutive pieces
+            match consecutive {
+                4 => total_threats += 1000,
+                3 => total_threats += if blocked == 0 { 100 } else { 10 },
+                2 => total_threats += if blocked == 0 { 10 } else { 1 },
+                1 => total_threats += if blocked == 0 { 1 } else { 0 },
+                _ => {}
             }
         }
 
-        // Count consecutive pieces in negative direction
-        c = col as i32 - dcol;
-        r = row as i32 - drow;
-        while c >= 0 && c < COLS as i32 && r >= 0 && r < ROWS as i32 {
-            if self.board[c as usize][r as usize] == Cell::from_player(player) {
-                consecutive += 1;
-                c -= dcol;
-                r -= drow;
-            } else {
-                if self.board[c as usize][r as usize] != Cell::Empty {
-                    blocked += 1;
+        total_threats
+    }
+
+    fn mobility_score(&self, player: Player) -> i32 {
+        let mut score = 0;
+
+        // Count valid moves for this player
+        let valid_moves = self.get_valid_moves();
+        score += valid_moves.len() as i32;
+
+        // Bonus for moves that don't give opponent immediate wins
+        for &col in &valid_moves {
+            let mut test_state = self.clone();
+            if test_state.make_move(col).is_ok() {
+                // Check if opponent has immediate winning move
+                let opponent_moves = test_state.get_valid_moves();
+                let mut opponent_has_win = false;
+
+                for &opp_col in &opponent_moves {
+                    let mut opp_test = test_state.clone();
+                    if opp_test.make_move(opp_col).is_ok() {
+                        if opp_test.get_winner() == Some(player.opponent()) {
+                            opponent_has_win = true;
+                            break;
+                        }
+                    }
                 }
-                break;
+
+                if !opponent_has_win {
+                    score += 5; // Bonus for safe moves
+                }
             }
         }
 
-        // Score based on consecutive pieces and blocking
-        match consecutive {
-            4 => 1000, // Winning line
-            3 => {
-                if blocked == 0 {
-                    100
+        score
+    }
+
+    fn vertical_control_score(&self, player: Player) -> i32 {
+        let mut score = 0;
+
+        for col in 0..COLS {
+            let mut consecutive = 0;
+            for row in 0..ROWS {
+                if self.board[col][row] == Cell::from_player(player) {
+                    consecutive += 1;
+                    score += consecutive; // Stacked pieces are worth more
                 } else {
-                    10
+                    consecutive = 0;
                 }
             }
-            2 => {
-                if blocked == 0 {
-                    10
-                } else {
-                    1
-                }
-            }
-            1 => {
-                if blocked == 0 {
-                    1
-                } else {
-                    0
-                }
-            }
-            _ => 0,
         }
+
+        score
+    }
+
+    fn horizontal_control_score(&self, player: Player) -> i32 {
+        let mut score = 0;
+
+        for row in 0..ROWS {
+            let mut consecutive = 0;
+            for col in 0..COLS {
+                if self.board[col][row] == Cell::from_player(player) {
+                    consecutive += 1;
+                    score += consecutive * consecutive; // Quadratic bonus for consecutive pieces
+                } else {
+                    consecutive = 0;
+                }
+            }
+        }
+
+        score
+    }
+
+    fn blocking_score(&self, player: Player) -> i32 {
+        let opponent = player.opponent();
+        let mut score = 0;
+
+        // Check how many opponent threats we can block
+        for col in 0..COLS {
+            for row in 0..ROWS {
+                if self.board[col][row] == Cell::Empty {
+                    let mut test_board = self.board;
+                    test_board[col][row] = Cell::from_player(opponent);
+
+                    if self.check_win_at_test(&test_board, col, row, opponent) {
+                        score += 50; // High value for blocking opponent wins
+                    }
+                }
+            }
+        }
+
+        score
+    }
+
+    fn height_advantage_score(&self, _player: Player) -> i32 {
+        let mut score = 0;
+
+        for col in 0..COLS {
+            let mut height = 0;
+            for row in 0..ROWS {
+                if self.board[col][row] != Cell::Empty {
+                    height = row + 1;
+                }
+            }
+
+            // Lower height is better (closer to bottom)
+            if height < ROWS {
+                score += (ROWS - height) as i32;
+            }
+        }
+
+        score
+    }
+
+    fn check_win_at_test(
+        &self,
+        board: &[[Cell; ROWS]; COLS],
+        col: usize,
+        row: usize,
+        player: Player,
+    ) -> bool {
+        let directions = [(1, 0), (0, 1), (1, 1), (1, -1)];
+
+        for (dcol, drow) in directions {
+            let mut count = 1;
+
+            // Count in positive direction
+            let mut c = col as i32 + dcol;
+            let mut r = row as i32 + drow;
+            while c >= 0 && c < COLS as i32 && r >= 0 && r < ROWS as i32 {
+                if board[c as usize][r as usize] == Cell::from_player(player) {
+                    count += 1;
+                    c += dcol;
+                    r += drow;
+                } else {
+                    break;
+                }
+            }
+
+            // Count in negative direction
+            c = col as i32 - dcol;
+            r = row as i32 - drow;
+            while c >= 0 && c < COLS as i32 && r >= 0 && r < ROWS as i32 {
+                if board[c as usize][r as usize] == Cell::from_player(player) {
+                    count += 1;
+                    c -= dcol;
+                    r -= drow;
+                } else {
+                    break;
+                }
+            }
+
+            if count >= 4 {
+                return true;
+            }
+        }
+
+        false
     }
 
     fn hash(&self) -> u64 {
@@ -377,28 +623,6 @@ impl AI {
         state: &GameState,
         depth: u8,
     ) -> (Option<u8>, Vec<MoveEvaluation>) {
-        #[cfg(feature = "wasm")]
-        {
-            use web_sys::console;
-            console::log_1(&format!("🤖 WASM AI starting minimax search with depth: {}", depth).into());
-            
-            // Debug: Print board state
-            let mut board_str = String::from("Board state:\n");
-            for row in (0..ROWS).rev() {
-                for col in 0..COLS {
-                    let cell = match state.board[col][row] {
-                        Cell::Empty => ".",
-                        Cell::Player1 => "1",
-                        Cell::Player2 => "2",
-                    };
-                    board_str.push_str(cell);
-                    board_str.push(' ');
-                }
-                board_str.push('\n');
-            }
-            console::log_1(&board_str.into());
-        }
-        
         self.nodes_evaluated = 0;
         self.transposition_hits = 0;
 
@@ -416,10 +640,22 @@ impl AI {
         let mut best_move = valid_moves[0];
         let mut best_score = f32::MIN;
 
+        #[cfg(feature = "wasm")]
+        {
+            use web_sys::console;
+            console::log_1(&format!("🧠 Starting minimax search with depth {}", depth).into());
+        }
+
         for &col in &valid_moves {
             let mut next_state = state.clone();
             if next_state.make_move(col).is_ok() {
-                let score = -self.minimax(&next_state, depth - 1, f32::MIN, f32::MAX);
+                let score = self.minimax(&next_state, depth - 1, f32::MIN, f32::MAX);
+
+                #[cfg(feature = "wasm")]
+                {
+                    use web_sys::console;
+                    console::log_1(&format!("📊 Column {}: score {:.2}", col, score).into());
+                }
 
                 move_evaluations.push(MoveEvaluation {
                     column: col,
@@ -439,8 +675,8 @@ impl AI {
         #[cfg(feature = "wasm")]
         {
             use web_sys::console;
-            console::log_1(&format!("✅ WASM AI completed search: chose column {}, evaluated {} nodes, {} transposition hits", 
-                best_move, self.nodes_evaluated, self.transposition_hits).into());
+            console::log_1(&format!("🎯 Best move: column {} with score {:.2} (evaluated {} nodes, {} cache hits)", 
+                best_move, best_score, self.nodes_evaluated, self.transposition_hits).into());
         }
 
         (Some(best_move), move_evaluations)

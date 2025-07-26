@@ -79,7 +79,19 @@ export async function makeAIMove(gameState: GameState): Promise<number> {
         return response.move;
       }
     } catch (error) {
-      console.warn('WASM AI failed, falling back to JavaScript AI:', error);
+      console.warn('WASM AI failed, trying ML AI:', error);
+      
+      try {
+        const mlResponse = await wasmAI.getMLMove(gameState);
+        if (mlResponse.move !== null && mlResponse.move !== undefined) {
+          console.log(
+            `🤖 ML AI chose column ${mlResponse.move} (evaluation: ${mlResponse.evaluation})`
+          );
+          return mlResponse.move;
+        }
+      } catch (mlError) {
+        console.warn('ML AI also failed, falling back to JavaScript AI:', mlError);
+      }
     }
   }
 

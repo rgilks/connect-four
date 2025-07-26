@@ -1,4 +1,4 @@
-const CACHE_VERSION = '1753565807293-local-v1.0.0';
+const CACHE_VERSION = '1753569041638-local-v1.0.0';
 const CACHE_NAME = `connect-4-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline';
 
@@ -61,8 +61,14 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(event.request.url);
   
+  // WASM files - serve directly without caching
+  if (url.pathname.startsWith('/wasm/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+  
   // Static assets (JS, CSS, images) - cache first
-  if (url.pathname.startsWith('/_next/') || url.pathname.startsWith('/static/') || url.pathname.startsWith('/wasm/')) {
+  if (url.pathname.startsWith('/_next/') || url.pathname.startsWith('/static/')) {
     event.respondWith(
       caches.match(event.request).then(cachedResponse => {
         if (cachedResponse) {

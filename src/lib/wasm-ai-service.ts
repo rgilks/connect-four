@@ -42,12 +42,13 @@ interface WASMAIInstance {
   get_heuristic_move: (state: unknown) => string;
   get_ml_move: (state: unknown) => string;
   evaluate_position: (state: unknown) => number;
+  load_ml_weights: (value_weights: unknown, policy_weights: unknown) => void;
   clear_transposition_table: () => void;
   get_transposition_table_size: () => number;
 }
 
 interface WASMModule {
-  default: () => Promise<void>;
+  default: () => Promise<unknown>;
   ConnectFourAI: new () => WASMAIInstance;
 }
 
@@ -74,13 +75,19 @@ class WASMAIService {
 
     try {
       // Use dynamic import to load the WASM module
-      const wasmModule = (await import(/* webpackIgnore: true */ '/wasm/connect_four_ai_core.js')) as WASMModule;
+      console.log('🔄 Loading WASM module...');
+      const wasmModule = (await import(
+        '/wasm/connect_four_ai_core.js'
+      )) as WASMModule;
+      console.log('🔄 WASM module imported, initializing...');
       await wasmModule.default();
+      console.log('🔄 WASM module initialized, creating AI instance...');
       this.ai = new wasmModule.ConnectFourAI();
       this.isLoaded = true;
       console.log('✅ WASM AI loaded successfully');
     } catch (error) {
       console.error('❌ Failed to load WASM AI:', error);
+      console.error('❌ Error details:', error instanceof Error ? error.stack : error);
       throw new Error(`Failed to load WASM AI: ${error}`);
     }
   }
@@ -98,12 +105,12 @@ class WASMAIService {
       board,
       current_player: gameState.currentPlayer === 'player1' ? 'player1' : 'player2',
       genetic_params: {
-        center_control_weight: 1.0,
-        piece_count_weight: 0.5,
-        threat_weight: 2.0,
-        mobility_weight: 0.8,
-        vertical_control_weight: 1.2,
-        horizontal_control_weight: 1.0,
+        center_control_weight: 1.5,
+        piece_count_weight: 0.3,
+        threat_weight: 3.0,
+        mobility_weight: 1.2,
+        vertical_control_weight: 1.8,
+        horizontal_control_weight: 1.4,
       },
     };
   }
@@ -192,6 +199,19 @@ class WASMAIService {
     }
   }
 
+  async loadMLWeights(valueWeights: number[], policyWeights: number[]): Promise<void> {
+    if (!this.isLoaded || !this.ai) {
+      throw new Error('WASM AI not loaded');
+    }
+
+    try {
+      this.ai.load_ml_weights(valueWeights, policyWeights);
+      console.log('✅ ML weights loaded successfully');
+    } catch (error) {
+      throw new Error(`Failed to load ML weights: ${error}`);
+    }
+  }
+
   get isReady(): boolean {
     return this.isLoaded;
   }
@@ -220,9 +240,28 @@ export function getWASMAIService(): WASMAIService {
   return wasmAIInstance;
 }
 
+// For testing purposes
+export function resetWASMAIService(): void {
+  wasmAIInstance = null;
+}
+
 export async function initializeWASMAI(): Promise<void> {
   const service = getWASMAIService();
   await service.initialize();
+
+  // Try to load trained ML weights
+  try {
+    const weightsResponse = await fetch('/ml/data/weights/test_weights.json');
+    if (weightsResponse.ok) {
+      const weights = await weightsResponse.json() as { value_weights?: number[]; policy_weights?: number[] };
+      if (weights.value_weights && weights.policy_weights) {
+        await service.loadMLWeights(weights.value_weights, weights.policy_weights);
+        console.log('✅ Trained ML weights loaded successfully');
+      }
+    }
+  } catch (error) {
+    console.warn('Could not load trained ML weights:', error);
+  }
 }
 
 export default WASMAIService;
