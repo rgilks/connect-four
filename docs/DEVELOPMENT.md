@@ -558,3 +558,30 @@ This development guide provides comprehensive coverage of the development workfl
 - **Performance optimization** at both build and runtime levels
 
 For specific AI system details, see [AI-SYSTEM.md](./AI-SYSTEM.md). For architecture information, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+## WASM AI Genetic Parameters
+
+The WASM AI requires complete genetic parameters to function properly. The build process automatically copies the genetic parameters from `ml/data/genetic_params/evolved.json` to `public/ml/data/genetic_params/evolved.json`.
+
+**Required fields in genetic parameters:**
+
+- `win_score`: Score for winning positions
+- `loss_score`: Score for losing positions
+- `center_column_value`: Value for center column positions
+- `adjacent_center_value`: Value for columns adjacent to center
+- `outer_column_value`: Value for outer columns
+- `edge_column_value`: Value for edge columns
+- `row_height_weight`: Weight for row height evaluation
+- `center_control_weight`: Weight for center control evaluation
+- `piece_count_weight`: Weight for piece count evaluation
+- `threat_weight`: Weight for threat detection
+- `mobility_weight`: Weight for mobility evaluation
+- `vertical_control_weight`: Weight for vertical control
+- `horizontal_control_weight`: Weight for horizontal control
+- `defensive_weight`: Weight for defensive evaluation
+
+**If you encounter WASM AI errors:**
+
+1. Run `npm run build:wasm-assets` to rebuild and copy genetic parameters
+2. Check that `public/ml/data/genetic_params/evolved.json` exists and contains all required fields
+3. Verify the genetic parameters match the Rust `GeneticParams` struct definition
