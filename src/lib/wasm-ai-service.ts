@@ -177,9 +177,18 @@ class WASMAIService {
 
       console.log('WASM AI: Raw result:', result);
       
-      // The WASM API returns a JsValue which is already a JavaScript object
-      // No need to parse it as JSON
-      const parsedResult = result;
+      // Handle both Map and regular object formats
+      let parsedResult;
+      if (result instanceof Map) {
+        parsedResult = {
+          move: result.get('move'),
+          evaluations: result.get('evaluations') || [],
+          nodes_evaluated: result.get('nodes_evaluated') || 0,
+          transposition_hits: result.get('transposition_hits') || 0,
+        };
+      } else {
+        parsedResult = result;
+      }
 
       return {
         move: parsedResult.move,
