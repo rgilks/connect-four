@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { GameState } from '@/lib/types';
@@ -12,6 +12,12 @@ interface GameStatusProps {
 }
 
 export default function GameStatus({ gameState, aiThinking }: GameStatusProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const getStatusMessage = () => {
     if (gameState.gameStatus === 'finished') {
       if (gameState.winner) {
@@ -55,6 +61,19 @@ export default function GameStatus({ gameState, aiThinking }: GameStatusProps) {
   const StatusIcon = status.icon;
   const isValidIcon =
     typeof StatusIcon === 'function' || (typeof StatusIcon === 'object' && StatusIcon !== null);
+
+  // Don't render anything until mounted to prevent hydration mismatch
+  if (!isMounted) {
+    return (
+      <div className="text-center mb-3">
+        <div className="mt-2 h-10 flex flex-col justify-start relative pt-1">
+          <div className="flex items-center justify-center space-x-2 h-6">
+            <span className="font-bold text-lg text-gray-400">Loading...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="text-center mb-3">

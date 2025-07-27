@@ -62,6 +62,7 @@ A modern web implementation of the classic Connect Four game with AI opponents, 
 - **Browser-Native**: All AI runs locally via WebAssembly
 - **Offline Support**: PWA with full offline gameplay
 - **Modern UI**: Responsive design with animations and sound effects
+- **Awesome Win Animations**: Dramatic winning line highlighting with particle effects and sound
 - **Advanced AI**: Genetic algorithm optimized evaluation functions for superior performance
 - **User-Friendly Error Handling**: Graceful error modals instead of browser alerts for better UX
 

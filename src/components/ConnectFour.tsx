@@ -28,9 +28,11 @@ export default function ConnectFour() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsStandalone(isStandalonePWA());
+    setIsMounted(true);
   }, []);
 
   useEffect(() => {
@@ -151,7 +153,7 @@ export default function ConnectFour() {
           >
             <h1 className="text-4xl font-bold text-white mb-2 title-glow">Connect 4</h1>
             <p className="text-gray-300 text-sm">Drop your pieces to get four in a row!</p>
-            {process.env.NODE_ENV === 'development' && (
+            {process.env.NODE_ENV === 'development' && isMounted && (
               <div className="text-xs text-gray-500 mt-2">
                 Status: {gameState.gameStatus} | Player: {gameState.currentPlayer} | AI Thinking:{' '}
                 {aiThinking ? 'Yes' : 'No'}

@@ -186,6 +186,76 @@ describe('Connect Four Game Logic', () => {
     expect(winResult?.positions).toHaveLength(4);
   });
 
+  it('should detect win with winning line data', () => {
+    const game = initializeGame();
+    let currentGame = game;
+    const firstPlayer = currentGame.currentPlayer;
+
+    // Create a horizontal win
+    currentGame = makeMove(currentGame, 0); // col0, row5
+    currentGame = makeMove(currentGame, 0); // col0, row4 (second player)
+    currentGame = makeMove(currentGame, 1); // col1, row5
+    currentGame = makeMove(currentGame, 1); // col1, row4 (second player)
+    currentGame = makeMove(currentGame, 2); // col2, row5
+    currentGame = makeMove(currentGame, 2); // col2, row4 (second player)
+    currentGame = makeMove(currentGame, 3); // col3, row5 (should win)
+
+    expect(currentGame.gameStatus).toBe('finished');
+    expect(currentGame.winner).toBe(firstPlayer);
+    expect(currentGame.winningLine).not.toBe(null);
+    expect(currentGame.winningLine?.positions).toHaveLength(4);
+    expect(currentGame.winningLine?.direction).toBe('horizontal');
+
+    // Verify the winning positions are correct
+    const expectedPositions = [
+      { column: 0, row: 5 },
+      { column: 1, row: 5 },
+      { column: 2, row: 5 },
+      { column: 3, row: 5 },
+    ];
+    expect(currentGame.winningLine?.positions).toEqual(expectedPositions);
+  });
+
+  it('should test win animation state management', () => {
+    const game = initializeGame();
+    let currentGame = game;
+    const firstPlayer = currentGame.currentPlayer;
+
+    // Create a win scenario
+    currentGame = makeMove(currentGame, 0); // col0, row5
+    currentGame = makeMove(currentGame, 0); // col0, row4 (second player)
+    currentGame = makeMove(currentGame, 1); // col1, row5
+    currentGame = makeMove(currentGame, 1); // col1, row4 (second player)
+    currentGame = makeMove(currentGame, 2); // col2, row5
+    currentGame = makeMove(currentGame, 2); // col2, row4 (second player)
+    currentGame = makeMove(currentGame, 3); // col3, row5 (should win)
+
+    // Verify game state indicates a win
+    expect(currentGame.gameStatus).toBe('finished');
+    expect(currentGame.winner).toBe(firstPlayer);
+    expect(currentGame.winningLine).not.toBe(null);
+
+    // Verify winning line has correct structure for animation
+    const winningLine = currentGame.winningLine;
+    expect(winningLine).not.toBe(null);
+    if (winningLine) {
+      expect(winningLine.positions).toHaveLength(4);
+      expect(winningLine.direction).toBe('horizontal');
+
+      // Verify each position has the required properties for animation
+      winningLine.positions.forEach(pos => {
+        expect(pos).toHaveProperty('column');
+        expect(pos).toHaveProperty('row');
+        expect(typeof pos.column).toBe('number');
+        expect(typeof pos.row).toBe('number');
+        expect(pos.column).toBeGreaterThanOrEqual(0);
+        expect(pos.column).toBeLessThan(7);
+        expect(pos.row).toBeGreaterThanOrEqual(0);
+        expect(pos.row).toBeLessThan(6);
+      });
+    }
+  });
+
   it('should understand board structure', () => {
     const game = initializeGame();
     console.log('Initial board:');

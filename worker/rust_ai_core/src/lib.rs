@@ -266,20 +266,26 @@ impl GameState {
         // Position evaluation using genetic parameters
         for col in 0..COLS {
             let column_value = match col {
-                3 => self.genetic_params.center_column_value,    // Center column
+                3 => self.genetic_params.center_column_value, // Center column
                 2 | 4 => self.genetic_params.adjacent_center_value, // Adjacent to center
                 1 | 5 => self.genetic_params.outer_column_value, // Further from center
-                0 | 6 => self.genetic_params.edge_column_value,  // Edge columns
+                0 | 6 => self.genetic_params.edge_column_value, // Edge columns
                 _ => self.genetic_params.edge_column_value,
             };
 
             for row in 0..ROWS {
                 match self.board[col][row] {
                     Cell::Player1 => {
-                        score += (column_value as f64 * (ROWS - row) as f64 * self.genetic_params.row_height_weight) as i32;
+                        score += (column_value as f64
+                            * (ROWS - row) as f64
+                            * self.genetic_params.row_height_weight)
+                            as i32;
                     }
                     Cell::Player2 => {
-                        score -= (column_value as f64 * (ROWS - row) as f64 * self.genetic_params.row_height_weight) as i32;
+                        score -= (column_value as f64
+                            * (ROWS - row) as f64
+                            * self.genetic_params.row_height_weight)
+                            as i32;
                     }
                     Cell::Empty => {}
                 }
@@ -669,7 +675,7 @@ impl AI {
         }
 
         let mut move_evaluations = Vec::new();
-        let mut best_move = valid_moves[0];
+        let mut best_move: Option<u8> = None;
         let mut best_score = if state.current_player == Player::Player1 {
             f32::MIN
         } else {
@@ -691,12 +697,12 @@ impl AI {
                 if state.current_player == Player::Player1 {
                     if score > best_score {
                         best_score = score;
-                        best_move = col;
+                        best_move = Some(col);
                     }
                 } else {
                     if score < best_score {
                         best_score = score;
-                        best_move = col;
+                        best_move = Some(col);
                     }
                 }
             }
@@ -716,7 +722,7 @@ impl AI {
                 &format!(
                     "🎯 {:?} chose column {} (score {:.0}) - all scores: {:?}",
                     state.current_player,
-                    best_move,
+                    best_move.unwrap_or(255),
                     best_score,
                     move_evaluations
                         .iter()
@@ -728,7 +734,7 @@ impl AI {
             );
         }
 
-        (Some(best_move), move_evaluations)
+        (best_move, move_evaluations)
     }
 
     fn minimax(&mut self, state: &GameState, depth: u8, alpha: f32, beta: f32) -> f32 {

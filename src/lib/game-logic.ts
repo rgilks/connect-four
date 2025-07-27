@@ -10,19 +10,47 @@ export interface WinningLine {
 }
 
 function createEmptyBoard(): Board {
-  return Array.from({ length: COLS }, () => Array(ROWS).fill(null));
+  return Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => null));
+}
+
+function printBoard(board: Board, moveInfo?: string) {
+  const header = moveInfo ? `\n${moveInfo}` : '\nBoard:';
+  console.log(header);
+
+  // Print board from top to bottom (row 0 to 5)
+  for (let row = 0; row < ROWS; row++) {
+    let rowStr = '';
+    for (let col = 0; col < COLS; col++) {
+      const cell = board[col][row];
+      if (cell === 'player1') {
+        rowStr += '🔴';
+      } else if (cell === 'player2') {
+        rowStr += '🟡';
+      } else {
+        rowStr += '⚫'; // Black circle for empty cells
+      }
+    }
+    console.log(rowStr);
+  }
+  console.log('0123456');
+  console.log('-------');
 }
 
 export function initializeGame(): GameState {
   const startingPlayer: Player = Math.random() < 0.5 ? 'player1' : 'player2';
-  return {
+  const gameState = {
     board: createEmptyBoard(),
     currentPlayer: startingPlayer,
-    gameStatus: 'playing',
+    gameStatus: 'playing' as const,
     winner: null,
     history: [],
     winningLine: null,
   };
+
+  console.log(`🎮 Game started - ${startingPlayer === 'player1' ? 'Red' : 'Yellow'} goes first`);
+  printBoard(gameState.board);
+
+  return gameState;
 }
 
 export function makeMove(gameState: GameState, column: number): GameState {
@@ -49,7 +77,7 @@ export function makeMove(gameState: GameState, column: number): GameState {
   const winner = winResult ? gameState.currentPlayer : null;
   const isDrawn = !winner && isDraw(newBoard);
 
-  return {
+  const newGameState = {
     board: newBoard,
     currentPlayer:
       winner || isDrawn ? gameState.currentPlayer : otherPlayer(gameState.currentPlayer),
@@ -57,7 +85,25 @@ export function makeMove(gameState: GameState, column: number): GameState {
     winner: winner,
     history: newHistory,
     winningLine: winResult,
-  };
+  } as GameState;
+
+  // Log the move
+  const playerName = gameState.currentPlayer === 'player1' ? 'Red' : 'Yellow';
+  const moveInfo = `${playerName} placed in column ${column} (row ${row})`;
+
+  if (winner) {
+    console.log(`🏆 ${moveInfo} - ${playerName} WINS!`);
+    printBoard(newBoard, moveInfo);
+  } else if (isDrawn) {
+    console.log(`🤝 ${moveInfo} - Game is a DRAW!`);
+    printBoard(newBoard, moveInfo);
+  } else {
+    const nextPlayer = newGameState.currentPlayer === 'player1' ? 'Red' : 'Yellow';
+    console.log(`${moveInfo} - ${nextPlayer}'s turn`);
+    printBoard(newBoard, moveInfo);
+  }
+
+  return newGameState;
 }
 
 export function getValidMoves(board: Board): number[] {
@@ -74,6 +120,9 @@ export async function makeAIMove(gameState: GameState): Promise<number> {
   }
 
   try {
+    console.log('\n🤖 AI thinking...');
+    printBoard(gameState.board, 'Current board before AI move');
+
     // Clear transposition table to ensure fresh calculations
     wasmAI.clearTranspositionTable();
     const response = await wasmAI.getBestMove(gameState, 5);
@@ -85,10 +134,38 @@ export async function makeAIMove(gameState: GameState): Promise<number> {
       response.move >= 0 &&
       response.move < 7
     ) {
-      console.log(
-        `🤖 WASM AI chose column ${response.move} (evaluated ${response.nodesEvaluated} nodes)`
-      );
-      return response.move;
+      const moveTime =
+        response.nodesEvaluated > 0
+          ? `(${response.nodesEvaluated} nodes, ${response.transpositionHits || 0} cache hits)`
+          : '';
+      const chosenCol = response.move;
+      let bestType = '';
+      let bestReason = '';
+      let scoreTable = '\nAI Evaluation Table:';
+      if (response.evaluations && response.evaluations.length > 0) {
+        // Find the best score and type
+        let maxScore = -Infinity;
+        response.evaluations.forEach(e => {
+          if (typeof e.score === 'number' && e.score > maxScore) {
+            maxScore = e.score;
+          }
+        });
+        bestType = response.evaluations.find(e => e.column === chosenCol)?.moveType || '';
+        bestReason = bestType ? ` (${bestType})` : '';
+        // Print table
+        scoreTable += '\n-------------------------------------------';
+        scoreTable += '\n Col |   Score   |   Type';
+        scoreTable += '\n-------------------------------------------';
+        response.evaluations.forEach(e => {
+          const highlight = e.column === chosenCol ? ' <==' : '';
+          const moveType = e.moveType || 'normal';
+          scoreTable += `\n  ${e.column}  | ${String(e.score).padStart(8)} | ${moveType.padEnd(8)}${highlight}`;
+        });
+        scoreTable += '\n-------------------------------------------';
+      }
+      console.log(`🤖 AI chose column ${chosenCol} ${moveTime}${bestReason}`);
+      if (scoreTable) console.log(scoreTable);
+      return chosenCol;
     }
 
     console.error('WASM AI returned invalid move:', response.move);

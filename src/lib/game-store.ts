@@ -12,12 +12,14 @@ type GameStore = {
   gameState: GameState;
   aiThinking: boolean;
   pendingMove: { column: number; player: 'player1' | 'player2' } | null;
+  showWinnerModal: boolean;
   actions: {
     initialize: (fromStorage?: boolean) => void;
     makeMove: (column: number) => void;
     completeMove: () => void;
     makeAIMove: () => void;
     reset: () => void;
+    showWinnerModal: () => void;
   };
 };
 
@@ -27,14 +29,16 @@ export const useGameStore = create<GameStore>()(
       gameState: { ...initializeGame() },
       aiThinking: false,
       pendingMove: null,
+      showWinnerModal: false,
       actions: {
-        initialize: (fromStorage = false) => {
-          if (!fromStorage) {
-            set(state => {
-              state.gameState = { ...initializeGame() };
-              state.aiThinking = false;
-            });
-          }
+        initialize: () => {
+          // Always create a fresh game with new random starting player
+          set(state => {
+            state.gameState = { ...initializeGame() };
+            state.aiThinking = false;
+            state.showWinnerModal = false;
+            state.pendingMove = null;
+          });
 
           // Initialize WASM AI in the background
           initializeWASMAI().catch(error => {
@@ -44,6 +48,9 @@ export const useGameStore = create<GameStore>()(
         makeMove: (column: number) => {
           const { gameState } = get();
           if (gameState.gameStatus !== 'playing') return;
+
+          const playerName = gameState.currentPlayer === 'player1' ? 'Red' : 'Yellow';
+          console.log(`🎯 ${playerName} selecting column ${column}...`);
 
           // Set pending move for animation
           set(state => {
@@ -58,6 +65,12 @@ export const useGameStore = create<GameStore>()(
           set(state => {
             state.gameState = newState;
             state.pendingMove = null;
+
+            // If game is finished with a winner, delay showing the modal
+            if (newState.gameStatus === 'finished' && newState.winner) {
+              // Don't show modal immediately - let the win animation play first
+              state.showWinnerModal = false;
+            }
           });
         },
         makeAIMove: async () => {
@@ -88,6 +101,12 @@ export const useGameStore = create<GameStore>()(
                     set(state => {
                       state.gameState = newState;
                       state.pendingMove = null;
+
+                      // If game is finished with a winner, delay showing the modal
+                      if (newState.gameStatus === 'finished' && newState.winner) {
+                        // Don't show modal immediately - let the win animation play first
+                        state.showWinnerModal = false;
+                      }
                     });
                   }
                 }, 800);
@@ -113,6 +132,12 @@ export const useGameStore = create<GameStore>()(
             state.gameState = { ...initializeGame() };
             state.aiThinking = false;
             state.pendingMove = null;
+            state.showWinnerModal = false;
+          });
+        },
+        showWinnerModal: () => {
+          set(state => {
+            state.showWinnerModal = true;
           });
         },
       },

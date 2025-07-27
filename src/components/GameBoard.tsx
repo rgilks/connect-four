@@ -40,8 +40,13 @@ export default function GameBoard({
     Array<{ id: string; column: number; row: number; player: Player }>
   >([]);
   const [showWinAnimation, setShowWinAnimation] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
-  const { actions, pendingMove } = useGameStore();
+  const { actions, pendingMove, showWinnerModal } = useGameStore();
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   React.useEffect(() => {
     if (gameState.gameStatus === 'finished' && gameState.winner) {
@@ -69,6 +74,8 @@ export default function GameBoard({
       // Show Connect Four win animation
       if (gameState.winningLine) {
         setShowWinAnimation(true);
+        // Play win animation sound
+        soundEffects.winAnimation();
       }
     }
   }, [gameState.gameStatus, gameState.winner, gameState.winningLine]);
@@ -120,6 +127,10 @@ export default function GameBoard({
 
   const handleWinAnimationComplete = () => {
     setShowWinAnimation(false);
+    // Show the winner modal after the win animation completes
+    setTimeout(() => {
+      actions.showWinnerModal();
+    }, 500); // Small delay for smooth transition
   };
 
   return (
@@ -134,7 +145,7 @@ export default function GameBoard({
         ))}
       </AnimatePresence>
       <AnimatePresence>
-        {gameState.gameStatus === 'finished' && (
+        {gameState.gameStatus === 'finished' && showWinnerModal && (
           <GameCompletionOverlay gameState={gameState} onResetGame={onResetGame} />
         )}
       </AnimatePresence>
@@ -181,7 +192,7 @@ export default function GameBoard({
                   ))}
 
                   {/* Column click indicator */}
-                  {isClickable && (
+                  {isClickable && isMounted && (
                     <motion.div
                       className="absolute inset-0 rounded-lg border-2 border-green-400/50 pointer-events-none"
                       animate={{

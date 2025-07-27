@@ -76,13 +76,40 @@ class SoundEffects {
     await this.playChord(frequencies, 0.5, 'sine', 0.06);
   }
 
-
-
   async gameWin() {
     const melody = [523.25, 659.25, 783.99, 1046.5]; // C5-E5-G5-C6
     melody.forEach((freq, i) => {
       setTimeout(() => this.playTone(freq, 0.3, 'sine', 0.1), i * 200);
     });
+  }
+
+  async winAnimation() {
+    // Dramatic win animation sound sequence
+    const sequence = [
+      { freq: 523.25, duration: 0.2, type: 'sine' as OscillatorType }, // C5
+      { freq: 659.25, duration: 0.2, type: 'sine' as OscillatorType }, // E5
+      { freq: 783.99, duration: 0.2, type: 'sine' as OscillatorType }, // G5
+      { freq: 1046.5, duration: 0.3, type: 'sine' as OscillatorType }, // C6
+      { freq: 1318.5, duration: 0.3, type: 'sine' as OscillatorType }, // E6
+      { freq: 1567.98, duration: 0.4, type: 'sine' as OscillatorType }, // G6
+    ];
+
+    // Play the sequence with increasing volume for dramatic effect
+    sequence.forEach((note, i) => {
+      setTimeout(() => {
+        this.playTone(note.freq, note.duration, note.type, 0.08 + i * 0.02);
+      }, i * 150);
+    });
+
+    // Add some sparkle sounds
+    for (let i = 0; i < 8; i++) {
+      setTimeout(
+        () => {
+          this.playTone(800 + Math.random() * 400, 0.1, 'triangle', 0.03);
+        },
+        900 + i * 100
+      );
+    }
   }
 
   async gameLoss() {

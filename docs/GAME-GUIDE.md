@@ -41,6 +41,19 @@ Connect Four is a strategic two-player game where players take turns dropping co
 - **Diagonal**: 4 discs in a row diagonally (both directions)
 - **First to connect**: Player who creates the first 4-in-a-row wins
 
+### Win Animation
+
+When a player wins, the game features an **awesome animation sequence**:
+
+1. **Winning Line Highlight**: The 4 connected pieces are highlighted with pulsing effects
+2. **Particle Effects**: Victory particles burst from the winning positions
+3. **Victory Text**: Dramatic "RED WINS!" or "YELLOW WINS!" text appears with glowing effects
+4. **Sound Effects**: Triumphant audio sequence plays with ascending notes
+5. **Pause**: A brief pause allows players to appreciate the victory
+6. **Winner Modal**: The final winner modal appears with additional celebration
+
+This creates a satisfying and memorable victory experience that celebrates the achievement of connecting four pieces.
+
 ### Draw Condition
 
 - **Full board**: If all 42 positions are filled without a winner

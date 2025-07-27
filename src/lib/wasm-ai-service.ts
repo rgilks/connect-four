@@ -38,7 +38,10 @@ export interface WASMMLResponse {
 }
 
 interface WASMAIInstance {
-  get_best_move: (state: unknown, depth: number) => {
+  get_best_move: (
+    state: unknown,
+    depth: number
+  ) => {
     move: number | null;
     evaluations: Array<{
       column: number;
@@ -107,11 +110,11 @@ class WASMAIService {
     try {
       // Load WASM module using runtime import
       console.log('🔄 Loading WASM module...');
-      
+
       // Use a runtime import that won't be resolved at build time
       const wasmModulePath = '/wasm/connect_four_ai_core.js';
-      const wasmModule = await import(/* webpackIgnore: true */ wasmModulePath) as WASMModule;
-      
+      const wasmModule = (await import(/* webpackIgnore: true */ wasmModulePath)) as WASMModule;
+
       console.log('🔄 WASM module imported, initializing...');
       await wasmModule.default();
       console.log('🔄 WASM module initialized, creating AI instance...');
@@ -176,7 +179,7 @@ class WASMAIService {
       const result = this.ai.get_best_move(wasmState, depth);
 
       console.log('WASM AI: Raw result:', result);
-      
+
       // Handle both Map and regular object formats
       let parsedResult;
       if (result instanceof Map) {
@@ -190,9 +193,75 @@ class WASMAIService {
         parsedResult = result;
       }
 
+      // Debug the evaluations structure
+      console.log('WASM AI: Parsed evaluations:', parsedResult.evaluations);
+      if (parsedResult.evaluations && parsedResult.evaluations.length > 0) {
+        console.log('WASM AI: First evaluation item:', parsedResult.evaluations[0]);
+        console.log(
+          'WASM AI: Evaluation item keys:',
+          Object.keys(parsedResult.evaluations[0] || {})
+        );
+      }
+
+      // Transform evaluations to match expected format
+      let transformedEvaluations: Array<{
+        column: number;
+        score: number;
+        moveType: string;
+      }> = [];
+      if (parsedResult.evaluations && Array.isArray(parsedResult.evaluations)) {
+        transformedEvaluations = parsedResult.evaluations.map(
+          (evaluation: unknown, index: number) => {
+            // Handle different possible structures
+            if (evaluation && typeof evaluation === 'object') {
+              // Handle Map objects (from WASM)
+              if (evaluation instanceof Map) {
+                return {
+                  column:
+                    evaluation.get('column') !== undefined
+                      ? (evaluation.get('column') as number)
+                      : index,
+                  score:
+                    evaluation.get('score') !== undefined
+                      ? (evaluation.get('score') as number)
+                      : (evaluation.get('value') as number) || 0,
+                  moveType:
+                    (evaluation.get('moveType') as string) ||
+                    (evaluation.get('type') as string) ||
+                    'normal',
+                };
+              }
+              // Handle regular objects
+              const evalObj = evaluation as Record<string, unknown>;
+              return {
+                column: evalObj.column !== undefined ? (evalObj.column as number) : index,
+                score:
+                  evalObj.score !== undefined
+                    ? (evalObj.score as number)
+                    : (evalObj.value as number) || 0,
+                moveType: (evalObj.moveType as string) || (evalObj.type as string) || 'normal',
+              };
+            } else if (typeof evaluation === 'number') {
+              // If it's just a number, assume it's the score for column index
+              return {
+                column: index,
+                score: evaluation,
+                moveType: 'normal',
+              };
+            } else {
+              return {
+                column: index,
+                score: 0,
+                moveType: 'normal',
+              };
+            }
+          }
+        );
+      }
+
       return {
         move: parsedResult.move,
-        evaluations: parsedResult.evaluations || [],
+        evaluations: transformedEvaluations,
         nodesEvaluated: parsedResult.nodes_evaluated || 0,
         transpositionHits: parsedResult.transposition_hits || 0,
       };
@@ -210,7 +279,7 @@ class WASMAIService {
     try {
       const wasmState = await this.convertGameStateToWASM(gameState);
       const result = this.ai.get_heuristic_move(wasmState);
-      
+
       return {
         move: result.move,
         evaluations: result.evaluations || [],
@@ -229,7 +298,7 @@ class WASMAIService {
     try {
       const wasmState = await this.convertGameStateToWASM(gameState);
       const result = this.ai.get_ml_move(wasmState);
-      
+
       return {
         move: result.move,
         evaluation: result.evaluation,
