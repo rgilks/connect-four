@@ -77,12 +77,16 @@ export async function makeAIMove(gameState: GameState): Promise<number> {
     // Clear transposition table to ensure fresh calculations
     wasmAI.clearTranspositionTable();
     const response = await wasmAI.getBestMove(gameState, 5);
-    if (response.move !== null && response.move !== undefined) {
+    
+    // Check if we got a valid move (0-6 for columns)
+    if (response.move !== null && response.move !== undefined && response.move >= 0 && response.move < 7) {
       console.log(
         `🤖 WASM AI chose column ${response.move} (evaluated ${response.nodesEvaluated} nodes)`
       );
       return response.move;
     }
+    
+    console.error('WASM AI returned invalid move:', response.move);
   } catch (error) {
     console.error('WASM AI failed:', error);
     throw new Error(`AI calculation failed: ${error}`);
