@@ -253,6 +253,12 @@ impl GameState {
         score += center_control_p1 * 10;
         score -= center_control_p2 * 10;
 
+        // Threat detection - this is crucial for blocking wins
+        let threat_p1 = self.threat_score(Player::Player1);
+        let threat_p2 = self.threat_score(Player::Player2);
+        score += threat_p1 * 50; // Very high weight for threats
+        score -= threat_p2 * 50; // Very high weight for opponent threats
+
         // Evaluation is always from Player1's perspective (positive = Player1 advantage)
         score
     }
@@ -310,17 +316,18 @@ impl GameState {
     pub fn threat_score(&self, player: Player) -> i32 {
         let mut score = 0;
 
-        // Check for immediate winning threats
+        // Check for immediate winning threats in valid moves only
         for col in 0..COLS {
-            for row in 0..ROWS {
-                if self.board[col][row] == Cell::Empty {
+            if self.can_place_in_column(col) {
+                let row = self.get_lowest_empty_row(col);
+                if row < ROWS {
                     // Test if placing a piece here would create a win
                     let mut test_board = self.board;
                     test_board[col][row] = Cell::from_player(player);
 
                     // Check if this creates a win
                     if self.check_win_at_test(&test_board, col, row, player) {
-                        score += 1000; // Immediate win threat
+                        score += 10000; // Immediate win threat - much higher priority
                     } else {
                         // Check for 3-in-a-row threats
                         let threat_value = self.count_threats_at(&test_board, col, row, player);
@@ -390,117 +397,6 @@ impl GameState {
         }
 
         total_threats
-    }
-
-    fn mobility_score(&self, player: Player) -> i32 {
-        let mut score = 0;
-
-        // Count valid moves for this player
-        let valid_moves = self.get_valid_moves();
-        score += valid_moves.len() as i32;
-
-        // Bonus for moves that don't give opponent immediate wins
-        for &col in &valid_moves {
-            let mut test_state = self.clone();
-            if test_state.make_move(col).is_ok() {
-                // Check if opponent has immediate winning move
-                let opponent_moves = test_state.get_valid_moves();
-                let mut opponent_has_win = false;
-
-                for &opp_col in &opponent_moves {
-                    let mut opp_test = test_state.clone();
-                    if opp_test.make_move(opp_col).is_ok() {
-                        if opp_test.get_winner() == Some(player.opponent()) {
-                            opponent_has_win = true;
-                            break;
-                        }
-                    }
-                }
-
-                if !opponent_has_win {
-                    score += 5; // Bonus for safe moves
-                }
-            }
-        }
-
-        score
-    }
-
-    fn vertical_control_score(&self, player: Player) -> i32 {
-        let mut score = 0;
-
-        for col in 0..COLS {
-            let mut consecutive = 0;
-            for row in 0..ROWS {
-                if self.board[col][row] == Cell::from_player(player) {
-                    consecutive += 1;
-                    score += consecutive; // Stacked pieces are worth more
-                } else {
-                    consecutive = 0;
-                }
-            }
-        }
-
-        score
-    }
-
-    fn horizontal_control_score(&self, player: Player) -> i32 {
-        let mut score = 0;
-
-        for row in 0..ROWS {
-            let mut consecutive = 0;
-            for col in 0..COLS {
-                if self.board[col][row] == Cell::from_player(player) {
-                    consecutive += 1;
-                    score += consecutive * consecutive; // Quadratic bonus for consecutive pieces
-                } else {
-                    consecutive = 0;
-                }
-            }
-        }
-
-        score
-    }
-
-    fn blocking_score(&self, player: Player) -> i32 {
-        let opponent = player.opponent();
-        let mut score = 0;
-
-        // Check how many opponent threats we can block
-        for col in 0..COLS {
-            for row in 0..ROWS {
-                if self.board[col][row] == Cell::Empty {
-                    let mut test_board = self.board;
-                    test_board[col][row] = Cell::from_player(opponent);
-
-                    if self.check_win_at_test(&test_board, col, row, opponent) {
-                        score += 50; // High value for blocking opponent wins
-                    }
-                }
-            }
-        }
-
-        score
-    }
-
-    fn height_advantage_score(&self, _player: Player) -> i32 {
-        let mut score = 0;
-
-        for col in 0..COLS {
-            let mut height = 0;
-            for row in 0..ROWS {
-                if self.board[col][row] != Cell::Empty {
-                    height = row + 1;
-                }
-            }
-
-            // Lower height is better (closer to bottom)
-            if height < ROWS {
-                score += (ROWS - height) as i32;
-            }
-        }
-
-        score
     }
 
     fn check_win_at_test(
@@ -617,24 +513,16 @@ impl AI {
 
         let mut move_evaluations = Vec::new();
         let mut best_move = valid_moves[0];
-        let mut best_score = f32::MIN;
-
-        #[cfg(feature = "wasm")]
-        {
-            use web_sys::console;
-            console::log_1(&format!("🧠 Starting minimax search with depth {}", depth).into());
-        }
+        let mut best_score = if state.current_player == Player::Player1 {
+            f32::MIN
+        } else {
+            f32::MAX
+        };
 
         for &col in &valid_moves {
             let mut next_state = state.clone();
             if next_state.make_move(col).is_ok() {
                 let score = self.minimax(&next_state, depth - 1, f32::MIN, f32::MAX);
-
-                #[cfg(feature = "wasm")]
-                {
-                    use web_sys::console;
-                    console::log_1(&format!("📊 Column {}: score {:.2}", col, score).into());
-                }
 
                 move_evaluations.push(MoveEvaluation {
                     column: col,
@@ -642,22 +530,42 @@ impl AI {
                     move_type: "drop".to_string(),
                 });
 
-                if score > best_score {
-                    best_score = score;
-                    best_move = col;
+                // Player1 maximizes (wants highest score), Player2 minimizes (wants lowest score)
+                if state.current_player == Player::Player1 {
+                    if score > best_score {
+                        best_score = score;
+                        best_move = col;
+                    }
+                } else {
+                    if score < best_score {
+                        best_score = score;
+                        best_move = col;
+                    }
                 }
             }
         }
 
-        move_evaluations.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+        // Sort by score (highest first for Player1, lowest first for Player2)
+        if state.current_player == Player::Player1 {
+            move_evaluations.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+        } else {
+            move_evaluations.sort_by(|a, b| a.score.partial_cmp(&b.score).unwrap());
+        }
 
         #[cfg(feature = "wasm")]
         {
             use web_sys::console;
             console::log_1(
                 &format!(
-                    "🎯 Best move: column {} with score {:.2} (evaluated {} nodes, {} cache hits)",
-                    best_move, best_score, self.nodes_evaluated, self.transposition_hits
+                    "🎯 {:?} chose column {} (score {:.0}) - all scores: {:?}",
+                    state.current_player,
+                    best_move,
+                    best_score,
+                    move_evaluations
+                        .iter()
+                        .map(|e| format!("{}:{:.0}", e.column, e.score))
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 )
                 .into(),
             );

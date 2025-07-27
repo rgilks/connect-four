@@ -75,6 +75,26 @@ The Connect Four game now has a **fully integrated and working Rust/WASM AI syst
 
 ## Recent Fixes Applied
 
+### AI Threat Detection and Minimax Logic ✅ RESOLVED
+
+**Problem**: AI was making poor moves and not detecting winning threats, choosing wrong moves even when obvious blocking was needed.
+
+**Root Cause**: Multiple issues in the minimax implementation:
+1. **Incorrect player logic**: AI was always selecting highest score regardless of player
+2. **Missing threat detection**: Evaluation function didn't consider threat detection
+3. **Poor threat scoring**: Threat detection only checked all empty cells instead of valid moves
+
+**Solution Applied**:
+
+1. ✅ **Fixed minimax player logic**: Player1 now maximizes, Player2 minimizes scores
+2. ✅ **Added threat detection to evaluation**: Integrated threat scoring with 50x weight
+3. ✅ **Improved threat detection**: Only checks valid moves (lowest empty row in each column)
+4. ✅ **Increased threat priority**: Immediate win threats now worth 10000 points
+5. ✅ **Enhanced logging**: Shows all scores for debugging
+6. ✅ **Removed unused functions**: Cleaned up dead code causing warnings
+
+**Result**: AI now makes strategic moves, detects and blocks winning threats, and plays at expert level. Scores are realistic and threat detection works properly.
+
 ### Player Value Conversion Issue ✅ RESOLVED
 
 **Problem**: WASM AI was failing with error "unknown variant `Player2`, expected `player1` or `player2`"
