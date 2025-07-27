@@ -4,6 +4,13 @@ use std::path::Path;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GeneticParams {
+    // Unique identifier for tracking individuals across generations
+    pub id: String,
+    
+    // Ancestor tracking for lineage analysis
+    pub parent_ids: Vec<String>,
+    pub generation: usize,
+
     // Win/loss scores
     pub win_score: i32,
     pub loss_score: i32,
@@ -28,6 +35,9 @@ pub struct GeneticParams {
 impl Default for GeneticParams {
     fn default() -> Self {
         Self {
+            id: "default".to_string(),
+            parent_ids: vec![],
+            generation: 0,
             win_score: 10000,
             loss_score: -10000,
             center_column_value: 165,
@@ -52,6 +62,9 @@ impl GeneticParams {
         let mut rng = rand::thread_rng();
 
         Self {
+            id: format!("r{}", rng.gen_range(1000..9999)),
+            parent_ids: vec![],
+            generation: 0,
             win_score: rng.gen_range(5000..15000),
             loss_score: rng.gen_range(-15000..-5000),
             center_column_value: rng.gen_range(50..200),
@@ -86,6 +99,9 @@ impl GeneticParams {
         let mut rng = rand::thread_rng();
 
         Self {
+            id: format!("{}m{}", self.id, rng.gen_range(100..999)),
+            parent_ids: vec![self.id.clone()],
+            generation: self.generation + 1,
             win_score: if rng.gen_bool(mutation_rate) {
                 (self.win_score as f64 + rng.gen_range(-500.0..500.0) * mutation_strength) as i32
             } else {
@@ -168,6 +184,9 @@ impl GeneticParams {
         let mut rng = rand::thread_rng();
 
         Self {
+            id: format!("{}x{}", self.id, rng.gen_range(100..999)),
+            parent_ids: vec![self.id.clone(), other.id.clone()],
+            generation: std::cmp::max(self.generation, other.generation) + 1,
             win_score: if rng.gen_bool(crossover_rate) {
                 other.win_score
             } else {
@@ -301,6 +320,9 @@ mod tests {
     fn test_crossover() {
         let parent1 = GeneticParams::default();
         let parent2 = GeneticParams {
+            id: "test_parent2".to_string(),
+            parent_ids: vec![],
+            generation: 0,
             win_score: 15000,
             loss_score: -15000,
             center_column_value: 200,

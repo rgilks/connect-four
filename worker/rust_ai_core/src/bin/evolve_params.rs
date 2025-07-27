@@ -5,12 +5,13 @@ use connect_four_ai_core::{genetic_params::GeneticParams, GameState, Player, AI}
 use rayon::prelude::*;
 use std::fs;
 
-const POPULATION_SIZE: usize = 30; // Reduced from 50 for more exploration
-const GENERATIONS: usize = 50;
-const GAMES_PER_EVAL: usize = 50; // Reduced from 100 for more noise/exploration
-const MUTATION_RATE: f64 = 0.6; // Increased from 0.4 for more exploration
-const MUTATION_STRENGTH: f64 = 2.0; // Increased from 1.2 for more exploration
-const CROSSOVER_RATE: f64 = 0.5;
+const POPULATION_SIZE: usize = 50; // Increased for better exploration
+const GENERATIONS: usize = 100; // Increased for more thorough evolution
+const GAMES_PER_EVAL: usize = 50; // Reduced from 100 since depth 5 provides much better evaluation quality
+const MUTATION_RATE: f64 = 0.8; // Increased from 0.6 for more exploration
+const MUTATION_STRENGTH: f64 = 3.0; // Increased from 2.0 for more exploration
+const CROSSOVER_RATE: f64 = 0.7; // Increased from 0.5 for more diversity
+const SEARCH_DEPTH: u8 = 5; // Increased to depth 5 for better evaluation and to reduce perfect scores
 
 fn optimize_cpu_usage() {
     if cfg!(target_os = "macos") {
@@ -45,7 +46,74 @@ fn optimize_cpu_usage() {
     }
 }
 
-// Tournament-style evaluation: evolved params vs opponent params (previous generation's best)
+// Single game evaluation for tournament tie-breaking
+fn evaluate_single_game(evolved_params: &GeneticParams, opponent_params: &GeneticParams) -> f64 {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+
+    // Randomly decide which player uses evolved parameters
+    let evolved_is_player2 = rng.gen_bool(0.5);
+
+    // Create neutral game state
+    let mut game_state = GameState::new();
+
+    while !game_state.is_game_over() {
+        let current_player = game_state.current_player;
+        let is_evolved_turn = if evolved_is_player2 {
+            current_player == Player::Player2
+        } else {
+            current_player == Player::Player1
+        };
+
+        // Use different parameters for AI move calculation based on whose turn it is
+        let ai_params = if is_evolved_turn {
+            evolved_params.clone()
+        } else {
+            opponent_params.clone()
+        };
+
+        // Create a temporary state for AI move calculation
+        let mut ai_state = GameState::with_genetic_params(ai_params);
+        ai_state.board = game_state.board.clone();
+        ai_state.current_player = game_state.current_player;
+
+        let mut ai = AI::new();
+        let (best_move, _) = ai.get_best_move(&ai_state, SEARCH_DEPTH);
+
+        // Make the move
+        if let Some(move_col) = best_move {
+            game_state.make_move(move_col).unwrap();
+        } else {
+            break; // No valid moves
+        }
+    }
+
+    // Determine the winner with small noise to break ties
+    let base_score = match game_state.get_winner() {
+        Some(Player::Player1) => {
+            if evolved_is_player2 {
+                0.0 // Evolved lost
+            } else {
+                1.0 // Evolved won
+            }
+        }
+        Some(Player::Player2) => {
+            if evolved_is_player2 {
+                1.0 // Evolved won
+            } else {
+                0.0 // Evolved lost
+            }
+        }
+        None => 0.5, // Draw
+    };
+
+    // Add small noise to break ties and make evolution more robust
+    let noise: f64 = rng.gen_range(-0.001..0.001);
+    let final_score = base_score + noise;
+    final_score.max(0.0).min(1.0)
+}
+
+// Tournament-style evaluation: evolved params vs multiple opponents for better evaluation
 fn evaluate_params_tournament(
     evolved_params: &GeneticParams,
     opponent_params: &GeneticParams,
@@ -72,6 +140,21 @@ fn evaluate_params_tournament(
                 let mut rng = rand::thread_rng();
                 let evolved_is_player2 = rng.gen_bool(0.5);
 
+                // Create multiple opponent strategies for more challenging evaluation
+                let opponent_strategy = rng.gen_range(0..3);
+                let current_opponent_params = match opponent_strategy {
+                    0 => opponent_params.clone(),  // Previous generation's best
+                    1 => GeneticParams::default(), // Default parameters
+                    2 => {
+                        // Aggressive opponent
+                        let mut aggressive = opponent_params.clone();
+                        aggressive.threat_weight *= 1.5;
+                        aggressive.center_control_weight *= 1.3;
+                        aggressive
+                    }
+                    _ => opponent_params.clone(),
+                };
+
                 // Create neutral game state
                 let mut game_state = GameState::new();
 
@@ -87,7 +170,7 @@ fn evaluate_params_tournament(
                     let ai_params = if is_evolved_turn {
                         evolved_params.clone()
                     } else {
-                        opponent_params.clone()
+                        current_opponent_params.clone()
                     };
 
                     // Create a temporary state for AI move calculation
@@ -96,7 +179,7 @@ fn evaluate_params_tournament(
                     ai_state.current_player = game_state.current_player;
 
                     let mut ai = AI::new();
-                    let (best_move, _) = ai.get_best_move(&ai_state, 5);
+                    let (best_move, _) = ai.get_best_move(&ai_state, SEARCH_DEPTH);
 
                     if let Some(column) = best_move {
                         game_state.make_move(column).ok();
@@ -197,7 +280,7 @@ fn validate_against_default(evolved_params: &GeneticParams, num_games: usize) ->
                     ai_state.current_player = game_state.current_player;
 
                     let mut ai = AI::new();
-                    let (best_move, _) = ai.get_best_move(&ai_state, 5);
+                    let (best_move, _) = ai.get_best_move(&ai_state, SEARCH_DEPTH);
 
                     if let Some(column) = best_move {
                         game_state.make_move(column).ok();
@@ -250,7 +333,10 @@ fn validate_against_default(evolved_params: &GeneticParams, num_games: usize) ->
 }
 
 fn print_params_diff(current: &GeneticParams, previous: &GeneticParams, generation: usize) {
-    println!("  📊 Generation {} parameter changes:", generation);
+    println!(
+        "  📊 Generation {} parameter changes ({} → {}):",
+        generation, previous.id, current.id
+    );
     println!(
         "    Win score: {} → {} ({:+})",
         previous.win_score,
@@ -342,9 +428,83 @@ fn crossover(parent1: &GeneticParams, parent2: &GeneticParams) -> GeneticParams 
     parent1.crossover(parent2, CROSSOVER_RATE)
 }
 
-fn mutate(params: &mut GeneticParams) {
-    // Use the built-in mutation method from the GeneticParams struct
-    *params = params.random_mutation(MUTATION_RATE, MUTATION_STRENGTH);
+fn calculate_population_diversity(population: &[GeneticParams]) -> f64 {
+    if population.len() < 2 {
+        return 0.0;
+    }
+
+    let mut total_diversity = 0.0;
+    let mut comparisons = 0;
+
+    for i in 0..population.len() {
+        for j in (i + 1)..population.len() {
+            let diff = calculate_params_difference(&population[i], &population[j]);
+            total_diversity += diff;
+            comparisons += 1;
+        }
+    }
+
+    if comparisons > 0 {
+        total_diversity / comparisons as f64
+    } else {
+        0.0
+    }
+}
+
+fn calculate_params_difference(params1: &GeneticParams, params2: &GeneticParams) -> f64 {
+    let mut total_diff = 0.0;
+
+    // Use smaller normalization factors to make differences more visible
+    total_diff += ((params1.win_score - params2.win_score).abs() as f64) / 1000.0;
+    total_diff += ((params1.loss_score - params2.loss_score).abs() as f64) / 1000.0;
+    total_diff += ((params1.center_column_value - params2.center_column_value).abs() as f64) / 50.0;
+    total_diff +=
+        ((params1.adjacent_center_value - params2.adjacent_center_value).abs() as f64) / 25.0;
+    total_diff += ((params1.outer_column_value - params2.outer_column_value).abs() as f64) / 10.0;
+    total_diff += ((params1.edge_column_value - params2.edge_column_value).abs() as f64) / 5.0;
+    total_diff += (params1.row_height_weight - params2.row_height_weight).abs() / 1.0;
+    total_diff += (params1.center_control_weight - params2.center_control_weight).abs() / 1.0;
+    total_diff += (params1.piece_count_weight - params2.piece_count_weight).abs() / 1.0;
+    total_diff += (params1.threat_weight - params2.threat_weight).abs() / 2.0;
+    total_diff += (params1.mobility_weight - params2.mobility_weight).abs() / 1.0;
+    total_diff += (params1.vertical_control_weight - params2.vertical_control_weight).abs() / 1.0;
+    total_diff +=
+        (params1.horizontal_control_weight - params2.horizontal_control_weight).abs() / 1.0;
+    total_diff += (params1.defensive_weight - params2.defensive_weight).abs() / 1.0;
+
+    total_diff / 14.0 // Average across all parameters
+}
+
+fn inject_diversity(population: &mut Vec<GeneticParams>, target_diversity: f64) {
+    let current_diversity = calculate_population_diversity(population);
+
+    if current_diversity < target_diversity {
+        println!(
+            "    🔄 Injecting diversity (current: {:.3}, target: {:.3})",
+            current_diversity, target_diversity
+        );
+
+        // Replace some individuals with completely random ones
+        let num_to_replace = (population.len() as f64 * 0.4) as usize; // Increased from 30% to 40%
+
+        for _ in 0..num_to_replace {
+            let replace_idx = rand::random::<usize>() % population.len();
+            population[replace_idx] = GeneticParams::random();
+        }
+
+        // Apply extra mutation to existing individuals with higher strength
+        for individual in population.iter_mut() {
+            if rand::random::<f64>() < 0.7 {
+                // Increased from 0.5 to 0.7
+                *individual = individual.random_mutation(0.9, 6.0); // Increased strength from 4.0 to 6.0
+            }
+        }
+
+        println!(
+            "    ✅ Injected diversity: replaced {} individuals, applied extra mutations",
+            num_to_replace
+        );
+    }
 }
 
 fn main() {
@@ -353,6 +513,7 @@ fn main() {
     println!("Population size: {}", POPULATION_SIZE);
     println!("Generations: {}", GENERATIONS);
     println!("Games per evaluation: {}", GAMES_PER_EVAL);
+    println!("Search depth: {}", SEARCH_DEPTH);
     println!("⚠️  NOTE: Each generation plays against the previous generation's best, not default params");
 
     // Show starting parameters (default)
@@ -403,25 +564,88 @@ fn main() {
     // Add default parameters as one individual
     population.push(GeneticParams::default());
 
-    // Add some individuals with extreme parameter values
-    for i in 0..5 {
+    // Add individuals with extreme parameter values for better exploration
+    for i in 0..8 {
         let mut extreme_params = GeneticParams::default();
-        extreme_params.win_score = 5000 + i * 2000;
-        extreme_params.loss_score = -15000 + i * 2000;
-        extreme_params.center_column_value = 50 + i * 30;
-        extreme_params.threat_weight = 0.5 + i as f64 * 0.5;
-        extreme_params.center_control_weight = 0.0 + i as f64 * 1.0;
+        extreme_params.id = format!("extreme_{}", i);
+        extreme_params.generation = 0;
+        extreme_params.win_score = 3000 + i * 1500;
+        extreme_params.loss_score = -20000 + i * 1500;
+        extreme_params.center_column_value = 20 + i * 25;
+        extreme_params.adjacent_center_value = 10 + i * 12;
+        extreme_params.outer_column_value = 2 + i * 3;
+        extreme_params.edge_column_value = 1 + i;
+        extreme_params.row_height_weight = 0.1 + i as f64 * 0.3;
+        extreme_params.center_control_weight = 0.0 + i as f64 * 0.5;
+        extreme_params.piece_count_weight = 0.0 + i as f64 * 0.4;
+        extreme_params.threat_weight = 0.1 + i as f64 * 0.8;
+        extreme_params.mobility_weight = 0.0 + i as f64 * 0.4;
+        extreme_params.vertical_control_weight = 0.1 + i as f64 * 0.5;
+        extreme_params.horizontal_control_weight = 0.1 + i as f64 * 0.5;
+        extreme_params.defensive_weight = 0.1 + i as f64 * 0.5;
         population.push(extreme_params);
     }
 
-    // Add some individuals with very different strategies
-    for i in 0..5 {
+    // Add individuals with very different strategic focuses
+    for i in 0..8 {
         let mut strategy_params = GeneticParams::default();
-        strategy_params.center_column_value = 200 + i * 20;
-        strategy_params.adjacent_center_value = 150 + i * 15;
-        strategy_params.outer_column_value = 30 + i * 5;
-        strategy_params.defensive_weight = 3.0 + i as f64 * 0.5;
-        strategy_params.mobility_weight = 0.0 + i as f64 * 0.8;
+        strategy_params.id = format!("strategy_{}", i);
+        strategy_params.generation = 0;
+        match i {
+            0 => {
+                // Aggressive center control
+                strategy_params.center_column_value = 300;
+                strategy_params.adjacent_center_value = 200;
+                strategy_params.center_control_weight = 5.0;
+                strategy_params.threat_weight = 0.5;
+            }
+            1 => {
+                // Defensive play
+                strategy_params.defensive_weight = 5.0;
+                strategy_params.threat_weight = 3.0;
+                strategy_params.center_control_weight = 0.5;
+            }
+            2 => {
+                // Mobility focus
+                strategy_params.mobility_weight = 3.0;
+                strategy_params.piece_count_weight = 0.1;
+                strategy_params.center_control_weight = 0.5;
+            }
+            3 => {
+                // Threat detection
+                strategy_params.threat_weight = 5.0;
+                strategy_params.defensive_weight = 2.0;
+                strategy_params.mobility_weight = 0.5;
+            }
+            4 => {
+                // Positional play
+                strategy_params.row_height_weight = 3.0;
+                strategy_params.vertical_control_weight = 3.0;
+                strategy_params.horizontal_control_weight = 3.0;
+            }
+            5 => {
+                // Balanced but different
+                strategy_params.center_control_weight = 1.0;
+                strategy_params.piece_count_weight = 2.0;
+                strategy_params.threat_weight = 1.5;
+                strategy_params.mobility_weight = 1.5;
+            }
+            6 => {
+                // Extreme values
+                strategy_params.win_score = 20000;
+                strategy_params.loss_score = -20000;
+                strategy_params.center_column_value = 500;
+                strategy_params.threat_weight = 10.0;
+            }
+            7 => {
+                // Minimal values
+                strategy_params.win_score = 5000;
+                strategy_params.loss_score = -5000;
+                strategy_params.center_column_value = 50;
+                strategy_params.threat_weight = 0.1;
+            }
+            _ => unreachable!(),
+        }
         population.push(strategy_params);
     }
 
@@ -435,6 +659,7 @@ fn main() {
     let mut previous_best_params = GeneticParams::default(); // Track previous generation's best
     let mut hall_of_fame_fitness = 0.0;
     let mut generations_without_improvement = 0;
+    let mut consecutive_stagnation_count = 0; // Track consecutive generations with stagnation
 
     for generation in 0..GENERATIONS {
         println!("\n🔄 Generation {}", generation + 1);
@@ -448,6 +673,24 @@ fn main() {
 
         // Use parallel processing with progress tracking
         println!("    Starting parallel evaluation...");
+        println!(
+            "    🎯 Opponent parameters for this generation ({}):",
+            previous_best_params.id
+        );
+        println!("      Win score: {}", previous_best_params.win_score);
+        println!(
+            "      Center column value: {}",
+            previous_best_params.center_column_value
+        );
+        println!(
+            "      Center control weight: {:.3}",
+            previous_best_params.center_control_weight
+        );
+        println!(
+            "      Threat weight: {:.3}",
+            previous_best_params.threat_weight
+        );
+
         let fitness_scores: Vec<f64> = population
             .par_iter()
             .enumerate()
@@ -467,8 +710,9 @@ fn main() {
                 // Log perfect scores immediately
                 if fitness >= 1.0 {
                     println!(
-                        "      ⚠️  PERFECT SCORE at individual {}: {:.3}",
+                        "      ⚠️  PERFECT SCORE at individual {} ({}): {:.3}",
                         idx + 1,
+                        params.id,
                         fitness
                     );
                 }
@@ -496,138 +740,144 @@ fn main() {
                 perfect_indices.len()
             );
 
-            // Evaluate perfect candidates against each other in parallel mini-tournaments
-            // Collect tournament results efficiently in parallel with round-robin format
-            let tournament_games = 20; // Reduced from 50 to 20
+            // Check if the perfect candidates are actually different from each other
+            let mut all_same = true;
+            let first_perfect = &population[perfect_indices[0]];
+            for &idx in &perfect_indices[1..] {
+                let diff = calculate_params_difference(first_perfect, &population[idx]);
+                if diff > 0.01 {
+                    all_same = false;
+                    break;
+                }
+            }
 
-            println!(
-                "    🎮 Starting tie-break tournament ({} games per candidate)...",
-                tournament_games
-            );
-            // Create all individual games to parallelize at the game level
-            let mut all_games = Vec::new();
-            for &candidate_idx in &perfect_indices {
-                let opponents_per_game = perfect_indices.len() - 1; // Exclude self
-                let games_per_opponent = tournament_games / opponents_per_game; // At least 1
-                let remaining_games = tournament_games % opponents_per_game;
+            if all_same {
+                println!("    ⚠️  All perfect candidates are identical - picking first one");
+                (perfect_indices[0], &fitness_scores[perfect_indices[0]])
+            } else {
+                println!("    ✅ Perfect candidates are different - running tournament");
 
-                // Add base games against each opponent
-                for &opponent_idx in &perfect_indices {
-                    if opponent_idx != candidate_idx {
-                        for _ in 0..games_per_opponent {
+                // Evaluate perfect candidates against each other in parallel mini-tournaments
+                // Collect tournament results efficiently in parallel with round-robin format
+                let tournament_games = 50; // Reduced from 200 since depth 4 provides better evaluation quality
+
+                println!(
+                    "    🎮 Starting tie-break tournament ({} games per candidate)...",
+                    tournament_games
+                );
+                // Create all individual games to parallelize at the game level
+                let mut all_games = Vec::new();
+                for &candidate_idx in &perfect_indices {
+                    let opponents_per_game = perfect_indices.len() - 1; // Exclude self
+                    let games_per_opponent = tournament_games / opponents_per_game; // At least 1
+                    let remaining_games = tournament_games % opponents_per_game;
+
+                    // Add base games against each opponent
+                    for &opponent_idx in &perfect_indices {
+                        if opponent_idx != candidate_idx {
+                            for _ in 0..games_per_opponent {
+                                all_games.push((candidate_idx, opponent_idx));
+                            }
+                        }
+                    }
+
+                    // Add remaining games randomly
+                    for _ in 0..remaining_games {
+                        let opponent_idx =
+                            perfect_indices[rand::random::<usize>() % perfect_indices.len()];
+                        if opponent_idx != candidate_idx {
                             all_games.push((candidate_idx, opponent_idx));
                         }
                     }
                 }
 
-                // Add remaining games randomly
-                for _ in 0..remaining_games {
-                    let opponent_idx =
-                        perfect_indices[rand::random::<usize>() % perfect_indices.len()];
-                    if opponent_idx != candidate_idx {
-                        all_games.push((candidate_idx, opponent_idx));
+                println!(
+                    "    🎯 Parallelizing {} individual games across all cores...",
+                    all_games.len()
+                );
+
+                // Run all games in parallel at the individual game level
+                let game_results: Vec<(usize, usize, f64)> = all_games
+                    .par_iter()
+                    .map(|(candidate_idx, opponent_idx)| {
+                        // Use a simpler single-game evaluation for tournament
+                        let fitness = evaluate_single_game(
+                            &population[*candidate_idx],
+                            &population[*opponent_idx],
+                        );
+                        (*candidate_idx, *opponent_idx, fitness)
+                    })
+                    .collect();
+
+                // Aggregate results by candidate
+                let mut candidate_results = std::collections::HashMap::new();
+                for (candidate_idx, opponent_idx, fitness) in game_results {
+                    let entry =
+                        candidate_results
+                            .entry(candidate_idx)
+                            .or_insert((0, 0, Vec::new()));
+                    entry.0 += 1; // total games
+                    if fitness > 0.5 {
+                        entry.1 += 1; // wins
                     }
+                    entry.2.push((opponent_idx, fitness));
                 }
-            }
 
-            println!(
-                "    🎯 Parallelizing {} individual games across all cores...",
-                all_games.len()
-            );
+                // Convert to tournament results format
+                let tournament_results: Vec<(usize, usize, usize, Vec<(usize, f64)>)> =
+                    perfect_indices
+                        .iter()
+                        .map(|&idx| {
+                            let default_result = (0, 0, Vec::new());
+                            let (total_games, wins, game_results) =
+                                candidate_results.get(&idx).unwrap_or(&default_result);
+                            (idx, *wins, *total_games, game_results.clone())
+                        })
+                        .collect();
 
-            // Run all games in parallel at the individual game level
-            let game_results: Vec<(usize, usize, f64)> = all_games
-                .par_iter()
-                .map(|(candidate_idx, opponent_idx)| {
-                    let fitness = evaluate_params_tournament(
-                        &population[*candidate_idx],
-                        &population[*opponent_idx],
-                    );
-                    (*candidate_idx, *opponent_idx, fitness)
-                })
-                .collect();
-
-            // Aggregate results by candidate
-            let mut candidate_results = std::collections::HashMap::new();
-            for (candidate_idx, opponent_idx, fitness) in game_results {
-                let entry = candidate_results
-                    .entry(candidate_idx)
-                    .or_insert((0, 0, Vec::new()));
-                entry.0 += 1; // total games
-                if fitness > 0.5 {
-                    entry.1 += 1; // wins
-                }
-                entry.2.push((opponent_idx, fitness));
-            }
-
-            // Convert to tournament results format
-            let tournament_results: Vec<(usize, usize, usize, Vec<(usize, f64)>)> = perfect_indices
-                .iter()
-                .map(|&idx| {
-                    let default_result = (0, 0, Vec::new());
-                    let (total_games, wins, game_results) =
-                        candidate_results.get(&idx).unwrap_or(&default_result);
-                    (idx, *wins, *total_games, game_results.clone())
-                })
-                .collect();
-
-            // Log results after parallel computation is complete
-            let tournament_scores: Vec<f64> = tournament_results
-                .iter()
-                .map(|(idx, wins, total_games, game_results)| {
-                    let tournament_score = if *total_games > 0 {
-                        *wins as f64 / *total_games as f64
-                    } else {
-                        0.0
-                    };
-
-                    // Log individual game results
-                    for (opponent_idx, fitness) in game_results {
-                        if *fitness > 0.5 {
-                            println!(
-                                "      🟢 Candidate {} vs {}: WIN (fitness: {:.3})",
-                                idx + 1,
-                                opponent_idx + 1,
-                                fitness
-                            );
+                // Log results after parallel computation is complete
+                let tournament_scores: Vec<f64> = tournament_results
+                    .iter()
+                    .map(|(idx, wins, total_games, _game_results)| {
+                        let tournament_score = if *total_games > 0 {
+                            *wins as f64 / *total_games as f64
                         } else {
-                            println!(
-                                "      🔴 Candidate {} vs {}: LOSS (fitness: {:.3})",
-                                idx + 1,
-                                opponent_idx + 1,
-                                fitness
-                            );
-                        }
-                    }
+                            0.0
+                        };
 
-                    // Log candidate summary
-                    println!(
-                        "    📊 Candidate {} tournament complete: {}/{} wins ({:.1}%)",
-                        idx + 1,
-                        wins,
-                        total_games,
-                        tournament_score * 100.0
-                    );
+                        // Skip individual game logging for performance (too many games now)
 
-                    tournament_score
-                })
-                .collect();
+                        // Log candidate summary
+                        println!(
+                            "    📊 Candidate {} ({}) tournament complete: {}/{} wins ({:.1}%)",
+                            idx + 1,
+                            population[*idx].id,
+                            wins,
+                            total_games,
+                            tournament_score * 100.0
+                        );
 
-            // Find the best tournament score
-            let (best_tournament_idx, &best_tournament_score) = tournament_scores
-                .iter()
-                .enumerate()
-                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-                .unwrap();
+                        tournament_score
+                    })
+                    .collect();
 
-            let best_perfect_idx = perfect_indices[best_tournament_idx];
+                // Find the best tournament score
+                let (best_tournament_idx, &best_tournament_score) = tournament_scores
+                    .iter()
+                    .enumerate()
+                    .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+                    .unwrap();
 
-            println!(
-                "    🏆 Tie-break winner: individual {} (tournament score: {:.3})",
-                best_perfect_idx + 1,
-                best_tournament_score
-            );
-            (best_perfect_idx, &fitness_scores[best_perfect_idx])
+                let best_perfect_idx = perfect_indices[best_tournament_idx];
+
+                println!(
+                    "    🏆 Tie-break winner: individual {} ({}) (tournament score: {:.3})",
+                    best_perfect_idx + 1,
+                    population[best_perfect_idx].id,
+                    best_tournament_score
+                );
+                (best_perfect_idx, &fitness_scores[best_perfect_idx])
+            }
         } else {
             // Normal case - just pick the best
             fitness_scores
@@ -637,14 +887,27 @@ fn main() {
                 .unwrap()
         };
 
+        // Find runner-up for reporting
+        let (runner_up_idx, runner_up_score) = {
+            let mut fitness_with_indices: Vec<(usize, f64)> = fitness_scores
+                .iter()
+                .enumerate()
+                .map(|(idx, &score)| (idx, score))
+                .collect();
+            fitness_with_indices.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
+            (fitness_with_indices[1].0, fitness_with_indices[1].1)
+        };
+
+        let runner_up_params = &population[runner_up_idx];
+
         if best_score > best_fitness {
             let improvement = best_score - best_fitness;
             best_fitness = best_score;
             best_params = population[best_idx].clone();
             generations_without_improvement = 0;
             println!(
-                "🏆 New best fitness: {:.3} (+{:.3})",
-                best_fitness, improvement
+                "🏆 New best fitness: {:.3} (+{:.3}) - ID: {} (gen {})",
+                best_fitness, improvement, best_params.id, best_params.generation
             );
 
             // Update hall of fame if this is the best ever
@@ -664,12 +927,88 @@ fn main() {
             }
         }
 
-        // Always show current best parameters and changes from previous generation
+        // Get the current generation's winner
+        let current_winner = &population[best_idx];
+
+        // Check if the current generation's winner is different from the previous generation's winner
+        let params_diff = calculate_params_difference(current_winner, &previous_best_params);
+        if params_diff < 0.01 {
+            // Adjusted threshold for new normalization
+            println!(
+                "⚠️  WARNING: Current generation winner is nearly identical to previous generation winner (diff: {:.3})",
+                params_diff
+            );
+            println!("    This suggests the evolution is not making meaningful progress!");
+        } else {
+            println!(
+                "✅ Current generation winner is different from previous generation winner (diff: {:.3})",
+                params_diff
+            );
+        }
+
+        // Always show current generation winner parameters and changes from previous generation
         if generation > 0 {
-            print_params_diff(&best_params, &previous_best_params, generation + 1);
+            print_params_diff(current_winner, &previous_best_params, generation + 1);
         } else {
             // For generation 1, show changes from default parameters
-            print_params_diff(&best_params, &default_params, generation + 1);
+            print_params_diff(current_winner, &default_params, generation + 1);
+        }
+
+        // Show runner-up information
+        if runner_up_idx != best_idx {
+            println!(
+                "🥈 Runner-up: individual {} ({}) - fitness: {:.3}",
+                runner_up_idx + 1,
+                runner_up_params.id,
+                runner_up_score
+            );
+            println!("   Win score: {}", runner_up_params.win_score);
+            println!("   Loss score: {}", runner_up_params.loss_score);
+            println!(
+                "   Center column value: {}",
+                runner_up_params.center_column_value
+            );
+            println!(
+                "   Adjacent center value: {}",
+                runner_up_params.adjacent_center_value
+            );
+            println!(
+                "   Outer column value: {}",
+                runner_up_params.outer_column_value
+            );
+            println!(
+                "   Edge column value: {}",
+                runner_up_params.edge_column_value
+            );
+            println!(
+                "   Row height weight: {:.3}",
+                runner_up_params.row_height_weight
+            );
+            println!(
+                "   Center control weight: {:.3}",
+                runner_up_params.center_control_weight
+            );
+            println!(
+                "   Piece count weight: {:.3}",
+                runner_up_params.piece_count_weight
+            );
+            println!("   Threat weight: {:.3}", runner_up_params.threat_weight);
+            println!(
+                "   Mobility weight: {:.3}",
+                runner_up_params.mobility_weight
+            );
+            println!(
+                "   Vertical control weight: {:.3}",
+                runner_up_params.vertical_control_weight
+            );
+            println!(
+                "   Horizontal control weight: {:.3}",
+                runner_up_params.horizontal_control_weight
+            );
+            println!(
+                "   Defensive weight: {:.3}",
+                runner_up_params.defensive_weight
+            );
         }
 
         let avg_fitness = fitness_scores.iter().sum::<f64>() / fitness_scores.len() as f64;
@@ -688,6 +1027,10 @@ fn main() {
             POPULATION_SIZE
         );
 
+        // Log diversity information
+        let diversity = calculate_population_diversity(&population);
+        println!("🌱 Population diversity: {:.3}", diversity);
+
         // Analysis of why this generation might be performing well
         if perfect_fitness_count > POPULATION_SIZE / 2 {
             let perfect_percentage = (perfect_fitness_count * 100) / POPULATION_SIZE;
@@ -698,34 +1041,100 @@ fn main() {
             println!("    1. The opponent (previous generation) might be too weak");
             println!("    2. The evaluation might be too easy");
             println!("    3. The search depth might be insufficient");
+            println!(
+                "    4. Population diversity is too low (current: {:.3})",
+                diversity
+            );
         }
 
-        // Selection: Keep top 20% and tournament select the rest
-        let elite_count = POPULATION_SIZE / 10; // Reduced from /5 to /10 (10% instead of 20%)
+        // Selection: Use tournament selection with diversity preservation
         let mut new_population = Vec::new();
 
-        // Keep elite individuals
-        let mut indexed_fitness: Vec<(usize, f64)> = fitness_scores
-            .iter()
-            .enumerate()
-            .map(|(i, &f)| (i, f))
-            .collect();
-        indexed_fitness.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
+        // Keep only the absolute best individual (elitism = 1)
+        let best_individual = population[best_idx].clone();
+        new_population.push(best_individual.clone());
 
-        for i in 0..elite_count {
-            let mut elite_individual = population[indexed_fitness[i].0].clone();
-            // Apply very light mutation to elite individuals to maintain diversity
-            elite_individual = elite_individual.random_mutation(0.15, 0.5); // 15% chance, 0.5 strength
-            new_population.push(elite_individual);
+        // Check if we're stagnating (current generation winner is too similar to previous generation winner)
+        let params_diff = calculate_params_difference(current_winner, &previous_best_params);
+        let is_stagnating = params_diff < 0.01; // Adjusted threshold for new normalization
+
+        if is_stagnating {
+            consecutive_stagnation_count += 1;
+            println!(
+                "    ⚠️  STAGNATION DETECTED: Best individual diff = {:.4} (threshold: 0.01) - Consecutive: {}",
+                params_diff, consecutive_stagnation_count
+            );
+            println!("    🔧 Applying aggressive mutation strategy...");
+        } else {
+            consecutive_stagnation_count = 0;
         }
 
-        // Tournament selection for the rest
+        // Adjust mutation parameters based on stagnation
+        let current_mutation_strength = if is_stagnating {
+            MUTATION_STRENGTH * 2.0 // Double mutation strength when stagnating
+        } else {
+            MUTATION_STRENGTH
+        };
+
+        let current_mutation_rate = if is_stagnating {
+            (MUTATION_RATE * 1.5).min(1.0) // Increase mutation rate when stagnating, but cap at 1.0
+        } else {
+            MUTATION_RATE
+        };
+
+        // Generate the rest through tournament selection with forced diversity
+        let mut used_indices = std::collections::HashSet::new();
+        used_indices.insert(best_idx); // Don't reuse the best individual
+
+        // Focus more mutations on the best candidate when stagnating
+        let best_focused_ratio = if is_stagnating { 0.6 } else { 0.3 }; // 60% vs 30% focus on best
+        let num_best_focused = ((POPULATION_SIZE - 1) as f64 * best_focused_ratio) as usize;
+
+        if is_stagnating {
+            println!(
+                "    🎯 Creating {} offspring from best individual ({}% focus)",
+                num_best_focused,
+                (best_focused_ratio * 100.0) as i32
+            );
+        }
+
+        // Create some offspring specifically from the best individual
+        for _ in 0..num_best_focused {
+            let mut offspring = best_individual.clone();
+
+            // Apply stronger mutation to the best individual
+            offspring = offspring.random_mutation(current_mutation_rate, current_mutation_strength);
+
+            // Additional random mutation for extra diversity
+            if rand::random::<f64>() < 0.5 {
+                offspring = offspring.random_mutation(0.7, current_mutation_strength * 1.5);
+            }
+
+            new_population.push(offspring);
+        }
+
+        // Fill the rest through tournament selection
         while new_population.len() < POPULATION_SIZE {
-            let tournament_size = 3;
+            // Tournament selection with diversity constraint
+            let tournament_size = 5; // Increased from 3 for better selection pressure
             let mut tournament = Vec::new();
 
+            // Select tournament participants, avoiding recently used individuals
             for _ in 0..tournament_size {
-                let idx = rand::random::<usize>() % POPULATION_SIZE;
+                let mut attempts = 0;
+                let max_attempts = 20;
+                let mut idx;
+
+                loop {
+                    idx = rand::random::<usize>() % POPULATION_SIZE;
+                    attempts += 1;
+
+                    // Prefer unused individuals, but allow reuse after max attempts
+                    if !used_indices.contains(&idx) || attempts >= max_attempts {
+                        break;
+                    }
+                }
+
                 tournament.push((idx, fitness_scores[idx]));
             }
 
@@ -735,25 +1144,53 @@ fn main() {
                 .unwrap()
                 .0;
 
-            // Create a copy and apply crossover/mutation to add diversity
-            let mut selected_individual = population[winner_idx].clone();
+            // Create offspring through crossover and mutation
+            let mut offspring = population[winner_idx].clone();
 
-            // Apply crossover with another random individual
-            if rand::random::<f64>() < CROSSOVER_RATE {
-                let parent2_idx = rand::random::<usize>() % POPULATION_SIZE;
-                selected_individual = crossover(&selected_individual, &population[parent2_idx]);
+            // Always apply crossover with a different parent for diversity
+            let parent2_idx = loop {
+                let idx = rand::random::<usize>() % POPULATION_SIZE;
+                if idx != winner_idx {
+                    break idx;
+                }
+            };
+            offspring = crossover(&offspring, &population[parent2_idx]);
+
+            // Apply stronger mutation to ensure diversity
+            offspring = offspring.random_mutation(current_mutation_rate, current_mutation_strength);
+
+            // Additional random mutation for extra diversity
+            if rand::random::<f64>() < 0.3 {
+                offspring = offspring.random_mutation(0.5, current_mutation_strength);
             }
 
-            // Apply mutation
-            mutate(&mut selected_individual);
-
-            new_population.push(selected_individual);
+            new_population.push(offspring);
+            used_indices.insert(winner_idx);
         }
 
         // Crossover and mutation already applied during tournament selection
 
-        // Update previous best for next generation
-        previous_best_params = best_params.clone();
+        // Check population diversity and inject diversity if needed
+        let current_diversity = calculate_population_diversity(&new_population);
+        let target_diversity = if is_stagnating { 0.2 } else { 0.1 }; // Higher target when stagnating
+
+        if current_diversity < target_diversity || is_stagnating {
+            inject_diversity(&mut new_population, target_diversity);
+        }
+
+        // Check for early stopping due to stagnation
+        if consecutive_stagnation_count >= 3 {
+            println!(
+                "\n🛑 EARLY STOPPING: Stagnation detected for {} consecutive generations",
+                consecutive_stagnation_count
+            );
+            println!("   The evolution has converged and is no longer making meaningful progress.");
+            println!("   Best fitness achieved: {:.3}", best_fitness);
+            break;
+        }
+
+        // Update previous best for next generation (track current generation's winner)
+        previous_best_params = current_winner.clone();
         population = new_population;
 
         // Generation summary
@@ -768,6 +1205,14 @@ fn main() {
 
     println!("\n🎯 Evolution complete!");
     println!("🏆 Best fitness achieved: {:.3}", best_fitness);
+    println!("🧬 Best individual lineage:");
+    println!("  ID: {}", best_params.id);
+    println!("  Generation: {}", best_params.generation);
+    if !best_params.parent_ids.is_empty() {
+        println!("  Parents: {}", best_params.parent_ids.join(" → "));
+    } else {
+        println!("  Parents: None (initial population)");
+    }
     println!("📋 Best parameters:");
     println!("  Win score: {}", best_params.win_score);
     println!("  Loss score: {}", best_params.loss_score);
@@ -800,7 +1245,7 @@ fn main() {
     println!("  Defensive weight: {:.3}", best_params.defensive_weight);
 
     // Validate against default parameters
-    let validation_score = validate_against_default(&best_params, 1000);
+    let validation_score = validate_against_default(&best_params, 500); // Reduced from 2000 since depth 4 provides better evaluation
     println!(
         "✅ Validation score: {:.3} (vs default params)",
         validation_score
