@@ -172,7 +172,7 @@ class WASMAIService {
 
     try {
       const wasmState = await this.convertGameStateToWASM(gameState);
-      console.log('WASM AI: Converted state:', JSON.stringify(wasmState, null, 2));
+      // console.log('WASM AI: Converted state:', JSON.stringify(wasmState, null, 2));
       const result = this.ai.get_best_move(wasmState, depth);
 
       console.log('WASM AI: Raw result:', result);
