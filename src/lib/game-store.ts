@@ -4,6 +4,7 @@ import { immer } from 'zustand/middleware/immer';
 import { initializeGame, makeMove as makeMoveLogic, makeAIMove } from './game-logic';
 import { initializeWASMAI } from './wasm-ai-service';
 import type { GameState } from './types';
+import { useUIStore } from './ui-store';
 
 const LATEST_VERSION = 1;
 
@@ -34,7 +35,7 @@ export const useGameStore = create<GameStore>()(
               state.aiThinking = false;
             });
           }
-          
+
           // Initialize WASM AI in the background
           initializeWASMAI().catch(error => {
             console.warn('Failed to initialize WASM AI:', error);
@@ -92,8 +93,9 @@ export const useGameStore = create<GameStore>()(
                 }, 800);
               } catch (error) {
                 console.error('AI move calculation failed:', error);
-                // Show error to user
-                alert(`AI Error: ${error instanceof Error ? error.message : 'Unknown error'}. Please refresh the page.`);
+                // Show error to user via UI store
+                const errorMessage = `AI calculation failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please refresh the page.`;
+                useUIStore.getState().actions.showError(errorMessage);
                 set(state => {
                   state.aiThinking = false;
                 });

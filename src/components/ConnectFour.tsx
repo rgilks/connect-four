@@ -6,9 +6,11 @@ import { ExternalLink, Github } from 'lucide-react';
 import Image from 'next/image';
 import { useGameStore, useGameState, useGameActions } from '@/lib/game-store';
 import { soundEffects } from '@/lib/sound-effects';
+import { useUIStore } from '@/lib/ui-store';
 import GameBoard from './GameBoard';
 import AnimatedBackground from './AnimatedBackground';
 import HowToPlayPanel from './HowToPlayPanel';
+import ErrorModal from './ErrorModal';
 
 function isStandalonePWA() {
   if (typeof window === 'undefined') return false;
@@ -20,6 +22,8 @@ export default function ConnectFour() {
   const gameState = useGameState();
   const { makeAIMove, reset } = useGameActions();
   const aiThinking = useGameStore(state => state.aiThinking);
+  const { errorModal } = useUIStore();
+  const { hideError } = useUIStore(state => state.actions);
 
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -89,7 +93,7 @@ export default function ConnectFour() {
 
   return (
     <>
-            <div className="fixed bottom-5 left-1/2 transform -translate-x-1/2 z-50">
+      <div className="fixed bottom-5 left-1/2 transform -translate-x-1/2 z-50">
         <a
           href="https://ko-fi.com/N4N31DPNUS"
           target="_blank"
@@ -98,12 +102,12 @@ export default function ConnectFour() {
           className="opacity-60 hover:opacity-100 transition-opacity"
           data-testid="ko-fi-link"
         >
-          <Image 
-            height={36} 
+          <Image
+            height={36}
             width={120}
-            style={{ border: '0px', height: '36px' }} 
-            src="https://storage.ko-fi.com/cdn/kofi2.png?v=6" 
-            alt="Buy Me a Coffee at ko-fi.com" 
+            style={{ border: '0px', height: '36px' }}
+            src="https://storage.ko-fi.com/cdn/kofi2.png?v=6"
+            alt="Buy Me a Coffee at ko-fi.com"
           />
         </a>
       </div>
@@ -168,6 +172,7 @@ export default function ConnectFour() {
       </div>
 
       <HowToPlayPanel isOpen={showHowToPlay} onClose={handleCloseHowToPlay} />
+      <ErrorModal isOpen={errorModal.isOpen} onClose={hideError} error={errorModal.error} />
     </>
   );
 }

@@ -8,6 +8,10 @@ type UIStore = {
   soundEnabled: boolean;
   diagnosticsPanelOpen: boolean;
   howToPlayOpen: boolean;
+  errorModal: {
+    isOpen: boolean;
+    error: string;
+  };
   actions: {
     setShowModelOverlay: (show: boolean) => void;
     setSelectedMode: (mode: 'heuristic' | 'classic' | 'ml' | 'watch' | null) => void;
@@ -16,6 +20,8 @@ type UIStore = {
     setSoundEnabled: (enabled: boolean) => void;
     setDiagnosticsPanelOpen: (open: boolean) => void;
     setHowToPlayOpen: (open: boolean) => void;
+    showError: (error: string) => void;
+    hideError: () => void;
     reset: () => void;
   };
 };
@@ -28,6 +34,10 @@ export const useUIStore = create<UIStore>(set => ({
   soundEnabled: true,
   diagnosticsPanelOpen: false,
   howToPlayOpen: false,
+  errorModal: {
+    isOpen: false,
+    error: '',
+  },
   actions: {
     setShowModelOverlay: show => set({ showModelOverlay: show }),
     setSelectedMode: mode => set({ selectedMode: mode }),
@@ -36,6 +46,8 @@ export const useUIStore = create<UIStore>(set => ({
     setSoundEnabled: enabled => set({ soundEnabled: enabled }),
     setDiagnosticsPanelOpen: open => set({ diagnosticsPanelOpen: open }),
     setHowToPlayOpen: open => set({ howToPlayOpen: open }),
+    showError: error => set({ errorModal: { isOpen: true, error } }),
+    hideError: () => set({ errorModal: { isOpen: false, error: '' } }),
     reset: () =>
       set({
         showModelOverlay: true,
@@ -45,6 +57,7 @@ export const useUIStore = create<UIStore>(set => ({
         soundEnabled: true,
         diagnosticsPanelOpen: false,
         howToPlayOpen: false,
+        errorModal: { isOpen: false, error: '' },
       }),
   },
 }));
@@ -58,4 +71,5 @@ export const useUIState = () =>
     soundEnabled: state.soundEnabled,
     diagnosticsPanelOpen: state.diagnosticsPanelOpen,
     howToPlayOpen: state.howToPlayOpen,
+    errorModal: state.errorModal,
   }));
