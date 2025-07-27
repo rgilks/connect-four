@@ -72,7 +72,7 @@ fn evaluate_params_tournament(evolved_params: &GeneticParams) -> f64 {
                 test_state.current_player = game_state.current_player;
 
                 let mut ai = AI::new();
-                let (best_move, _) = ai.get_best_move(&test_state, 3);
+                let (best_move, _) = ai.get_best_move(&test_state, 5);
 
                 if let Some(column) = best_move {
                     game_state.make_move(column).ok();
@@ -122,7 +122,7 @@ fn validate_against_default(evolved_params: &GeneticParams, num_games: usize) ->
                 test_state.current_player = game_state.current_player;
 
                 let mut ai = AI::new();
-                let (best_move, _) = ai.get_best_move(&test_state, 3);
+                let (best_move, _) = ai.get_best_move(&test_state, 5);
 
                 if let Some(column) = best_move {
                     game_state.make_move(column).ok();

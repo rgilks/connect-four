@@ -74,9 +74,13 @@ class WASMAIService {
     }
 
     try {
-      // Use dynamic import to load the WASM module
+      // Load WASM module using runtime import
       console.log('🔄 Loading WASM module...');
-      const wasmModule = (await import('/wasm/connect_four_ai_core.js')) as WASMModule;
+      
+      // Use a runtime import that won't be resolved at build time
+      const wasmModulePath = '/wasm/connect_four_ai_core.js';
+      const wasmModule = await import(/* webpackIgnore: true */ wasmModulePath) as WASMModule;
+      
       console.log('🔄 WASM module imported, initializing...');
       await wasmModule.default();
       console.log('🔄 WASM module initialized, creating AI instance...');
