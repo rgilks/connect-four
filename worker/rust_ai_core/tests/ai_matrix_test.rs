@@ -58,6 +58,7 @@ enum AIType {
     EMMDepth4,
     EMMDepth5,
     EMMDepth6,
+    EMMDepth7,
 }
 
 impl AIType {
@@ -71,6 +72,7 @@ impl AIType {
             AIType::EMMDepth4 => "EMM-Depth4",
             AIType::EMMDepth5 => "EMM-Depth5",
             AIType::EMMDepth6 => "EMM-Depth6",
+            AIType::EMMDepth7 => "EMM-Depth7",
         }
     }
 }
@@ -283,6 +285,14 @@ fn create_ai_player(ai_type: &AIType) -> Result<Box<dyn AIPlayer>, Box<dyn std::
                 Err("Depth 6 tests require RUN_SLOW_TESTS=1".into())
             }
         }
+        AIType::EMMDepth7 => {
+            // Only run depth 7 if explicitly requested
+            if std::env::var("RUN_SLOW_TESTS").is_ok() {
+                Ok(Box::new(ExpectiminimaxAI::new(7)))
+            } else {
+                Err("Depth 7 tests require RUN_SLOW_TESTS=1".into())
+            }
+        }
     }
 }
 
@@ -381,11 +391,12 @@ fn test_ai_matrix() {
         AIType::EMMDepth3,
     ];
 
-    // Add depths 4-6 only if slow tests are enabled
+    // Add depths 4-7 only if slow tests are enabled
     if std::env::var("RUN_SLOW_TESTS").is_ok() {
         ai_types.push(AIType::EMMDepth4);
         ai_types.push(AIType::EMMDepth5);
         ai_types.push(AIType::EMMDepth6);
+        ai_types.push(AIType::EMMDepth7);
     }
 
     println!("Testing {} AI types:", ai_types.len());

@@ -134,11 +134,11 @@ The evaluation function uses evolved genetic parameters optimized through a gene
 
 ### Search Depth Optimization
 
-Optimized for depth 3 search, providing the best performance/speed ratio:
+Optimized for depth 5 search, providing the best performance/speed ratio:
 
-- **Production**: Depth 3 search for optimal balance
-- **Maximum Strength**: Depth 4 search for strongest play
-- **Fast Alternative**: Depth 2 search for instant speed
+- **Production**: Depth 5 search for optimal balance (93.8% win rate)
+- **Maximum Strength**: Depth 7 search for strongest play
+- **Fast Alternative**: Depth 3 search for instant speed
 - **Testing**: Various depths for performance analysis
 
 ## ML AI

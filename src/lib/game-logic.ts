@@ -76,7 +76,7 @@ export async function makeAIMove(gameState: GameState): Promise<number> {
   try {
     // Clear transposition table to ensure fresh calculations
     wasmAI.clearTranspositionTable();
-    const response = await wasmAI.getBestMove(gameState, 3);
+    const response = await wasmAI.getBestMove(gameState, 5);
     if (response.move !== null && response.move !== undefined) {
       console.log(
         `🤖 WASM AI chose column ${response.move} (evaluated ${response.nodesEvaluated} nodes)`
