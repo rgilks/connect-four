@@ -38,9 +38,40 @@ export interface WASMMLResponse {
 }
 
 interface WASMAIInstance {
-  get_best_move: (state: unknown, depth: number) => string;
-  get_heuristic_move: (state: unknown) => string;
-  get_ml_move: (state: unknown) => string;
+  get_best_move: (state: unknown, depth: number) => {
+    move: number | null;
+    evaluations: Array<{
+      column: number;
+      score: number;
+      moveType: string;
+    }>;
+    nodes_evaluated: number;
+    transposition_hits: number;
+  };
+  get_heuristic_move: (state: unknown) => {
+    move: number | null;
+    evaluations: Array<{
+      column: number;
+      score: number;
+      moveType: string;
+    }>;
+    nodes_evaluated: number;
+  };
+  get_ml_move: (state: unknown) => {
+    move: number | null;
+    evaluation: number;
+    thinking: string;
+    diagnostics: {
+      validMoves: number[];
+      moveEvaluations: Array<{
+        column: number;
+        score: number;
+        moveType: string;
+      }>;
+      valueNetworkOutput: number;
+      policyNetworkOutputs: number[];
+    };
+  };
   evaluate_position: (state: unknown) => number;
   load_ml_weights: (value_weights: unknown, policy_weights: unknown) => void;
   clear_transposition_table: () => void;
@@ -145,7 +176,10 @@ class WASMAIService {
       const result = this.ai.get_best_move(wasmState, depth);
 
       console.log('WASM AI: Raw result:', result);
-      const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
+      
+      // The WASM API returns a JsValue which is already a JavaScript object
+      // No need to parse it as JSON
+      const parsedResult = result;
 
       return {
         move: parsedResult.move,
@@ -167,7 +201,12 @@ class WASMAIService {
     try {
       const wasmState = await this.convertGameStateToWASM(gameState);
       const result = this.ai.get_heuristic_move(wasmState);
-      return typeof result === 'string' ? JSON.parse(result) : result;
+      
+      return {
+        move: result.move,
+        evaluations: result.evaluations || [],
+        nodesEvaluated: result.nodes_evaluated || 0,
+      };
     } catch (error) {
       throw new Error(`WASM heuristic AI failed: ${error}`);
     }
@@ -181,7 +220,13 @@ class WASMAIService {
     try {
       const wasmState = await this.convertGameStateToWASM(gameState);
       const result = this.ai.get_ml_move(wasmState);
-      return typeof result === 'string' ? JSON.parse(result) : result;
+      
+      return {
+        move: result.move,
+        evaluation: result.evaluation,
+        thinking: result.thinking,
+        diagnostics: result.diagnostics,
+      };
     } catch (error) {
       throw new Error(`WASM ML AI failed: ${error}`);
     }

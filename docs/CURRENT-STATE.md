@@ -99,6 +99,29 @@ The Connect Four game now has a **fully integrated and working Rust/WASM AI syst
 
 **Problem**: WASM AI was failing with error "unknown variant `Player2`, expected `player1` or `player2`"
 
+**Root Cause**: Rust enum variants were using PascalCase (`Player1`, `Player2`) but the WASM API expected lowercase (`player1`, `player2`).
+
+**Solution Applied**:
+1. ✅ **Fixed Rust enum serialization**: Added `#[serde(rename = "player1")]` and `#[serde(rename = "player2")]` to Player enum
+2. ✅ **Updated TypeScript interfaces**: Ensured consistent lowercase format throughout
+3. ✅ **Verified conversion**: Game state conversion now works correctly
+
+**Result**: WASM AI now loads and functions properly with consistent player value format.
+
+### WASM Return Value Parsing Issue ✅ RESOLVED
+
+**Problem**: WASM AI was working (choosing moves correctly) but throwing errors in the game store due to incorrect parsing of return values.
+
+**Root Cause**: The WASM API returns `JsValue` objects directly, but the TypeScript code was trying to parse them as if they might be JSON strings.
+
+**Solution Applied**:
+1. ✅ **Fixed TypeScript interfaces**: Updated `WASMAIInstance` to reflect actual return types (objects, not strings)
+2. ✅ **Removed unnecessary parsing**: Eliminated `JSON.parse()` calls for WASM return values
+3. ✅ **Fixed property mapping**: Corrected property name mapping between WASM API and TypeScript interfaces
+4. ✅ **Updated all AI methods**: Applied consistent fix to `getBestMove`, `getHeuristicMove`, and `getMLMove`
+
+**Result**: WASM AI now works without errors, providing smooth gameplay with proper move selection and evaluation.
+
 **Root Cause**: Inconsistent format expectations in Rust/WASM code:
 - `Player` enum expects lowercase values (`player1`, `player2`) due to `#[serde(rename_all = "lowercase")]`
 - `Cell` enum expected exact enum names (`Empty`, `Player1`, `Player2`)
