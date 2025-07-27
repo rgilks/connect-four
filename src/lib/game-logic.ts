@@ -123,7 +123,7 @@ export async function makeAIMove(gameState: GameState): Promise<number> {
 
     // Clear transposition table to ensure fresh calculations
     wasmAI.clearTranspositionTable();
-    const response = await wasmAI.getBestMove(gameState, 5);
+    const response = await wasmAI.getBestMove(gameState, 1);
 
     // Check if we got a valid move (0-6 for columns)
     if (

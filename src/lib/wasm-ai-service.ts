@@ -168,7 +168,7 @@ class WASMAIService {
     };
   }
 
-  async getBestMove(gameState: GameState, depth: number = 5): Promise<WASMAIResponse> {
+  async getBestMove(gameState: GameState, depth: number = 1): Promise<WASMAIResponse> {
     if (!this.isLoaded || !this.ai) {
       throw new Error('WASM AI not loaded');
     }

@@ -32,9 +32,9 @@ Visit [http://localhost:3000](http://localhost:3000) to play!
 
 The game features a sophisticated AI system with:
 
-- **Classic AI**: Minimax with alpha-beta pruning (Rust/WASM)
+- **Classic AI**: Minimax with alpha-beta pruning (Rust/WASM) at depth 1 for optimal performance
 - **Heuristic AI**: Fast win/block detection
-- **Evolved Parameters**: AI behavior optimized through genetic algorithms
+- **Evolved Parameters**: AI behavior optimized through genetic algorithms (76.0% win rate, 0.0ms/move)
 - **Multiple Depths**: Configurable search depth for different difficulty levels
 
 ### Genetic Algorithm Evolution

@@ -172,8 +172,6 @@ fn evaluate_position(game_state: &GameState, player: Player) -> f32 {
     }
 }
 
-
-
 #[derive(Debug)]
 struct GameResult {
     winner: Player,
@@ -249,9 +247,9 @@ fn play_game(
         // For draws, we'll assign based on who had the advantage
         let final_eval = game_state.evaluate();
         if final_eval > 0 {
-            Player::Player1  // Player1 had advantage
+            Player::Player1 // Player1 had advantage
         } else if final_eval < 0 {
-            Player::Player2  // Player2 had advantage
+            Player::Player2 // Player2 had advantage
         } else {
             // True draw - randomly assign winner
             use rand::Rng;
@@ -490,11 +488,9 @@ fn test_ai_matrix() {
                     ai2_wins += 1;
                 }
 
-                // Reset AI state periodically to prevent memory buildup
-                if (game + 1) % 20 == 0 {
-                    ai1.reset();
-                    ai2.reset();
-                }
+                // Reset AI state after every game to ensure clean state
+                ai1.reset();
+                ai2.reset();
 
                 if game % 20 == 0 && num_games > 20 {
                     println!(
