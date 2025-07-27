@@ -7,7 +7,7 @@ use std::fs;
 
 const POPULATION_SIZE: usize = 50;
 const GENERATIONS: usize = 50;
-const GAMES_PER_EVAL: usize = 100; // Back to original value for proper evolution
+const GAMES_PER_EVAL: usize = 100; // Reduced for faster evolution while still detecting perfect scores
 const MUTATION_RATE: f64 = 0.3;
 const MUTATION_STRENGTH: f64 = 1.0;
 const CROSSOVER_RATE: f64 = 0.5;
@@ -17,17 +17,18 @@ fn optimize_cpu_usage() {
         let num_cores = std::thread::available_parallelism()
             .map(|n| n.get())
             .unwrap_or(8);
-        let optimal_threads = (num_cores as f64 * 0.8) as usize;
+        // Use only performance cores (typically 6-8 on Apple Silicon)
+        let performance_cores = std::cmp::min(num_cores, 8);
         rayon::ThreadPoolBuilder::new()
-            .num_threads(optimal_threads)
+            .num_threads(performance_cores)
             .stack_size(8 * 1024 * 1024)
             .build_global()
             .unwrap_or_else(|_| {
                 println!("Warning: Could not set optimal thread count, using default");
             });
         println!(
-            "🍎 Apple Silicon detected: Using {} threads ({} cores available)",
-            optimal_threads, num_cores
+            "🍎 Apple Silicon detected: Using {} performance cores ({} total cores available)",
+            performance_cores, num_cores
         );
     } else {
         let num_cores = std::thread::available_parallelism()
@@ -40,7 +41,10 @@ fn optimize_cpu_usage() {
             .unwrap_or_else(|_| {
                 println!("Warning: Could not set optimal thread count, using default");
             });
-        println!("🖥️  Using {} threads for parallel processing", num_cores);
+        println!(
+            "🖥️  Using {} threads for maximum performance",
+            num_cores
+        );
     }
 }
 
@@ -48,163 +52,202 @@ fn optimize_cpu_usage() {
 fn evaluate_params_tournament(evolved_params: &GeneticParams) -> f64 {
     let default_params = GeneticParams::default();
 
-    let results: Vec<bool> = (0..GAMES_PER_EVAL)
+    // Use chunked parallel processing for better performance with large sample sizes
+    let chunk_size = 100;
+    let num_chunks = (GAMES_PER_EVAL + chunk_size - 1) / chunk_size;
+
+    let total_wins: usize = (0..num_chunks)
         .into_par_iter()
-        .map(|_| {
-            let mut moves_played = 0;
-            let max_moves = 42; // Maximum moves in Connect Four (6x7 board)
+        .map(|chunk_idx| {
+            let start = chunk_idx * chunk_size;
+            let end = std::cmp::min(start + chunk_size, GAMES_PER_EVAL);
+            let chunk_size_actual = end - start;
 
-            // Randomly decide which player uses evolved parameters
-            use rand::Rng;
-            let mut rng = rand::thread_rng();
-            let evolved_is_player2 = rng.gen_bool(0.5);
+            let mut chunk_wins = 0;
 
-            // Create neutral game state (doesn't matter which params we use for the game state itself)
-            let mut game_state = GameState::new();
+            for _ in 0..chunk_size_actual {
+                let mut moves_played = 0;
+                let max_moves = 42; // Maximum moves in Connect Four (6x7 board)
 
-            while !game_state.is_game_over() && moves_played < max_moves {
-                let current_player = game_state.current_player;
-                let is_evolved_turn = if evolved_is_player2 {
-                    current_player == Player::Player2
-                } else {
-                    current_player == Player::Player1
-                };
+                // Randomly decide which player uses evolved parameters
+                use rand::Rng;
+                let mut rng = rand::thread_rng();
+                let evolved_is_player2 = rng.gen_bool(0.5);
 
-                // Use different parameters for AI move calculation based on whose turn it is
-                let ai_params = if is_evolved_turn {
-                    evolved_params.clone()
-                } else {
-                    default_params.clone()
-                };
+                // Create neutral game state
+                let mut game_state = GameState::new();
 
-                // Create a temporary state for AI move calculation
-                let mut ai_state = GameState::with_genetic_params(ai_params);
-                ai_state.board = game_state.board.clone();
-                ai_state.current_player = game_state.current_player;
+                while !game_state.is_game_over() && moves_played < max_moves {
+                    let current_player = game_state.current_player;
+                    let is_evolved_turn = if evolved_is_player2 {
+                        current_player == Player::Player2
+                    } else {
+                        current_player == Player::Player1
+                    };
 
-                let mut ai = AI::new();
-                let (best_move, _) = ai.get_best_move(&ai_state, 5);
+                    // Use different parameters for AI move calculation based on whose turn it is
+                    let ai_params = if is_evolved_turn {
+                        evolved_params.clone()
+                    } else {
+                        default_params.clone()
+                    };
 
-                if let Some(column) = best_move {
-                    game_state.make_move(column).ok();
-                } else {
-                    // No valid moves, game is a draw
-                    break;
+                    // Create a temporary state for AI move calculation
+                    let mut ai_state = GameState::with_genetic_params(ai_params);
+                    ai_state.board = game_state.board.clone();
+                    ai_state.current_player = game_state.current_player;
+
+                    let mut ai = AI::new();
+                    let (best_move, _) = ai.get_best_move(&ai_state, 5);
+
+                    if let Some(column) = best_move {
+                        game_state.make_move(column).ok();
+                    } else {
+                        // No valid moves, game is a draw
+                        break;
+                    }
+                    moves_played += 1;
                 }
-                moves_played += 1;
+
+                // Determine winner - evolved params win if they are the winner
+                if let Some(winner) = game_state.get_winner() {
+                    let evolved_won = if evolved_is_player2 {
+                        winner == Player::Player2
+                    } else {
+                        winner == Player::Player1
+                    };
+
+                    if evolved_won {
+                        chunk_wins += 1;
+                    }
+                } else {
+                    // Game ended in draw - use neutral evaluation approach
+                    let mut evolved_state = GameState::with_genetic_params(evolved_params.clone());
+                    evolved_state.board = game_state.board.clone();
+                    evolved_state.current_player = game_state.current_player;
+                    let evolved_eval = evolved_state.evaluate();
+
+                    let mut default_state = GameState::with_genetic_params(default_params.clone());
+                    default_state.board = game_state.board.clone();
+                    default_state.current_player = game_state.current_player;
+                    let default_eval = default_state.evaluate();
+
+                    // Compare evaluations from both perspectives
+                    let evolved_won = if evolved_is_player2 {
+                        evolved_eval < 0 && default_eval < 0 // Both think Player2 is winning
+                    } else {
+                        evolved_eval > 0 && default_eval > 0 // Both think Player1 is winning
+                    };
+
+                    if evolved_won {
+                        chunk_wins += 1;
+                    }
+                }
             }
 
-            // Determine winner - evolved params win if they are the winner
-            if let Some(winner) = game_state.get_winner() {
-                if evolved_is_player2 {
-                    winner == Player::Player2
-                } else {
-                    winner == Player::Player1
-                }
-            } else {
-                // Game ended in draw - this should be rare in Connect Four
-                // For draws, we'll assign based on who had the advantage
-                // Use a neutral evaluation approach to avoid bias
-                let mut evolved_state = GameState::with_genetic_params(evolved_params.clone());
-                evolved_state.board = game_state.board.clone();
-                evolved_state.current_player = game_state.current_player;
-                let evolved_eval = evolved_state.evaluate();
-
-                let mut default_state = GameState::with_genetic_params(default_params.clone());
-                default_state.board = game_state.board.clone();
-                default_state.current_player = game_state.current_player;
-                let default_eval = default_state.evaluate();
-
-                // Compare evaluations from both perspectives
-                // If evolved params think they're winning AND default params agree, then evolved wins
-                if evolved_is_player2 {
-                    evolved_eval < 0 && default_eval < 0 // Both think Player2 is winning
-                } else {
-                    evolved_eval > 0 && default_eval > 0 // Both think Player1 is winning
-                }
-            }
+            chunk_wins
         })
-        .collect();
+        .sum();
 
-    let wins = results.iter().filter(|&&won| won).count();
-    let fitness = wins as f64 / GAMES_PER_EVAL as f64;
-
+    let fitness = total_wins as f64 / GAMES_PER_EVAL as f64;
     fitness
 }
 
 fn validate_against_default(evolved_params: &GeneticParams, num_games: usize) -> f64 {
     let default_params = GeneticParams::default();
-    let results: Vec<bool> = (0..num_games)
+
+    // Use chunked parallel processing for better performance
+    let chunk_size = 100;
+    let num_chunks = (num_games + chunk_size - 1) / chunk_size;
+
+    let total_wins: usize = (0..num_chunks)
         .into_par_iter()
-        .map(|_| {
-            let mut game_state = GameState::new();
-            let mut moves_played = 0;
-            let max_moves = 42;
+        .map(|chunk_idx| {
+            let start = chunk_idx * chunk_size;
+            let end = std::cmp::min(start + chunk_size, num_games);
+            let chunk_size_actual = end - start;
 
-            // Randomly decide which player uses evolved parameters
-            use rand::Rng;
-            let mut rng = rand::thread_rng();
-            let evolved_is_player2 = rng.gen_bool(0.5);
+            let mut chunk_wins = 0;
 
-            while !game_state.is_game_over() && moves_played < max_moves {
-                let current_player = game_state.current_player;
-                let is_evolved_turn = if evolved_is_player2 {
-                    current_player == Player::Player2
-                } else {
-                    current_player == Player::Player1
-                };
+            for _ in 0..chunk_size_actual {
+                let mut game_state = GameState::new();
+                let mut moves_played = 0;
+                let max_moves = 42;
 
-                let ai_params = if is_evolved_turn {
-                    evolved_params.clone()
-                } else {
-                    default_params.clone()
-                };
+                // Randomly decide which player uses evolved parameters
+                use rand::Rng;
+                let mut rng = rand::thread_rng();
+                let evolved_is_player2 = rng.gen_bool(0.5);
 
-                let mut ai_state = GameState::with_genetic_params(ai_params);
-                ai_state.board = game_state.board.clone();
-                ai_state.current_player = game_state.current_player;
+                while !game_state.is_game_over() && moves_played < max_moves {
+                    let current_player = game_state.current_player;
+                    let is_evolved_turn = if evolved_is_player2 {
+                        current_player == Player::Player2
+                    } else {
+                        current_player == Player::Player1
+                    };
 
-                let mut ai = AI::new();
-                let (best_move, _) = ai.get_best_move(&ai_state, 5);
+                    let ai_params = if is_evolved_turn {
+                        evolved_params.clone()
+                    } else {
+                        default_params.clone()
+                    };
 
-                if let Some(column) = best_move {
-                    game_state.make_move(column).ok();
-                } else {
-                    break;
+                    let mut ai_state = GameState::with_genetic_params(ai_params);
+                    ai_state.board = game_state.board.clone();
+                    ai_state.current_player = game_state.current_player;
+
+                    let mut ai = AI::new();
+                    let (best_move, _) = ai.get_best_move(&ai_state, 5);
+
+                    if let Some(column) = best_move {
+                        game_state.make_move(column).ok();
+                    } else {
+                        break;
+                    }
+                    moves_played += 1;
                 }
-                moves_played += 1;
+
+                if let Some(winner) = game_state.get_winner() {
+                    let evolved_won = if evolved_is_player2 {
+                        winner == Player::Player2
+                    } else {
+                        winner == Player::Player1
+                    };
+
+                    if evolved_won {
+                        chunk_wins += 1;
+                    }
+                } else {
+                    // Game ended in draw - use neutral evaluation approach
+                    let mut evolved_state = GameState::with_genetic_params(evolved_params.clone());
+                    evolved_state.board = game_state.board.clone();
+                    evolved_state.current_player = game_state.current_player;
+                    let evolved_eval = evolved_state.evaluate();
+
+                    let mut default_state = GameState::with_genetic_params(default_params.clone());
+                    default_state.board = game_state.board.clone();
+                    default_state.current_player = game_state.current_player;
+                    let default_eval = default_state.evaluate();
+
+                    // Compare evaluations from both perspectives
+                    let evolved_won = if evolved_is_player2 {
+                        evolved_eval < 0 && default_eval < 0
+                    } else {
+                        evolved_eval > 0 && default_eval > 0
+                    };
+
+                    if evolved_won {
+                        chunk_wins += 1;
+                    }
+                }
             }
 
-            if let Some(winner) = game_state.get_winner() {
-                if evolved_is_player2 {
-                    winner == Player::Player2
-                } else {
-                    winner == Player::Player1
-                }
-            } else {
-                // Game ended in draw - use neutral evaluation approach
-                let mut evolved_state = GameState::with_genetic_params(evolved_params.clone());
-                evolved_state.board = game_state.board.clone();
-                evolved_state.current_player = game_state.current_player;
-                let evolved_eval = evolved_state.evaluate();
-
-                let mut default_state = GameState::with_genetic_params(default_params.clone());
-                default_state.board = game_state.board.clone();
-                default_state.current_player = game_state.current_player;
-                let default_eval = default_state.evaluate();
-
-                // Compare evaluations from both perspectives
-                if evolved_is_player2 {
-                    evolved_eval < 0 && default_eval < 0
-                } else {
-                    evolved_eval > 0 && default_eval > 0
-                }
-            }
+            chunk_wins
         })
-        .collect();
+        .sum();
 
-    let wins = results.iter().filter(|&&won| won).count();
-    wins as f64 / num_games as f64
+    total_wins as f64 / num_games as f64
 }
 
 fn crossover(parent1: &GeneticParams, parent2: &GeneticParams) -> GeneticParams {
@@ -230,15 +273,43 @@ fn main() {
 
     let mut best_fitness = 0.0;
     let mut best_params = GeneticParams::default();
+    let mut generations_without_improvement = 0;
 
     for generation in 0..GENERATIONS {
         println!("\n🔄 Generation {}", generation + 1);
 
-        // Evaluate fitness for all individuals
+                // Evaluate fitness for all individuals with progress reporting
+        println!(
+            "  Evaluating {} individuals ({} games each) in parallel...",
+            POPULATION_SIZE, GAMES_PER_EVAL
+        );
+        let start_time = std::time::Instant::now();
+        
+        // Use parallel processing with progress tracking
+        println!("    Starting parallel evaluation...");
         let fitness_scores: Vec<f64> = population
             .par_iter()
-            .map(|params| evaluate_params_tournament(params))
+            .enumerate()
+            .map(|(idx, params)| {
+                let fitness = evaluate_params_tournament(params);
+                
+                // Log progress every 5 individuals
+                if (idx + 1) % 5 == 0 || idx == 0 {
+                    println!("      {}/{} evaluated (fitness: {:.3})", idx + 1, POPULATION_SIZE, fitness);
+                }
+                
+                // Log perfect scores immediately
+                if fitness >= 1.0 {
+                    println!("      ⚠️  PERFECT SCORE at individual {}: {:.3}", idx + 1, fitness);
+                }
+                
+                fitness
+            })
             .collect();
+        println!("    Parallel evaluation finished!");
+        
+        let eval_time = start_time.elapsed();
+        println!("  Evaluation completed in {:.1}s", eval_time.as_secs_f64());
 
         // Find best individual
         let (best_idx, &best_score) = fitness_scores
@@ -250,14 +321,30 @@ fn main() {
         if best_score > best_fitness {
             best_fitness = best_score;
             best_params = population[best_idx].clone();
-            println!("🏆 New best fitness: {:.3}", best_fitness);
+            generations_without_improvement = 0;
+            println!(
+                "🏆 New best fitness: {:.3} (+{:.3})",
+                best_fitness,
+                best_score - best_fitness
+            );
+        } else {
+            generations_without_improvement += 1;
+            if generations_without_improvement == 5 {
+                println!("⚠️  No improvement for 5 generations");
+            } else if generations_without_improvement == 10 {
+                println!("⚠️  No improvement for 10 generations - evolution may be stagnating");
+            }
         }
 
+                let avg_fitness = fitness_scores.iter().sum::<f64>() / fitness_scores.len() as f64;
+        let min_fitness = fitness_scores.iter().fold(1.0_f64, |a, &b| a.min(b));
+        let high_fitness_count = fitness_scores.iter().filter(|&&f| f > 0.7).count();
+        let perfect_fitness_count = fitness_scores.iter().filter(|&&f| f >= 1.0).count();
+        
         println!(
-            "📊 Average fitness: {:.3}",
-            fitness_scores.iter().sum::<f64>() / fitness_scores.len() as f64
+            "📊 Fitness stats: avg={:.3}, min={:.3}, best={:.3}, high(>0.7)={}/{}, perfect={}/{}",
+            avg_fitness, min_fitness, best_score, high_fitness_count, POPULATION_SIZE, perfect_fitness_count, POPULATION_SIZE
         );
-        println!("🏆 Best fitness: {:.3}", best_score);
 
         // Selection: Keep top 20% and tournament select the rest
         let elite_count = POPULATION_SIZE / 5;
@@ -304,6 +391,15 @@ fn main() {
         }
 
         population = new_population;
+
+        // Generation summary
+        if (generation + 1) % 10 == 0 {
+            println!(
+                "📈 Generation {} complete - Best so far: {:.3}",
+                generation + 1,
+                best_fitness
+            );
+        }
     }
 
     println!("\n🎯 Evolution complete!");
