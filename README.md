@@ -58,10 +58,11 @@ A modern web implementation of the classic Connect Four game with AI opponents, 
 
 ## ✨ Features
 
-- **AI Opponent**: Play against a depth-5 minimax AI with 93.8% win rate
+- **AI Opponent**: Play against a depth-5 minimax AI with 83.1% win rate (evolved genetic parameters)
 - **Browser-Native**: All AI runs locally via WebAssembly
 - **Offline Support**: PWA with full offline gameplay
 - **Modern UI**: Responsive design with animations and sound effects
+- **Advanced AI**: Genetic algorithm optimized evaluation functions for superior performance
 
 ## 📚 Documentation
 

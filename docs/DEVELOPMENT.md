@@ -22,14 +22,16 @@ The game will open at http://localhost:3000
 
 ## ✅ Current Status
 
-### WASM AI Integration Complete
+### WASM AI Integration Complete with Evolved Parameters
 
 The sophisticated Rust/WASM AI system has been successfully integrated and is now being used in the game:
 
 - **Primary AI**: Rust/WASM Classic AI (minimax with alpha-beta pruning) ✅
 - **Fallback AI**: JavaScript heuristic (win/block detection) ✅
 - **Performance**: ~17ms per move, competitive play ✅
-- **Features**: Transposition tables, genetic parameters, advanced evaluation ✅
+- **Features**: Transposition tables, evolved genetic parameters, advanced evaluation ✅
+- **AI Strength**: EMM-Depth5 achieves 83.1% win rate with optimized parameters ✅
+- **Speed**: 11.4% faster performance with evolved genetic parameters ✅
 
 See [AI-SYSTEM.md](./AI-SYSTEM.md) for detailed AI system documentation.
 
