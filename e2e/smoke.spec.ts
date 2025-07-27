@@ -5,8 +5,12 @@ async function dismissErrorModalIfPresent(page: Page) {
     // Check if error modal is visible and dismiss it
     const errorModal = page.getByTestId('error-modal');
     if (await errorModal.isVisible()) {
+      console.log('Dismissing error modal...');
       await page.getByTestId('error-close-bottom').click();
-      await page.waitForTimeout(100);
+      await page.waitForTimeout(200);
+      
+      // Wait for modal to disappear
+      await expect(errorModal).not.toBeVisible();
     }
   } catch (error) {
     // Error modal not present, continue
@@ -22,6 +26,10 @@ async function startGame(page: Page) {
 
   // Dismiss any error modal that might appear due to WASM AI not loading in tests
   await dismissErrorModalIfPresent(page);
+  
+  // Ensure no error modal is blocking interactions
+  const errorModal = page.getByTestId('error-modal');
+  await expect(errorModal).not.toBeVisible();
 }
 
 test.describe('Core Game Functionality', () => {
@@ -41,6 +49,9 @@ test.describe('Game Interactions', () => {
   test('can click on board columns', async ({ page }) => {
     const gameBoard = page.getByTestId('game-board');
     await expect(gameBoard).toBeVisible();
+
+    // Ensure no error modal is blocking
+    await dismissErrorModalIfPresent(page);
 
     // Click on a column to drop a piece
     await page.getByTestId('column-3').click();
@@ -68,6 +79,9 @@ test.describe('Game Interactions', () => {
   });
 
   test('can toggle sound settings', async ({ page }) => {
+    // Ensure no error modal is blocking
+    await dismissErrorModalIfPresent(page);
+    
     const soundToggle = page.getByTestId('toggle-sound');
     await expect(soundToggle).toBeVisible();
 

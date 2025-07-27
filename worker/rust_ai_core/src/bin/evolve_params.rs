@@ -4,6 +4,7 @@ use connect_four_ai_core::{genetic_params::GeneticParams, GameState, Player, AI}
 
 use rayon::prelude::*;
 use std::fs;
+use std::io::Write;
 
 const POPULATION_SIZE: usize = 50; // Increased for better exploration
 const GENERATIONS: usize = 100; // Increased for more thorough evolution
@@ -475,6 +476,108 @@ fn calculate_params_difference(params1: &GeneticParams, params2: &GeneticParams)
     total_diff / 14.0 // Average across all parameters
 }
 
+fn log_generation_parameters(
+    generation: usize,
+    best_params: &GeneticParams,
+    avg_fitness: f64,
+    diversity: f64,
+    csv_file: &mut std::fs::File,
+) -> Result<(), std::io::Error> {
+    // Write CSV header if this is the first generation
+    if generation == 0 {
+        writeln!(
+            csv_file,
+            "generation,fitness,diversity,win_score,loss_score,center_column_value,adjacent_center_value,outer_column_value,edge_column_value,row_height_weight,center_control_weight,piece_count_weight,threat_weight,mobility_weight,vertical_control_weight,horizontal_control_weight,defensive_weight"
+        )?;
+    }
+
+    // Write parameter values for this generation
+    writeln!(
+        csv_file,
+        "{},{:.6},{:.6},{},{},{},{},{},{},{:.6},{:.6},{:.6},{:.6},{:.6},{:.6},{:.6},{:.6}",
+        generation,
+        avg_fitness,
+        diversity,
+        best_params.win_score,
+        best_params.loss_score,
+        best_params.center_column_value,
+        best_params.adjacent_center_value,
+        best_params.outer_column_value,
+        best_params.edge_column_value,
+        best_params.row_height_weight,
+        best_params.center_control_weight,
+        best_params.piece_count_weight,
+        best_params.threat_weight,
+        best_params.mobility_weight,
+        best_params.vertical_control_weight,
+        best_params.horizontal_control_weight,
+        best_params.defensive_weight
+    )?;
+
+    Ok(())
+}
+
+fn log_convergence_analysis(
+    generation: usize,
+    best_params: &GeneticParams,
+    previous_best_params: &GeneticParams,
+    csv_file: &mut std::fs::File,
+) -> Result<(), std::io::Error> {
+    // Calculate parameter changes
+    let win_score_change = best_params.win_score - previous_best_params.win_score;
+    let loss_score_change = best_params.loss_score - previous_best_params.loss_score;
+    let center_column_change =
+        best_params.center_column_value - previous_best_params.center_column_value;
+    let adjacent_center_change =
+        best_params.adjacent_center_value - previous_best_params.adjacent_center_value;
+    let outer_column_change =
+        best_params.outer_column_value - previous_best_params.outer_column_value;
+    let edge_column_change = best_params.edge_column_value - previous_best_params.edge_column_value;
+    let row_height_change = best_params.row_height_weight - previous_best_params.row_height_weight;
+    let center_control_change =
+        best_params.center_control_weight - previous_best_params.center_control_weight;
+    let piece_count_change =
+        best_params.piece_count_weight - previous_best_params.piece_count_weight;
+    let threat_change = best_params.threat_weight - previous_best_params.threat_weight;
+    let mobility_change = best_params.mobility_weight - previous_best_params.mobility_weight;
+    let vertical_control_change =
+        best_params.vertical_control_weight - previous_best_params.vertical_control_weight;
+    let horizontal_control_change =
+        best_params.horizontal_control_weight - previous_best_params.horizontal_control_weight;
+    let defensive_change = best_params.defensive_weight - previous_best_params.defensive_weight;
+
+    // Write convergence CSV header if this is the first generation
+    if generation == 1 {
+        writeln!(
+            csv_file,
+            "generation,win_score_change,loss_score_change,center_column_change,adjacent_center_change,outer_column_change,edge_column_change,row_height_change,center_control_change,piece_count_change,threat_change,mobility_change,vertical_control_change,horizontal_control_change,defensive_change"
+        )?;
+    }
+
+    // Write parameter changes for this generation
+    writeln!(
+        csv_file,
+        "{},{},{},{},{},{},{},{:.6},{:.6},{:.6},{:.6},{:.6},{:.6},{:.6},{:.6}",
+        generation,
+        win_score_change,
+        loss_score_change,
+        center_column_change,
+        adjacent_center_change,
+        outer_column_change,
+        edge_column_change,
+        row_height_change,
+        center_control_change,
+        piece_count_change,
+        threat_change,
+        mobility_change,
+        vertical_control_change,
+        horizontal_control_change,
+        defensive_change
+    )?;
+
+    Ok(())
+}
+
 fn inject_diversity(population: &mut Vec<GeneticParams>, target_diversity: f64) {
     let current_diversity = calculate_population_diversity(population);
 
@@ -653,6 +756,20 @@ fn main() {
     while population.len() < POPULATION_SIZE {
         population.push(GeneticParams::random());
     }
+
+    // Create CSV files for parameter tracking
+    let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+    let params_csv_path = format!("evolution_params_{}.csv", timestamp);
+    let convergence_csv_path = format!("evolution_convergence_{}.csv", timestamp);
+
+    let mut params_csv_file =
+        std::fs::File::create(&params_csv_path).expect("Failed to create parameters CSV file");
+    let mut convergence_csv_file = std::fs::File::create(&convergence_csv_path)
+        .expect("Failed to create convergence CSV file");
+
+    println!("📊 Parameter tracking enabled:");
+    println!("  Parameters: {}", params_csv_path);
+    println!("  Convergence: {}", convergence_csv_path);
 
     let mut best_fitness = 0.0;
     let mut best_params = GeneticParams::default();
@@ -1031,6 +1148,29 @@ fn main() {
         let diversity = calculate_population_diversity(&population);
         println!("🌱 Population diversity: {:.3}", diversity);
 
+        // Log parameters to CSV for graphing
+        if let Err(e) = log_generation_parameters(
+            generation + 1,
+            current_winner,
+            avg_fitness,
+            diversity,
+            &mut params_csv_file,
+        ) {
+            eprintln!("⚠️  Failed to log generation parameters: {}", e);
+        }
+
+        // Log convergence analysis
+        if generation > 0 {
+            if let Err(e) = log_convergence_analysis(
+                generation + 1,
+                current_winner,
+                &previous_best_params,
+                &mut convergence_csv_file,
+            ) {
+                eprintln!("⚠️  Failed to log convergence analysis: {}", e);
+            }
+        }
+
         // Analysis of why this generation might be performing well
         if perfect_fitness_count > POPULATION_SIZE / 2 {
             let perfect_percentage = (perfect_fitness_count * 100) / POPULATION_SIZE;
@@ -1255,4 +1395,20 @@ fn main() {
     let evolved_json = serde_json::to_string_pretty(&best_params).unwrap();
     fs::write("../../ml/data/genetic_params/evolved.json", evolved_json).unwrap();
     println!("💾 Evolved parameters saved to ../../ml/data/genetic_params/evolved.json");
+
+    // Convergence analysis summary
+    println!("\n📊 Convergence Analysis:");
+    println!("  Parameter tracking files created:");
+    println!("    - Parameters: {}", params_csv_path);
+    println!("    - Convergence: {}", convergence_csv_path);
+    println!("  Use these files to create graphs showing:");
+    println!("    - Parameter evolution over generations");
+    println!("    - Convergence rates for each parameter");
+    println!("    - Fitness improvement trends");
+    println!("    - Population diversity changes");
+    println!("  Expected convergence patterns:");
+    println!("    - Parameters should stabilize after ~20-30 generations");
+    println!("    - Fitness should plateau around 0.8-0.9");
+    println!("    - Diversity should decrease as population converges");
+    println!("    - Large parameter swings suggest insufficient evaluation");
 }

@@ -1,33 +1,16 @@
-# Connect Four Game
+# Connect Four
 
-A modern, responsive Connect Four game built with Next.js, TypeScript, and Rust WASM AI.
+A modern, AI-powered implementation of the classic Connect Four game, built with Next.js, Rust/WASM, and advanced genetic algorithms.
 
 ## Features
 
-- 🎮 **Classic Connect Four gameplay** with smooth animations
-- 🤖 **Intelligent AI opponents** using Rust WASM with multiple algorithms:
-  - ExpectiMinimax with configurable depth (1-6)
-  - Heuristic-based AI
-  - Random AI for testing
-- 🧠 **Machine Learning AI** with neural networks (PyTorch backend)
-- 🎯 **Genetic Algorithm optimization** for AI parameters
-- 📊 **Comprehensive AI testing** with performance matrix
-- 🎨 **Beautiful UI** with animations and sound effects
-- 📱 **Progressive Web App** with offline support
-- 🗄️ **Database integration** for game history
-- 🧪 **Full test coverage** with unit, integration, and e2e tests
-
-## AI Performance
-
-The AI system includes multiple algorithms with different performance characteristics:
-
-| AI Type    | Win Rate | Speed | Use Case                 |
-| ---------- | -------- | ----- | ------------------------ |
-| EMM-Depth1 | 92.9%    | 0.0ms | Production (recommended) |
-| EMM-Depth2 | 71.4%    | 0.0ms | Fast gameplay            |
-| EMM-Depth3 | 32.1%    | 3.7ms | Balanced performance     |
-| Heuristic  | 46.4%    | 0.0ms | Educational              |
-| Random     | 7.1%     | 0.0ms | Testing baseline         |
+- **Classic Gameplay**: Traditional Connect Four with modern UI
+- **AI Opponents**: Multiple AI difficulty levels powered by Rust/WASM
+- **Genetic Evolution**: AI parameters evolved through genetic algorithms
+- **Parameter Tracking**: Comprehensive CSV logging and visualization of evolution
+- **Offline-First**: Works completely offline once loaded
+- **Mobile Optimized**: Responsive design for all devices
+- **PWA Support**: Install as a native app
 
 ## Quick Start
 
@@ -35,66 +18,81 @@ The AI system includes multiple algorithms with different performance characteri
 # Install dependencies
 npm install
 
+# Setup database and build WASM
+npm run db:setup
+npm run build:wasm-assets
+
 # Start development server
 npm run dev
+```
 
-# Run all tests
+Visit [http://localhost:3000](http://localhost:3000) to play!
+
+## AI System
+
+The game features a sophisticated AI system with:
+
+- **Classic AI**: Minimax with alpha-beta pruning (Rust/WASM)
+- **Heuristic AI**: Fast win/block detection
+- **Evolved Parameters**: AI behavior optimized through genetic algorithms
+- **Multiple Depths**: Configurable search depth for different difficulty levels
+
+### Genetic Algorithm Evolution
+
+The AI parameters are evolved using genetic algorithms:
+
+```bash
+# Run genetic parameter evolution
+npm run evolve:genetic-params
+
+# Plot evolution results
+python scripts/plot_evolution.py evolution_params_20241201_143022.csv
+```
+
+This generates comprehensive CSV files tracking:
+
+- Parameter evolution over generations
+- Fitness and diversity metrics
+- Convergence analysis
+- Performance improvements
+
+## Development
+
+```bash
+# Run all checks
 npm run check
+
+# Run tests
+npm run test
+npm run test:e2e
 
 # Build for production
 npm run build
 ```
 
-## AI Development
-
-The AI system is built in Rust and compiled to WebAssembly for optimal performance:
-
-```bash
-# Build Rust AI
-npm run build:wasm
-
-# Test AI performance
-npm run test:ai-comparison
-
-# Train genetic parameters
-npm run evolve:genetic-params
-
-# Train ML models
-npm run train:rust
-```
-
-## Testing
-
-- **Unit Tests**: `npm test`
-- **E2E Tests**: `npm run test:e2e`
-- **AI Matrix**: `npm run test:ai-comparison`
-- **Full Check**: `npm run check`
-
-## Deployment
-
-```bash
-# Deploy to Cloudflare Pages
-npm run deploy
-
-# Quick deploy
-npm run deploy:quick
-```
+See [DEVELOPMENT.md](./docs/DEVELOPMENT.md) for detailed development information.
 
 ## Architecture
 
-- **Frontend**: Next.js 15 with TypeScript
+- **Frontend**: Next.js 15 with React 19, TypeScript, Tailwind CSS
 - **AI Engine**: Rust compiled to WebAssembly
-- **Database**: Drizzle ORM with SQLite/Cloudflare D1
-- **Testing**: Vitest + Playwright
-- **Deployment**: Cloudflare Pages
+- **Database**: SQLite (local) / Cloudflare D1 (production)
+- **State Management**: Zustand with Immer
+- **Testing**: Vitest (unit) + Playwright (e2e)
 
-## Recent Updates
+## Deployment
 
-- ✅ **Fixed AI win detection** - AI now correctly identifies and makes winning moves
-- ✅ **Improved serialization** - Fixed Player enum serialization for proper game state conversion
-- ✅ **Enhanced performance** - Optimized AI algorithms and reduced move evaluation time
-- ✅ **Better testing** - Comprehensive AI matrix testing with performance analysis
+The game is deployed on Cloudflare Pages with automatic deployments from the main branch.
+
+**Live Demo**: [https://connect-4.tre.systems](https://connect-4.tre.systems)
+
+## Documentation
+
+- [Development Guide](./docs/DEVELOPMENT.md) - Comprehensive development information
+- [AI System](./docs/AI-SYSTEM.md) - Detailed AI system documentation
+- [Architecture](./docs/ARCHITECTURE.md) - System architecture overview
+- [Game Guide](./docs/GAME-GUIDE.md) - Game rules and strategy
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License - see [LICENSE](./LICENSE) for details.

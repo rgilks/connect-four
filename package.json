@@ -51,6 +51,7 @@
     "db:setup": "npm run db:local:reset",
     "evolve:genetic-params": "cd worker/rust_ai_core && caffeinate cargo run --release --bin evolve_params",
     "validate:genetic-params": "cd worker/rust_ai_core && caffeinate cargo test test_genetic_params_comparison -- --nocapture",
+    "plot:evolution": "python scripts/plot_evolution.py",
     "test:ai-matrix:md": "cd worker/rust_ai_core && cargo test test_ai_matrix -- --nocapture | node ../../scripts/format-ai-matrix-md.cjs",
     "deploy": "./scripts/deploy.sh",
     "deploy:quick": "npm run build:cf && wrangler deploy",

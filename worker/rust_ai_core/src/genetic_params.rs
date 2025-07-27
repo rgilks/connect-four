@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GeneticParams {
     // Unique identifier for tracking individuals across generations
     pub id: String,
-    
+
     // Ancestor tracking for lineage analysis
     pub parent_ids: Vec<String>,
     pub generation: usize,
@@ -35,7 +36,7 @@ pub struct GeneticParams {
 impl Default for GeneticParams {
     fn default() -> Self {
         Self {
-            id: "default".to_string(),
+            id: Uuid::new_v4().to_string(),
             parent_ids: vec![],
             generation: 0,
             win_score: 10000,
@@ -62,7 +63,7 @@ impl GeneticParams {
         let mut rng = rand::thread_rng();
 
         Self {
-            id: format!("r{}", rng.gen_range(1000..9999)),
+            id: Uuid::new_v4().to_string(),
             parent_ids: vec![],
             generation: 0,
             win_score: rng.gen_range(5000..15000),
@@ -99,7 +100,7 @@ impl GeneticParams {
         let mut rng = rand::thread_rng();
 
         Self {
-            id: format!("{}m{}", self.id, rng.gen_range(100..999)),
+            id: Uuid::new_v4().to_string(),
             parent_ids: vec![self.id.clone()],
             generation: self.generation + 1,
             win_score: if rng.gen_bool(mutation_rate) {
@@ -184,7 +185,7 @@ impl GeneticParams {
         let mut rng = rand::thread_rng();
 
         Self {
-            id: format!("{}x{}", self.id, rng.gen_range(100..999)),
+            id: Uuid::new_v4().to_string(),
             parent_ids: vec![self.id.clone(), other.id.clone()],
             generation: std::cmp::max(self.generation, other.generation) + 1,
             win_score: if rng.gen_bool(crossover_rate) {
@@ -277,16 +278,41 @@ mod tests {
 
     #[test]
     fn test_random_params() {
+        let params = GeneticParams::random();
+        assert!(params.win_score >= 5000 && params.win_score < 15000);
+        assert!(params.loss_score >= -15000 && params.loss_score < -5000);
+        assert!(params.center_column_value >= 50 && params.center_column_value < 200);
+        assert!(params.center_control_weight >= 0.0 && params.center_control_weight < 3.0);
+        assert!(params.threat_weight >= 0.5 && params.threat_weight < 5.0);
+
+        // Test that ID is a valid UUID format (36 characters with hyphens)
+        assert_eq!(params.id.len(), 36);
+        assert!(params.id.contains('-'));
+        assert!(params.id.matches('-').count() == 4);
+    }
+
+    #[test]
+    fn test_uuid_ids_are_short() {
         let params1 = GeneticParams::random();
         let params2 = GeneticParams::random();
 
-        // Random params should be different
-        assert_ne!(params1.win_score, params2.win_score);
-        assert_ne!(params1.center_control_weight, params2.center_control_weight);
+        // UUIDs should be 36 characters (much shorter than the old format)
+        assert_eq!(params1.id.len(), 36);
+        assert_eq!(params2.id.len(), 36);
 
-        // But should be within reasonable bounds
-        assert!(params1.win_score >= 5000 && params1.win_score <= 15000);
-        assert!(params1.center_control_weight >= 0.0 && params1.center_control_weight <= 3.0);
+        // IDs should be unique
+        assert_ne!(params1.id, params2.id);
+
+        // Test mutation creates new UUID
+        let mutated = params1.random_mutation(0.5, 0.3);
+        assert_ne!(params1.id, mutated.id);
+        assert_eq!(mutated.id.len(), 36);
+
+        // Test crossover creates new UUID
+        let crossed = params1.crossover(&params2, 0.5);
+        assert_ne!(params1.id, crossed.id);
+        assert_ne!(params2.id, crossed.id);
+        assert_eq!(crossed.id.len(), 36);
     }
 
     #[test]

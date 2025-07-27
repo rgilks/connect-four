@@ -1,307 +1,106 @@
 # Development Guide
 
-## 🚀 Quick Start
+This document provides comprehensive guidance for developers working on the Connect Four project.
 
-Get the project running in 5 minutes:
+## Quick Start
 
 ```bash
-# Clone and install
-git clone https://github.com/rgilks/connect-four.git
-cd connect-four
+# Install dependencies
 npm install
 
-# Setup database and build WASM
-npm run db:setup
-npm run build:wasm-assets
-
-# Start development
-npm run dev
-```
-
-The game will open at http://localhost:3000
-
-## ✅ Current Status
-
-### WASM AI Integration Complete with Evolved Parameters
-
-The sophisticated Rust/WASM AI system has been successfully integrated and is now being used in the game:
-
-- **Primary AI**: Rust/WASM Classic AI (minimax with alpha-beta pruning) ✅
-- **Fallback AI**: JavaScript heuristic (win/block detection) ✅
-- **Performance**: ~17ms per move, competitive play ✅
-- **Features**: Transposition tables, evolved genetic parameters, advanced evaluation ✅
-- **AI Strength**: EMM-Depth5 achieves 83.1% win rate with optimized parameters ✅
-- **Speed**: 11.4% faster performance with evolved genetic parameters ✅
-
-See [AI-SYSTEM.md](./AI-SYSTEM.md) for detailed AI system documentation.
-
-## Development Workflow
-
-### Core Development Commands
-
-```bash
 # Start development server
 npm run dev
 
-# Build for production
-npm run build
-
-# Build for Cloudflare deployment
-npm run build:cf
-
-# Clean install (reset environment)
-npm run nuke
-```
-
-### Code Quality
-
-```bash
-# Lint code
-npm run lint
-
-# Fix linting issues
-npm run lint:fix
-
-# Type checking
-npm run type-check
-
-# Run all checks (lint, type-check, tests)
+# Run all checks
 npm run check
-```
 
-## Build System
-
-### WASM and Rust
-
-```bash
-# Build WebAssembly modules
-npm run build:wasm
-
-# Build and copy WASM assets
-npm run build:wasm-assets
-
-# Build Rust AI core
-npm run build:rust-ai
-```
-
-### Service Worker
-
-```bash
-# Generate service worker with Git commit hash
-npm run generate:sw
-```
-
-## Testing Strategy
-
-### Test Philosophy
-
-- Focus on high-value, low-maintenance tests
-- Prefer deterministic, pure function tests
-- Use integration tests for workflows
-- Use snapshot tests for regression detection
-
-### Test Categories
-
-| Test Type         | What to Test                | Tool       | Value  | Maintenance |
-| ----------------- | --------------------------- | ---------- | ------ | ----------- |
-| Pure logic        | Game rules, reducers        | Vitest     | High   | Low         |
-| Schema validation | Zod schemas, domain types   | Vitest     | High   | Low         |
-| Snapshots         | Key game states             | Vitest     | Medium | Low         |
-| Store integration | Zustand actions/transitions | Vitest     | Medium | Medium      |
-| UI smoke          | App loads, basic flows      | Playwright | Medium | Low         |
-| Full E2E          | Full game, random flows     | Avoid      | Low    | High        |
-
-### Unit Testing
-
-```bash
-# Run unit tests
+# Run tests
 npm run test
-
-# Watch mode
-npm run test:watch
-
-# Coverage report
-npm run test:coverage
+npm run test:e2e
 ```
 
-**Test Locations**:
+## Project Structure
 
-- `src/lib/__tests__/game-logic.test.ts` - Pure functions and business logic
-- `src/lib/__tests__/schemas.test.ts` - Zod schemas and type safety
-- `src/lib/__tests__/game-store.test.ts` - Game store and move sequences
-
-### Rust Testing
-
-### Recent Bug Fixes
-
-#### AI Move Stuck Issue (Fixed)
-
-**Problem**: The game would stop working during the AI's second turn, with the AI getting stuck in a "thinking" state.
-
-**Root Cause**: In the `makeAIMove` function in `src/lib/game-store.ts`, when the AI move calculation returned -1 (indicating no valid moves), the `aiThinking` state was never reset to false. This caused the AI to remain in a thinking state indefinitely.
-
-**Solution**: Added proper error handling and state reset logic:
-
-```typescript
-// Before: aiThinking state was never reset if aiColumn === -1
-if (aiColumn !== -1) {
-  set(state => {
-    state.pendingMove = { column: aiColumn, player: 'player2' };
-    state.aiThinking = false;
-  });
-}
-
-// After: Added proper error handling
-if (aiColumn !== -1) {
-  set(state => {
-    state.pendingMove = { column: aiColumn, player: 'player2' };
-    state.aiThinking = false;
-  });
-} else {
-  // No valid move found, reset thinking state
-  set(state => {
-    state.aiThinking = false;
-  });
-}
+```
+connect-four/
+├── src/                    # Frontend source code
+│   ├── app/               # Next.js app directory
+│   ├── components/        # React components
+│   └── lib/               # Core logic and utilities
+├── worker/                # Rust AI engine
+│   └── rust_ai_core/      # Core AI logic
+├── ml/                    # Machine learning scripts
+├── e2e/                   # End-to-end tests
+└── docs/                  # Documentation
 ```
 
-**Testing**: Added comprehensive error handling with try-catch blocks and console logging for debugging future issues.
+## AI Development
+
+### Genetic Algorithm Evolution
+
+The project uses a genetic algorithm to evolve AI parameters for optimal gameplay.
+
+#### Running Evolution
 
 ```bash
-# Run Rust tests
-npm run test:rust
+# Run genetic parameter evolution
+npm run evolve:genetic-params
 
-# Run slow tests (depth 4)
-npm run test:rust:slow
-
-# Test specific ML models (disabled until training)
-npm run test:ml-v2
-npm run test:ml-hybrid
+# Validate evolved parameters
+npm run validate:genetic-params
 ```
+
+#### Parameter Tracking and Visualization
+
+The evolution process now generates comprehensive CSV files for analysis:
+
+- **Parameters file**: `evolution_params_YYYYMMDD_HHMMSS.csv`
+  - Tracks all parameter values, fitness, and diversity per generation
+  - Contains 14 genetic parameters plus fitness and diversity metrics
+
+- **Convergence file**: `evolution_convergence_YYYYMMDD_HHMMSS.csv`
+  - Tracks parameter changes between generations
+  - Shows convergence patterns and stability
+
+#### Plotting Evolution Results
+
+```bash
+# Plot evolution data
+python scripts/plot_evolution.py evolution_params_20241201_143022.csv evolution_convergence_20241201_143022.csv
+```
+
+This generates three visualization files:
+
+- `evolution_params_20241201_143022_parameters.png` - Parameter evolution over time
+- `evolution_convergence_20241201_143022_convergence.png` - Parameter changes
+- `evolution_params_20241201_143022_summary.png` - Convergence summary and analysis
+
+#### Expected Convergence Patterns
+
+- **Parameter stabilization**: Should occur after ~20-30 generations
+- **Fitness plateau**: Should reach 0.8-0.9 range
+- **Diversity decrease**: Population should converge over time
+- **Large parameter swings**: Indicate insufficient evaluation or poor mutation rates
+
+#### Genetic Parameter IDs
+
+Genetic parameters now use UUID-based identifiers (36 characters) instead of the previous long concatenated strings. This provides:
+
+- **Uniqueness**: Guaranteed unique identification
+- **Readability**: Much shorter and cleaner display
+- **Consistency**: Standard format across all operations
 
 ### AI Testing
 
 ```bash
-# Default AI comparison (50 games, EMM depths 1-6)
-npm run test:ai-comparison
+# Run AI matrix test
+npm run test:ai-matrix:md
 
-# Quick AI comparison (10 games)
-npm run test:ai-comparison:fast
-
-# Comprehensive AI comparison (100 games, includes depth 7+)
+# Run comprehensive AI comparison
 npm run test:ai-comparison:comprehensive
-
-# Matrix test only
-cd worker/rust_ai_core
-cargo test test_ai_matrix -- --nocapture
 ```
 
-### End-to-End Testing
-
-```bash
-# Run E2E tests
-npm run test:e2e
-
-# Debug with UI
-npm run test:e2e:ui
-```
-
-**E2E Best Practices**:
-
-- Use `data-testid` attributes for robust selectors
-- Focus on critical flows, avoid edge cases
-- Verify actual database saves, don't mock
-- Test mobile layout and game completion
-
-## Machine Learning Development
-
-### Training System
-
-The project uses a unified training system with different presets and backends.
-
-#### Training Presets
-
-**Quick Preset**:
-
-- Games: 100
-- Epochs: 10
-- Batch Size: 32
-- Use Case: Testing and development
-
-**Default Preset**:
-
-- Games: 1000
-- Epochs: 50
-- Batch Size: 32
-- Use Case: Standard training runs
-
-**Production Preset**:
-
-- Games: 2000
-- Epochs: 100
-- Batch Size: 64
-- Use Case: Final model training
-
-#### Backend Selection
-
-**Auto (Default)**:
-
-- Automatically selects best available backend
-- PyTorch if GPU acceleration is available
-- Rust if no GPU acceleration
-
-**Rust**:
-
-- CPU-based training
-- Always available
-- Slower but more reliable
-
-**PyTorch**:
-
-- GPU-accelerated training
-- Requires CUDA or Apple Metal (MPS)
-- Faster training when available
-
-#### Training Commands
-
-```bash
-# General training
-npm run train
-npm run train:quick
-npm run train:production
-
-# Rust backend
-npm run train:rust
-npm run train:rust:quick
-npm run train:rust:production
-
-# PyTorch backend
-npm run train:pytorch
-npm run train:pytorch:quick
-npm run train:pytorch:production
-
-# Custom training
-npm run train:rust -- --num-games 500 --epochs 25
-```
-
-### AI Evolution
-
-```bash
-# Evolve genetic parameters
-npm run evolve:genetic-params
-
-# Validate genetic parameters
-npm run validate:genetic-params
-```
-
-### Model Management
-
-```bash
-# Load and convert ML model weights
-npm run load:ml-weights
-```
-
-## Database Development
+## Database
 
 ### Local Development
 
@@ -309,8 +108,8 @@ npm run load:ml-weights
 # Reset local database
 npm run db:local:reset
 
-# Setup local database (alias)
-npm run db:setup
+# Generate migrations
+npm run migrate:generate
 
 # Apply local migrations
 npm run migrate:local
@@ -319,269 +118,193 @@ npm run migrate:local
 ### Production
 
 ```bash
-# Generate new migrations
-npm run migrate:generate
-
-# Apply migrations to Cloudflare D1
+# Apply production migrations
 npm run migrate:d1
+
+# Database shell
+npm run db:shell
 ```
 
-## Dependency Management
+## Testing
+
+### Unit Tests
 
 ```bash
-# Check for outdated dependencies
-npm run deps
+# Run all unit tests
+npm run test
 
-# Update all dependencies and clean install
-npm run deps:update
+# Run with coverage
+npm run test:coverage
+
+# Watch mode
+npm run test:watch
 ```
 
-## Troubleshooting
-
-### Common Issues and Solutions
-
-#### Cloudflare Deployment Issues
-
-**Problem**: App works locally but fails on Cloudflare.
-
-**Solution**:
+### End-to-End Tests
 
 ```bash
-# Pin exact dependency versions
-npm install --save-exact next@15.3.4 @opennextjs/cloudflare@1.3.1 wrangler@4.22.0
+# Run e2e tests
+npm run test:e2e
 
-# Clean and rebuild
-rm -rf .next .open-next .wrangler
-npm run build:cf
-```
-
-#### WASM Build Failures
-
-**Solution**:
-
-```bash
-# Install correct wasm-pack version
-cargo install wasm-pack --version 0.12.1 --locked
-
-# Clean and rebuild
-cd worker/rust_ai_core
-cargo clean
-wasm-pack build --target web --out-name connect_four_ai_worker -- --features wasm
-```
-
-#### ML AI Not Working
-
-**Solution**:
-
-```bash
-# Check WASM files
-ls -la public/wasm/
-
-# Load weights
-npm run load:ml-weights
-```
-
-#### E2E Tests Failing
-
-**Solution**:
-
-```bash
-# Install Playwright browsers
-npx playwright install --with-deps
-
-# Run with UI for debugging
+# Run with UI
 npm run test:e2e:ui
 ```
 
-#### Performance Issues
-
-**Solution**:
+### Rust Tests
 
 ```bash
-# Use caching
-npm ci --cache .npm
+# Run Rust tests
+npm run test:rust
 
-# Clean and rebuild
-npm run nuke
+# Run slow tests
+npm run test:rust:slow
 ```
 
-### Quick Fixes
+## Building
 
-| Issue            | Quick Fix                   |
-| ---------------- | --------------------------- |
-| WASM not loading | `npm run build:wasm-assets` |
-| Database errors  | `npm run migrate:local`     |
-| ML AI broken     | `npm run load:ml-weights`   |
-| Tests failing    | `npm run nuke`              |
-| Build slow       | `npm ci --cache .npm`       |
-| Deployment fails | Pin dependency versions     |
-
-### Environment Reset
+### Development Build
 
 ```bash
-# Complete environment reset
-npm run nuke
+# Build WASM assets
+npm run build:wasm-assets
+
+# Build for development
+npm run build
 ```
 
-## Development Environment
+### Production Build
 
-### Prerequisites
+```bash
+# Build for Cloudflare
+npm run build:cf
+```
 
-- Node.js >= 20.0.0
-- npm >= 9.0.0
-- Rust (for AI development)
-- wasm-pack (for WASM builds)
+## Deployment
 
-### Local Setup
+```bash
+# Deploy to Cloudflare
+npm run deploy
 
-1. **Clone and install**:
+# Quick deploy
+npm run deploy:quick
+```
 
-   ```bash
-   git clone <repository>
-   cd connect-four
-   npm install
-   ```
+## Code Quality
 
-2. **Setup database**:
+### Linting and Type Checking
 
-   ```bash
-   npm run db:setup
-   ```
+```bash
+# Run linting
+npm run lint
 
-3. **Build WASM assets**:
+# Fix linting issues
+npm run lint:fix
+
+# Type checking
+npm run type-check
+```
+
+### Full Quality Check
+
+```bash
+# Run all quality checks
+npm run check
+```
+
+This includes:
+
+- ESLint linting
+- TypeScript type checking
+- Rust AI tests
+- Unit test coverage
+- End-to-end tests
+
+## Troubleshooting
+
+### WASM Issues
+
+If you encounter WASM loading issues:
+
+1. Rebuild WASM assets:
 
    ```bash
    npm run build:wasm-assets
    ```
 
-4. **Start development**:
+2. Check that WASM files exist:
+
    ```bash
-   npm run dev
+   ls -la public/wasm/
    ```
 
-### Development Tools
+3. Verify WASM compilation:
+   ```bash
+   cd worker/rust_ai_core && cargo check
+   ```
 
-**Dev-only features** (only on localhost):
+### Database Issues
 
-- AI diagnostics panel
-- AI toggle controls
-- Reset/test buttons
-- Enhanced logging
+If database operations fail:
 
-**Production features**:
+1. Reset local database:
 
-- Clean UI without development tools
-- Classic AI as default opponent
-- Optimized builds
+   ```bash
+   npm run db:local:reset
+   ```
+
+2. Check migration status:
+   ```bash
+   npm run db:shell
+   ```
+
+### Test Failures
+
+If tests are failing:
+
+1. Check WASM compilation
+2. Reset local database
+3. Clear test cache:
+   ```bash
+   rm -rf coverage/ test-results/
+   ```
 
 ## Performance Optimization
 
-### Build Performance
+### Rust AI Performance
 
-- Use `npm ci --cache .npm` for faster installs
-- WASM builds are cached in `worker/rust_ai_core/target/`
-- Service worker generation includes Git commit hash for cache busting
+- Use `cargo build --release` for production builds
+- Monitor AI matrix test results for performance regressions
+- Use `npm run test:ai-comparison` to benchmark AI performance
 
-### Runtime Performance
+### Frontend Performance
 
-- AI runs in Web Workers to avoid blocking UI
-- Transposition tables provide significant speedup for repeated positions
-- ML models are optimized for inference speed
+- Monitor bundle size with `npm run build`
+- Use React DevTools for component profiling
+- Check WASM loading times in browser dev tools
 
-### Testing Performance
+## Contributing
 
-- Unit tests run in parallel
-- E2E tests use local SQLite for speed
-- AI matrix tests are configurable for different time constraints
+1. Follow the existing code style
+2. Add tests for new functionality
+3. Update documentation for significant changes
+4. Run `npm run check` before submitting changes
+5. Ensure all tests pass locally
 
-## Best Practices
+## Useful Commands
 
-### Code Quality
+```bash
+# Full system check
+npm run check
 
-- Always run `npm run check` before committing
-- Fix linting issues automatically with `npm run lint:fix`
-- Use TypeScript strict mode for better type safety
-- Prefer pure functions for game logic
+# Quick development cycle
+npm run dev
 
-### Testing
+# Test specific functionality
+npm run test:ai-comparison:fast
 
-- Write tests for pure functions and business logic
-- Use integration tests for complex workflows
-- Avoid testing UI components (high maintenance, low value)
-- Use `data-testid` attributes for E2E testing
+# Analyze evolution results
+python scripts/plot_evolution.py <params_file> [convergence_file]
 
-### AI Development
-
-- Use evolved genetic parameters for Classic AI
-- Test ML models against strong opponents (EMM-3)
-- Validate training results with competitive testing
-- Monitor performance metrics over time
-
-### Database
-
-- Use migrations for schema changes
-- Test database operations in E2E tests
-- Use local SQLite for development
-- Backup production data regularly
-
-## Continuous Integration
-
-### GitHub Actions
-
-The project uses GitHub Actions for automated testing:
-
-```yaml
-- name: Run all checks
-  run: npm run check
-
-- name: Run slow tests
-  run: npm run check:slow
+# Monitor logs
+npm run logs
 ```
-
-### Pre-commit Hooks
-
-Recommended pre-commit checks:
-
-1. `npm run lint`
-2. `npm run type-check`
-3. `npm run test`
-4. `npm run build:wasm-assets`
-
-## Summary
-
-This development guide provides comprehensive coverage of the development workflow, testing strategies, and troubleshooting procedures. The project emphasizes:
-
-- **High-quality testing** with focus on pure functions and integration tests
-- **Comprehensive AI development** with multiple training backends and testing frameworks
-- **Robust build system** with WASM compilation and deployment automation
-- **Efficient troubleshooting** with quick fixes and environment reset capabilities
-- **Performance optimization** at both build and runtime levels
-
-For specific AI system details, see [AI-SYSTEM.md](./AI-SYSTEM.md). For architecture information, see [ARCHITECTURE.md](./ARCHITECTURE.md).
-
-## WASM AI Genetic Parameters
-
-The WASM AI requires complete genetic parameters to function properly. The build process automatically copies the genetic parameters from `ml/data/genetic_params/evolved.json` to `public/ml/data/genetic_params/evolved.json`.
-
-**Required fields in genetic parameters:**
-
-- `win_score`: Score for winning positions
-- `loss_score`: Score for losing positions
-- `center_column_value`: Value for center column positions
-- `adjacent_center_value`: Value for columns adjacent to center
-- `outer_column_value`: Value for outer columns
-- `edge_column_value`: Value for edge columns
-- `row_height_weight`: Weight for row height evaluation
-- `center_control_weight`: Weight for center control evaluation
-- `piece_count_weight`: Weight for piece count evaluation
-- `threat_weight`: Weight for threat detection
-- `mobility_weight`: Weight for mobility evaluation
-- `vertical_control_weight`: Weight for vertical control
-- `horizontal_control_weight`: Weight for horizontal control
-- `defensive_weight`: Weight for defensive evaluation
-
-**If you encounter WASM AI errors:**
-
-1. Run `npm run build:wasm-assets` to rebuild and copy genetic parameters
-2. Check that `public/ml/data/genetic_params/evolved.json` exists and contains all required fields
-3. Verify the genetic parameters match the Rust `GeneticParams` struct definition

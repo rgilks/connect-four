@@ -43,6 +43,7 @@ slow_tests = []
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 rand = { version = "0.8.5", features = ["getrandom"] }
+uuid = { version = "1.0", features = ["v4", "serde", "js"] }
 getrandom = { version = "0.2", features = ["js"] }
 wasm-bindgen = { version = "0.2.100", optional = true }
 serde-wasm-bindgen = "0.6.5"
