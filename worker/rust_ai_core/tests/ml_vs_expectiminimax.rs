@@ -143,23 +143,4 @@ fn test_ml_vs_expectiminimax_ai() {
     }
 }
 
-fn load_ml_weights(weights_file: &str) -> Result<(Vec<f32>, Vec<f32>), Box<dyn std::error::Error>> {
-    let content = std::fs::read_to_string(weights_file)?;
-    let weights: serde_json::Value = serde_json::from_str(&content)?;
 
-    let value_weights = weights["value_network"]["weights"]
-        .as_array()
-        .ok_or("Invalid weights format")?
-        .iter()
-        .map(|w| w.as_f64().unwrap_or(0.0) as f32)
-        .collect();
-
-    let policy_weights = weights["policy_network"]["weights"]
-        .as_array()
-        .ok_or("Invalid weights format")?
-        .iter()
-        .map(|w| w.as_f64().unwrap_or(0.0) as f32)
-        .collect();
-
-    Ok((value_weights, policy_weights))
-}

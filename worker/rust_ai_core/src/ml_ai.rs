@@ -249,7 +249,7 @@ mod tests {
         // Should have a valid move (untrained ML AI may not choose optimal blocking move)
         assert!(response.r#move.is_some());
         let best_move = response.r#move.unwrap();
-        assert!(best_move >= 0 && best_move < COLS as u8);
+        assert!(best_move < COLS as u8);
     }
 
     #[test]
@@ -282,7 +282,7 @@ mod tests {
 
         // Should have a valid move
         let best_move = response.r#move.unwrap();
-        assert!(best_move >= 0 && best_move <= 6); // Valid column range
+        assert!(best_move <= 6); // Valid column range
     }
 
     #[test]

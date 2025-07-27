@@ -33,6 +33,7 @@ impl Player {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Cell {
     Empty,
     Player1,
@@ -246,17 +247,13 @@ impl GameState {
             }
         }
 
-        // Threat evaluation - check for potential wins
-        let threat_p1 = self.threat_score(Player::Player1);
-        let threat_p2 = self.threat_score(Player::Player2);
-        score += threat_p1 * 1000; // High weight for threats
-        score -= threat_p2 * 1000;
+        // Center control bonus
+        let center_control_p1 = self.center_control_score(Player::Player1);
+        let center_control_p2 = self.center_control_score(Player::Player2);
+        score += center_control_p1 * 10;
+        score -= center_control_p2 * 10;
 
-        // The evaluation should be from the perspective of the current player
-        if self.current_player == Player::Player1 {
-            score = -score;
-        }
-
+        // Evaluation is always from Player1's perspective (positive = Player1 advantage)
         score
     }
 
@@ -679,7 +676,19 @@ impl AI {
             }
         }
 
-        if depth == 0 || state.is_game_over() {
+        if depth == 0 {
+            let eval = state.evaluate() as f32;
+            self.transposition_table.insert(
+                state_hash,
+                TranspositionEntry {
+                    evaluation: eval,
+                    depth,
+                },
+            );
+            return eval;
+        }
+
+        if state.is_game_over() {
             let eval = state.evaluate() as f32;
             self.transposition_table.insert(
                 state_hash,
@@ -698,7 +707,8 @@ impl AI {
             return 0.0; // Draw
         }
 
-        let is_maximizing = state.current_player == Player::Player2;
+        // Minimax: Player1 maximizes (wants positive scores), Player2 minimizes (wants negative scores)
+        let is_maximizing = state.current_player == Player::Player1;
         let mut best_score = if is_maximizing { f32::MIN } else { f32::MAX };
         let mut alpha = alpha;
         let mut beta = beta;

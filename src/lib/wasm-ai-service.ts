@@ -94,15 +94,14 @@ class WASMAIService {
   private convertGameStateToWASM(gameState: GameState): unknown {
     const board = gameState.board.map(col =>
       col.map(cell => {
-        if (cell === null) return 'Empty';
-        if (cell === 'player1') return 'Player1';
-        return 'Player2';
+        if (cell === null) return 'empty';
+        return cell;
       })
     );
 
     return {
       board,
-      current_player: gameState.currentPlayer === 'player1' ? 'player1' : 'player2',
+      current_player: gameState.currentPlayer,
       genetic_params: {
         center_control_weight: 1.0,
         piece_count_weight: 0.5,

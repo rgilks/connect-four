@@ -4,16 +4,40 @@
 
 The sophisticated Rust/WASM AI system has been successfully integrated and is now being used in the game. The game now uses the advanced WASM AI with fallback to JavaScript AI.
 
+## Recent Improvements (27/07/2025)
+
+### EMM AI Evaluation Function Fixed
+
+- **Issue**: Critical bug in evaluation function causing inconsistent player perspective
+- **Fix**: Removed incorrect score flipping based on current player
+- **Result**: EMM AI now performs consistently across all depths
+- **Performance**: EMM-Depth3 now balanced at 50% win rate (was 87% - too strong)
+- **Scores**: Now reasonable (thousands instead of millions)
+
+### Heuristic vs EMM Analysis
+
+- **Key Finding**: Heuristic AI (57.1% win rate) outperforms EMM-Depth6 (50.0% win rate)
+- **Reason**: Evaluation function quality is more important than search depth
+- **Implication**: Strategic understanding can beat tactical calculation
+- **Documentation**: See [EMM vs Heuristic Analysis](EMM-VS-HEURISTIC-ANALYSIS.md) for detailed explanation
+
+### Technical Changes
+
+- Evaluation function now consistently from Player1's perspective
+- Added center control bonus to evaluation
+- Improved minimax algorithm consistency
+- Better depth progression (EMM-Depth1/2: 31.2%, EMM-Depth3: 50%)
+
 ## Current Implementation (WASM AI with JavaScript Fallback)
 
 The game now uses the advanced WASM AI system with fallback to JavaScript AI:
 
 - **Primary AI**: Rust/WASM Classic AI (minimax with alpha-beta pruning)
 - **Fallback AI**: JavaScript heuristic (win/block detection)
-- **Strategy**: 
+- **Strategy**:
   - WASM AI: Advanced search with transposition tables, genetic parameters
   - JavaScript AI: Simple heuristic (win/block/center preference)
-- **Performance**: 
+- **Performance**:
   - WASM AI: ~17ms per move, competitive play
   - JavaScript AI: ~1ms per move, basic play
 

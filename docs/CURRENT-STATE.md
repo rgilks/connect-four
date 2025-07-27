@@ -2,7 +2,7 @@
 
 ## ✅ WASM AI Integration Complete and Working
 
-The Connect Four game now has a **fully integrated and working Rust/WASM AI system** that provides sophisticated gameplay with advanced minimax algorithm and alpha-beta pruning. The WASM AI is now loading correctly and functioning as expected.
+The Connect Four game now has a **fully integrated and working Rust/WASM AI system** that provides sophisticated gameplay with advanced minimax algorithm and alpha-beta pruning. The WASM AI is now loading correctly and functioning as expected with consistent lowercase player value format.
 
 ## What's Currently Active
 
@@ -74,6 +74,25 @@ The Connect Four game now has a **fully integrated and working Rust/WASM AI syst
 - ESLint passing with no warnings ✅
 
 ## Recent Fixes Applied
+
+### Player Value Conversion Issue ✅ RESOLVED
+
+**Problem**: WASM AI was failing with error "unknown variant `Player2`, expected `player1` or `player2`"
+
+**Root Cause**: Inconsistent format expectations in Rust/WASM code:
+- `Player` enum expects lowercase values (`player1`, `player2`) due to `#[serde(rename_all = "lowercase")]`
+- `Cell` enum expected exact enum names (`Empty`, `Player1`, `Player2`)
+
+**Solution Applied**:
+
+1. ✅ **Made Rust code consistent**: Added `#[serde(rename_all = "lowercase")]` to `Cell` enum
+2. ✅ **Fixed Rust compilation errors**: Updated all `Cell::empty` references to `Cell::Empty` in Rust code
+3. ✅ **Simplified TypeScript conversion**: Now just converts `null` → `'empty'` and passes through `player1`/`player2`
+4. ✅ **Rebuilt WASM module** with consistent lowercase format
+5. ✅ **Updated tests** to verify the new consistent format
+6. ✅ **Verified build and runtime**: All tests passing (69/69), no linting errors, clean TypeScript compilation
+
+**Result**: Now using consistent lowercase format everywhere (`player1`, `player2`, `empty`) - much cleaner and simpler! WASM AI integration is fully functional.
 
 ### WASM Loading Issue ✅ RESOLVED
 

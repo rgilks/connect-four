@@ -70,7 +70,7 @@ fn test_draw_detection() {
     
     // Fill the board in a pattern that doesn't create wins
     for col in 0..7 {
-        for row in 0..6 {
+        for _row in 0..6 {
             if game_state.can_place_in_column(col) {
                 game_state.make_move(col as u8).unwrap();
             }

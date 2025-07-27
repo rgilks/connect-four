@@ -73,8 +73,6 @@ impl AIType {
             AIType::EMMDepth6 => "EMM-Depth6",
         }
     }
-
-
 }
 
 trait AIPlayer {
@@ -162,6 +160,8 @@ fn evaluate_position(game_state: &GameState, player: Player) -> f32 {
     // and adjust it based on the player
     let base_evaluation = game_state.evaluate() as f32;
 
+    // The base evaluation is from Player1's perspective
+    // We need to convert it to the given player's perspective
     match player {
         Player::Player1 => base_evaluation,
         Player::Player2 => -base_evaluation,
@@ -283,7 +283,6 @@ fn create_ai_player(ai_type: &AIType) -> Result<Box<dyn AIPlayer>, Box<dyn std::
                 Err("Depth 6 tests require RUN_SLOW_TESTS=1".into())
             }
         }
-
     }
 }
 

@@ -69,80 +69,29 @@ export function getValidMoves(board: Board): number[] {
 export async function makeAIMove(gameState: GameState): Promise<number> {
   const wasmAI = getWASMAIService();
 
-  if (wasmAI.isReady) {
-    try {
-      // Clear transposition table to ensure fresh calculations
-      wasmAI.clearTranspositionTable();
-      const response = await wasmAI.getBestMove(gameState, 6);
-      if (response.move !== null && response.move !== undefined) {
-        console.log(
-          `🤖 WASM AI chose column ${response.move} (evaluated ${response.nodesEvaluated} nodes)`
-        );
-        return response.move;
-      }
-    } catch (error) {
-      console.warn('WASM AI failed, trying ML AI:', error);
-
-      try {
-        const mlResponse = await wasmAI.getMLMove(gameState);
-        if (mlResponse.move !== null && mlResponse.move !== undefined) {
-          console.log(
-            `🤖 ML AI chose column ${mlResponse.move} (evaluation: ${mlResponse.evaluation})`
-          );
-          return mlResponse.move;
-        }
-      } catch (mlError) {
-        console.warn('ML AI also failed, falling back to JavaScript AI:', mlError);
-      }
-    }
+  if (!wasmAI.isReady) {
+    throw new Error('WASM AI not loaded. Please refresh the page and try again.');
   }
 
-  return makeAIMoveJavaScript(gameState);
+  try {
+    // Clear transposition table to ensure fresh calculations
+    wasmAI.clearTranspositionTable();
+    const response = await wasmAI.getBestMove(gameState, 3);
+    if (response.move !== null && response.move !== undefined) {
+      console.log(
+        `🤖 WASM AI chose column ${response.move} (evaluated ${response.nodesEvaluated} nodes)`
+      );
+      return response.move;
+    }
+  } catch (error) {
+    console.error('WASM AI failed:', error);
+    throw new Error(`AI calculation failed: ${error}`);
+  }
+
+  throw new Error('No valid move found');
 }
 
-function makeAIMoveJavaScript(gameState: GameState): number {
-  const validMoves = getValidMoves(gameState.board);
-  if (validMoves.length === 0) return -1;
 
-  // Try to find a winning move
-  for (const col of validMoves) {
-    const testBoard: Board = gameState.board.map((c, i) => {
-      if (i !== col) return [...c];
-      const row = c.lastIndexOf(null);
-      if (row === -1) return [...c];
-      return [...c.slice(0, row), 'player2', ...c.slice(row + 1)];
-    });
-    const row = gameState.board[col].lastIndexOf(null);
-    if (row !== -1 && checkWin(testBoard, col, row, 'player2')) {
-      return col;
-    }
-  }
-
-  // Try to block player1's winning move
-  for (const col of validMoves) {
-    const testBoard: Board = gameState.board.map((c, i) => {
-      if (i !== col) return [...c];
-      const row = c.lastIndexOf(null);
-      if (row === -1) return [...c];
-      return [...c.slice(0, row), 'player1', ...c.slice(row + 1)];
-    });
-    const row = gameState.board[col].lastIndexOf(null);
-    if (row !== -1 && checkWin(testBoard, col, row, 'player1')) {
-      return col;
-    }
-  }
-
-  // Prefer center columns for better strategic position
-  const centerColumns = [3, 2, 4, 1, 5, 0, 6];
-  for (const col of centerColumns) {
-    if (validMoves.includes(col)) {
-      return col;
-    }
-  }
-
-  // Fallback to random move
-  return validMoves[Math.floor(Math.random() * validMoves.length)];
-}
 
 function otherPlayer(player: Player): Player {
   return player === 'player1' ? 'player2' : 'player1';

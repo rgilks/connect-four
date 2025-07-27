@@ -155,7 +155,7 @@ async fn handle_ai_move(mut req: Request, start_time: f64, env: &Env) -> Result<
             console_log!(
                 "  {}: column={}, score={:.1}, type={}",
                 i + 1,
-                                    eval.column,
+                eval.column,
                 eval.score,
                 eval.move_type
             );

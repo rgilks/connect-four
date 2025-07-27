@@ -1,5 +1,4 @@
-use connect_four_ai_core::{genetic_params::GeneticParams, GameState, HeuristicAI, Player, AI};
-use std::time::Instant;
+use connect_four_ai_core::{GameState, HeuristicAI, AI};
 
 #[test]
 fn test_ai_diagnostic() {
