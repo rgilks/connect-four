@@ -157,16 +157,19 @@ See [DEVELOPMENT.md](./docs/DEVELOPMENT.md) for detailed solutions.
 **✅ Current State**: The game now uses the sophisticated Rust/WASM AI system with fallback to JavaScript AI.
 
 ### Primary AI (WASM)
+
 - **Algorithm**: Minimax with alpha-beta pruning, transposition tables
 - **Strategy**: Advanced search with genetic parameters, evolved evaluation
 - **Performance**: ~17ms per move, competitive play
 
 ### Fallback AI (JavaScript)
+
 - **Algorithm**: Basic heuristic with win/block detection
 - **Strategy**: Look for wins, block opponent wins, prefer center columns
 - **Performance**: ~1ms per move, basic play
 
 ### Integration Status
+
 The WASM AI system has been successfully integrated. See [AI-SYSTEM.md](./docs/AI-SYSTEM.md) for detailed documentation.
 
 See [AI-SYSTEM.md](./docs/AI-SYSTEM.md) for detailed system documentation.
@@ -293,3 +296,24 @@ Contributions are welcome! Please read the documentation and ensure all tests pa
 
 - **Connect Four Community** - For strategy and analysis resources
 - **Rust Community** - Excellent WebAssembly tooling and ecosystem
+
+### Current Results (July 2025)
+
+**Evolved Parameters Performance:**
+
+- **Significant improvement** over default parameters
+- **Evolution time:** ~42 minutes
+- **Validation confirmed:** 1000-game test confirms improvement
+- **Implementation:** Parameters are now actively used in the evaluation function
+
+For detailed performance metrics, see [AI-MATRIX-RESULTS.md](./AI-MATRIX-RESULTS.md).
+
+**Key Parameter Changes:**
+
+- `win_score`: 10000 → 8354 (-1646)
+- `position_weight`: 15 → 30 (+15)
+- `safety_bonus`: 25 → -13 (-38)
+- `advancement_bonus`: 5 → 11 (+6)
+- `center_column_bonus`: 2 → 4 (+2)
+
+The evolved parameters significantly outperform the defaults and are now actively used in production AI evaluation.

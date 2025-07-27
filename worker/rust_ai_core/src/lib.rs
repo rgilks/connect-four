@@ -221,7 +221,22 @@ impl GameState {
             return 0;
         }
 
-        // Simple, effective evaluation function
+        // Use genetic parameters if available, otherwise use hardcoded values
+        self.evaluate_with_genetic_params()
+    }
+
+    pub fn evaluate_with_genetic_params(&self) -> i32 {
+        if let Some(winner) = self.get_winner() {
+            return match winner {
+                Player::Player1 => 10000,
+                Player::Player2 => -10000,
+            };
+        }
+
+        if self.is_draw() {
+            return 0;
+        }
+
         let mut score = 0;
 
         // Position evaluation - prefer center columns
@@ -247,17 +262,47 @@ impl GameState {
             }
         }
 
-        // Center control bonus
+        // Center control bonus using genetic parameters
         let center_control_p1 = self.center_control_score(Player::Player1);
         let center_control_p2 = self.center_control_score(Player::Player2);
-        score += center_control_p1 * 10;
-        score -= center_control_p2 * 10;
+        let center_weight = self.genetic_params.center_control_weight as i32;
+        score += center_control_p1 * center_weight;
+        score -= center_control_p2 * center_weight;
 
-        // Threat detection - this is crucial for blocking wins
+        // Threat detection using genetic parameters
         let threat_p1 = self.threat_score(Player::Player1);
         let threat_p2 = self.threat_score(Player::Player2);
-        score += threat_p1 * 50; // Very high weight for threats
-        score -= threat_p2 * 50; // Very high weight for opponent threats
+        let threat_weight = self.genetic_params.threat_weight as i32;
+        score += threat_p1 * threat_weight;
+        score -= threat_p2 * threat_weight;
+
+        // Piece count evaluation using genetic parameters
+        let piece_count_p1 = self.pieces_count(Player::Player1);
+        let piece_count_p2 = self.pieces_count(Player::Player2);
+        let piece_weight = self.genetic_params.piece_count_weight as i32;
+        score += piece_count_p1 * piece_weight;
+        score -= piece_count_p2 * piece_weight;
+
+        // Mobility evaluation using genetic parameters
+        let mobility_p1 = self.mobility_score(Player::Player1);
+        let mobility_p2 = self.mobility_score(Player::Player2);
+        let mobility_weight = self.genetic_params.mobility_weight as i32;
+        score += mobility_p1 * mobility_weight;
+        score -= mobility_p2 * mobility_weight;
+
+        // Vertical control evaluation using genetic parameters
+        let vertical_p1 = self.vertical_control_score(Player::Player1);
+        let vertical_p2 = self.vertical_control_score(Player::Player2);
+        let vertical_weight = self.genetic_params.vertical_control_weight as i32;
+        score += vertical_p1 * vertical_weight;
+        score -= vertical_p2 * vertical_weight;
+
+        // Horizontal control evaluation using genetic parameters
+        let horizontal_p1 = self.horizontal_control_score(Player::Player1);
+        let horizontal_p2 = self.horizontal_control_score(Player::Player2);
+        let horizontal_weight = self.genetic_params.horizontal_control_weight as i32;
+        score += horizontal_p1 * horizontal_weight;
+        score -= horizontal_p2 * horizontal_weight;
 
         // Evaluation is always from Player1's perspective (positive = Player1 advantage)
         score
@@ -458,6 +503,54 @@ impl GameState {
         }
         self.current_player.hash(&mut hasher);
         hasher.finish()
+    }
+
+    pub fn mobility_score(&self, player: Player) -> i32 {
+        let mut mobility = 0;
+        for col in 0..COLS {
+            if self.can_place_in_column(col) {
+                // Test the move
+                let mut test_state = self.clone();
+                if test_state.make_move(col as u8).is_ok() {
+                    // Check if this creates a threat
+                    let threat_score = test_state.threat_score(player);
+                    mobility += threat_score / 10; // Normalize
+                }
+            }
+        }
+        mobility
+    }
+
+    pub fn vertical_control_score(&self, player: Player) -> i32 {
+        let mut score = 0;
+        for col in 0..COLS {
+            let mut consecutive = 0;
+            for row in 0..ROWS {
+                if self.board[col][row] == Cell::from_player(player) {
+                    consecutive += 1;
+                } else {
+                    consecutive = 0;
+                }
+                score += consecutive;
+            }
+        }
+        score
+    }
+
+    pub fn horizontal_control_score(&self, player: Player) -> i32 {
+        let mut score = 0;
+        for row in 0..ROWS {
+            let mut consecutive = 0;
+            for col in 0..COLS {
+                if self.board[col][row] == Cell::from_player(player) {
+                    consecutive += 1;
+                } else {
+                    consecutive = 0;
+                }
+                score += consecutive;
+            }
+        }
+        score
     }
 }
 

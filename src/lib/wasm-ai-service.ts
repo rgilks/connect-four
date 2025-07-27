@@ -57,7 +57,6 @@ class WASMAIService {
   private isLoaded = false;
   private loadPromise: Promise<void> | null = null;
 
-
   async initialize(): Promise<void> {
     if (this.loadPromise) {
       return this.loadPromise;
@@ -91,7 +90,7 @@ class WASMAIService {
     }
   }
 
-  private convertGameStateToWASM(gameState: GameState): unknown {
+  private async convertGameStateToWASM(gameState: GameState): Promise<unknown> {
     const board = gameState.board.map(col =>
       col.map(cell => {
         if (cell === null) return 'empty';
@@ -99,60 +98,60 @@ class WASMAIService {
       })
     );
 
+    // Load genetic parameters from evolved.json
+    const geneticParams = await this.loadGeneticParams();
+
     return {
       board,
       current_player: gameState.currentPlayer,
-      genetic_params: {
-        center_control_weight: 1.0,
-        piece_count_weight: 0.5,
-        threat_weight: 2.0,
-        mobility_weight: 0.8,
-        vertical_control_weight: 1.2,
-        horizontal_control_weight: 1.0,
-      },
+      genetic_params: geneticParams,
     };
   }
 
-  async getBestMove(gameState: GameState, depth: number = 3): Promise<WASMAIResponse> {
+  private async loadGeneticParams(): Promise<Record<string, number>> {
+    try {
+      // Try to load from the evolved.json file
+      const response = await fetch('/ml/data/genetic_params/evolved.json');
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (error) {
+      console.warn('Failed to load evolved genetic parameters, using defaults:', error);
+    }
+
+    // Fallback to default parameters
+    return {
+      center_control_weight: 1.0,
+      piece_count_weight: 0.5,
+      threat_weight: 2.0,
+      mobility_weight: 0.8,
+      vertical_control_weight: 1.2,
+      horizontal_control_weight: 1.0,
+    };
+  }
+
+  async getBestMove(gameState: GameState, depth: number = 5): Promise<WASMAIResponse> {
     if (!this.isLoaded || !this.ai) {
       throw new Error('WASM AI not loaded');
     }
 
-    const player = gameState.currentPlayer;
-    const board = gameState.board;
-    console.log(
-      `WASM AI: Starting move calculation | Player: ${player}, Depth: ${depth}, Board:`,
-      board
-    );
-
-    const start = performance.now();
     try {
-      const wasmState = this.convertGameStateToWASM(gameState);
+      const wasmState = await this.convertGameStateToWASM(gameState);
       console.log('WASM AI: Converted state:', JSON.stringify(wasmState, null, 2));
       const result = this.ai.get_best_move(wasmState, depth);
-      const parsed = typeof result === 'string' ? JSON.parse(result) : result;
-      const end = performance.now();
 
-      const move = parsed instanceof Map ? parsed.get('move') : parsed.move;
-      const nodesEvaluated =
-        parsed instanceof Map ? parsed.get('nodes_evaluated') : parsed.nodes_evaluated;
-      const transpositionHits =
-        parsed instanceof Map ? parsed.get('transposition_hits') : parsed.transposition_hits;
-      const evaluations = parsed instanceof Map ? parsed.get('evaluations') : parsed.evaluations;
-
-      console.log(
-        `WASM AI: Move calculation complete | Player: ${player}, Depth: ${depth}, Move: ${move}, Score: ${evaluations?.[0]?.score ?? 'N/A'}, Nodes: ${nodesEvaluated}, Cache hits: ${transpositionHits}, Time: ${(end - start).toFixed(1)}ms`
-      );
+      console.log('WASM AI: Raw result:', result);
+      const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
 
       return {
-        move,
-        evaluations: evaluations || [],
-        nodesEvaluated,
-        transpositionHits,
+        move: parsedResult.move,
+        evaluations: parsedResult.evaluations || [],
+        nodesEvaluated: parsedResult.nodes_evaluated || 0,
+        transpositionHits: parsedResult.transposition_hits || 0,
       };
     } catch (error) {
-      console.error('WASM AI: Error during move calculation:', error);
-      throw new Error(`WASM AI calculation failed: ${error}`);
+      console.error('WASM AI error:', error);
+      throw new Error(`WASM AI failed: ${error}`);
     }
   }
 
@@ -162,11 +161,11 @@ class WASMAIService {
     }
 
     try {
-      const wasmState = this.convertGameStateToWASM(gameState);
+      const wasmState = await this.convertGameStateToWASM(gameState);
       const result = this.ai.get_heuristic_move(wasmState);
       return typeof result === 'string' ? JSON.parse(result) : result;
     } catch (error) {
-      throw new Error(`WASM Heuristic AI calculation failed: ${error}`);
+      throw new Error(`WASM heuristic AI failed: ${error}`);
     }
   }
 
@@ -176,11 +175,11 @@ class WASMAIService {
     }
 
     try {
-      const wasmState = this.convertGameStateToWASM(gameState);
+      const wasmState = await this.convertGameStateToWASM(gameState);
       const result = this.ai.get_ml_move(wasmState);
       return typeof result === 'string' ? JSON.parse(result) : result;
     } catch (error) {
-      throw new Error(`WASM ML AI calculation failed: ${error}`);
+      throw new Error(`WASM ML AI failed: ${error}`);
     }
   }
 
@@ -190,7 +189,7 @@ class WASMAIService {
     }
 
     try {
-      const wasmState = this.convertGameStateToWASM(gameState);
+      const wasmState = await this.convertGameStateToWASM(gameState);
       return this.ai.evaluate_position(wasmState);
     } catch (error) {
       throw new Error(`WASM position evaluation failed: ${error}`);

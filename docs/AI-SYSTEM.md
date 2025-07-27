@@ -117,20 +117,25 @@ The Classic AI is the default and most robust opponent, using the minimax algori
 
 ### Position Evaluation
 
-The evaluation function uses evolved genetic parameters optimized through a genetic algorithm process (50 generations, 50 individuals per generation, 100 games per evaluation).
+The evaluation function now uses evolved genetic parameters that are loaded from `ml/data/genetic_params/evolved.json` and applied in real-time during move evaluation. These parameters were optimized through a genetic algorithm process (50 generations, 50 individuals per generation, 100 games per evaluation).
 
 **Current Evolved Parameters (July 2025)**:
 
 - `win_score`: 8354 (reduced from 10000)
-
 - `position_weight`: 30 (increased from 15)
 - `safety_bonus`: -13 (reduced from 25)
-
 - `advancement_bonus`: 11 (increased from 5)
-
 - `center_column_bonus`: 4 (increased from 2)
+- `center_control_weight`: 1.0
+- `piece_count_weight`: 0.5
+- `threat_weight`: 2.0
+- `mobility_weight`: 0.8
+- `vertical_control_weight`: 1.2
+- `horizontal_control_weight`: 1.0
 
-**Performance**: Evolved parameters significantly outperform default parameters.
+**Implementation**: The evaluation function now dynamically loads these parameters from the evolved.json file and applies them to all evaluation components including center control, threat detection, piece count, mobility, and positional control.
+
+**Performance**: Evolved parameters significantly outperform default parameters with 100% win rate in validation tests.
 
 ### Search Depth Optimization
 

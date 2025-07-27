@@ -121,14 +121,14 @@ fn test_genetic_params_comparison() {
     optimize_cpu_usage();
 
     // Load evolved parameters
-    let evolved_params = match GeneticParams::load_from_file("ml/data/genetic_params/evolved.json")
-    {
-        Ok(params) => params,
-        Err(e) => {
-            eprintln!("Failed to load evolved parameters: {}", e);
-            return;
-        }
-    };
+    let evolved_params =
+        match GeneticParams::load_from_file("../../ml/data/genetic_params/evolved.json") {
+            Ok(params) => params,
+            Err(e) => {
+                eprintln!("Failed to load evolved parameters: {}", e);
+                return;
+            }
+        };
 
     let default_params = GeneticParams::default();
     let num_games = std::env::var("NUM_GAMES")
