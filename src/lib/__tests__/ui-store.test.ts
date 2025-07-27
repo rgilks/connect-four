@@ -17,6 +17,8 @@ describe('UI Store', () => {
       expect(state.soundEnabled).toBe(true);
       expect(state.diagnosticsPanelOpen).toBe(false);
       expect(state.howToPlayOpen).toBe(false);
+      expect(state.errorModal.isOpen).toBe(false);
+      expect(state.errorModal.error).toBe('');
     });
   });
 
@@ -113,6 +115,44 @@ describe('UI Store', () => {
     });
   });
 
+  describe('error modal', () => {
+    it('should show error modal', () => {
+      const { showError } = useUIStore.getState().actions;
+      const testError = 'Test error message';
+
+      showError(testError);
+      const state = useUIStore.getState();
+      expect(state.errorModal.isOpen).toBe(true);
+      expect(state.errorModal.error).toBe(testError);
+    });
+
+    it('should hide error modal', () => {
+      const { showError, hideError } = useUIStore.getState().actions;
+      const testError = 'Test error message';
+
+      showError(testError);
+      expect(useUIStore.getState().errorModal.isOpen).toBe(true);
+
+      hideError();
+      const state = useUIStore.getState();
+      expect(state.errorModal.isOpen).toBe(false);
+      expect(state.errorModal.error).toBe('');
+    });
+
+    it('should update error message when showing new error', () => {
+      const { showError } = useUIStore.getState().actions;
+      const firstError = 'First error message';
+      const secondError = 'Second error message';
+
+      showError(firstError);
+      expect(useUIStore.getState().errorModal.error).toBe(firstError);
+
+      showError(secondError);
+      expect(useUIStore.getState().errorModal.error).toBe(secondError);
+      expect(useUIStore.getState().errorModal.isOpen).toBe(true);
+    });
+  });
+
   describe('reset', () => {
     it('should reset all state to initial values', () => {
       const { actions } = useUIStore.getState();
@@ -124,6 +164,7 @@ describe('UI Store', () => {
       actions.setSoundEnabled(false);
       actions.setDiagnosticsPanelOpen(true);
       actions.setHowToPlayOpen(true);
+      actions.showError('Test error');
 
       const stateBeforeReset = useUIStore.getState();
       expect(stateBeforeReset.showModelOverlay).toBe(false);
@@ -133,6 +174,8 @@ describe('UI Store', () => {
       expect(stateBeforeReset.soundEnabled).toBe(false);
       expect(stateBeforeReset.diagnosticsPanelOpen).toBe(true);
       expect(stateBeforeReset.howToPlayOpen).toBe(true);
+      expect(stateBeforeReset.errorModal.isOpen).toBe(true);
+      expect(stateBeforeReset.errorModal.error).toBe('Test error');
 
       actions.reset();
 
@@ -144,6 +187,8 @@ describe('UI Store', () => {
       expect(stateAfterReset.soundEnabled).toBe(true);
       expect(stateAfterReset.diagnosticsPanelOpen).toBe(false);
       expect(stateAfterReset.howToPlayOpen).toBe(false);
+      expect(stateAfterReset.errorModal.isOpen).toBe(false);
+      expect(stateAfterReset.errorModal.error).toBe('');
     });
   });
 
