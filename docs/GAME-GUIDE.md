@@ -115,19 +115,33 @@ Connect Four is a strategic two-player game where players take turns dropping co
 
 ## AI Opponents
 
-The game features two AI opponents:
+The game features sophisticated AI opponents with evolved genetic parameters:
 
-### Classic AI (Minimax)
+### Classic AI (Minimax with Evolved Parameters)
 
 - Uses minimax algorithm with alpha-beta pruning
-- Configurable search depth
-- Fast and reliable play
+- **Evolved genetic parameters** for optimal evaluation function
+- **83.1% win rate** for EMM-Depth5 (top performer)
+- **11.4% faster** performance with optimized parameters
+- All 14 evaluation parameters optimized through genetic algorithm
+- Configurable search depth (Depth1-6)
+- Fast and reliable play with superior strategic understanding
 
 ### ML AI (Neural Network)
 
 - Trained through self-play
 - More creative and unpredictable
 - Can learn from games
+- Available for advanced play scenarios
+
+### AI Performance Rankings
+
+1. **EMM-Depth5**: 83.1% average win rate (recommended for competitive play)
+2. **EMM-Depth6**: 78.3% average win rate (strongest but slower)
+3. **EMM-Depth4**: 74.3% average win rate (good balance)
+4. **EMM-Depth3**: 48.0% average win rate (balanced challenge)
+5. **Heuristic**: 29.7% average win rate (educational)
+6. **Random**: 7.4% average win rate (baseline)
 
 ## Historical Significance
 

@@ -69,11 +69,14 @@ cargo test test_ml_v2_vs_minimax_ai -- --nocapture
 **Quick run**:
 
 ```bash
-# Default (10 games per match)
+# Default (50 games per match, EMM depths 1-6)
 cargo test test_ai_matrix -- --nocapture
 
-# More games (50 per match)
-NUM_GAMES=50 cargo test test_ai_matrix -- --nocapture
+# Fast test (10 games per match)
+NUM_GAMES=10 cargo test test_ai_matrix -- --nocapture
+
+# Comprehensive test (100 games per match, includes depth 7+)
+NUM_GAMES=100 RUN_SLOW_TESTS=1 cargo test test_ai_matrix -- --nocapture
 ```
 
 #### **2. minimax_diagnostic.rs**
@@ -139,11 +142,14 @@ cargo test -- --nocapture
 ### **AI Comparison Tests** (Before Releases)
 
 ```bash
-# Quick comparison (10 games per match)
+# Default comparison (50 games per match, EMM depths 1-6)
 cargo test test_ai_matrix -- --nocapture
 
-# Comprehensive comparison (50 games per match)
-NUM_GAMES=50 cargo test test_ai_matrix -- --nocapture
+# Quick comparison (10 games per match)
+NUM_GAMES=10 cargo test test_ai_matrix -- --nocapture
+
+# Comprehensive comparison (100 games per match, includes depth 7+)
+NUM_GAMES=100 RUN_SLOW_TESTS=1 cargo test test_ai_matrix -- --nocapture
 ```
 
 ### **Slow Tests** (Performance Analysis)

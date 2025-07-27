@@ -58,19 +58,21 @@ A modern web implementation of the classic Connect Four game with AI opponents, 
 
 ## ✨ Features
 
-- **AI Opponent**: Play against a depth-5 minimax AI with 93.8% win rate
+- **AI Opponent**: Play against a depth-5 minimax AI with 83.1% win rate (evolved genetic parameters)
 - **Browser-Native**: All AI runs locally via WebAssembly
 - **Offline Support**: PWA with full offline gameplay
 - **Modern UI**: Responsive design with animations and sound effects
+- **Advanced AI**: Genetic algorithm optimized evaluation functions for superior performance
 
 ## 📚 Documentation
 
 - **[docs/README.md](./docs/README.md)** – Documentation index and quick reference
-- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** – System design, components, deployment, and infrastructure
-- **[DEVELOPMENT.md](./docs/DEVELOPMENT.md)** – Development workflow, testing, troubleshooting, best practices
-- **[GAME-GUIDE.md](./docs/GAME-GUIDE.md)** – Game rules, strategy, and user info
-- **[CLOUDFLARE-DEPLOYMENT.md](./docs/CLOUDFLARE-DEPLOYMENT.md)** – Complete Cloudflare deployment guide
-- **[TODO.md](./docs/TODO.md)** – Project TODOs and improvements
+- **[DEVELOPMENT.md](./docs/DEVELOPMENT.md)** – Complete development guide, testing, troubleshooting
+- **[AI-SYSTEM.md](./docs/AI-SYSTEM.md)** – AI architecture, training, performance analysis
+- **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)** – Cloudflare deployment, monitoring, troubleshooting
+- **[GAME-GUIDE.md](./docs/GAME-GUIDE.md)** – Game rules, strategy, AI opponents
+- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** – System design, data flow, infrastructure
+- **[TODO.md](./docs/TODO.md)** – Current tasks and future plans
 
 ## 🚀 Quick Start
 
@@ -142,7 +144,7 @@ npm run db:shell
 wrangler status
 ```
 
-For complete deployment documentation, see **[CLOUDFLARE-DEPLOYMENT.md](./docs/CLOUDFLARE-DEPLOYMENT.md)**.
+For complete deployment documentation, see **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)**.
 
 ### Common Setup Issues
 
@@ -265,13 +267,15 @@ The project is a pure client-side implementation for optimal performance and off
 
 ### Core Documentation
 
-- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)**
-- **[DEVELOPMENT.md](./docs/DEVELOPMENT.md)**
-- **[GAME-GUIDE.md](./docs/GAME-GUIDE.md)**
+- **[DEVELOPMENT.md](./docs/DEVELOPMENT.md)** – Complete development guide
+- **[AI-SYSTEM.md](./docs/AI-SYSTEM.md)** – AI architecture and training
+- **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)** – Cloudflare deployment guide
+- **[GAME-GUIDE.md](./docs/GAME-GUIDE.md)** – Game rules and strategy
 
-### Additional Files
+### Reference Documentation
 
-- **[TODO.md](./docs/TODO.md)**
+- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** – System design and infrastructure
+- **[TODO.md](./docs/TODO.md)** – Current tasks and roadmap
 
 ## 🔧 Troubleshooting
 

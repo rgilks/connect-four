@@ -1,161 +1,195 @@
-# Documentation
+# Connect Four Documentation
 
-This directory contains comprehensive documentation for the Connect Four project.
+Welcome to the Connect Four project documentation. This guide provides comprehensive information about the game, its AI system, development workflow, and deployment.
+
+## 🎮 Quick Start
+
+- **[Play Online](https://connect-4.tre.systems/)** - Live game
+- **[Development Setup](./DEVELOPMENT.md#quick-start)** - Get started in 5 minutes
+- **[Deployment Guide](./DEPLOYMENT.md)** - Deploy to production
 
 ## 📚 Documentation Structure
 
 ### Core Documentation
 
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System design, components, deployment, and infrastructure
-- **[AI-SYSTEM.md](./AI-SYSTEM.md)** - Complete AI system guide including Classic AI, ML AI, testing, and development history
-- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development workflow, testing strategies, troubleshooting, and best practices
-- **[GAME-GUIDE.md](./GAME-GUIDE.md)** - Game rules, strategy, historical context, and user information
-- **[CLOUDFLARE-DEPLOYMENT.md](./CLOUDFLARE-DEPLOYMENT.md)** - Complete Cloudflare deployment guide
-- **[CLOUDFLARE-QUICK-REFERENCE.md](./CLOUDFLARE-QUICK-REFERENCE.md)** - Quick reference for Cloudflare commands and troubleshooting
+| Document                               | Purpose                                              | Audience      |
+| -------------------------------------- | ---------------------------------------------------- | ------------- |
+| **[DEVELOPMENT.md](./DEVELOPMENT.md)** | Complete development guide, testing, troubleshooting | Developers    |
+| **[AI-SYSTEM.md](./AI-SYSTEM.md)**     | AI architecture, training, performance analysis      | AI developers |
+| **[DEPLOYMENT.md](./DEPLOYMENT.md)**   | Cloudflare deployment, monitoring, troubleshooting   | DevOps        |
+| **[GAME-GUIDE.md](./GAME-GUIDE.md)**   | Game rules, strategy, AI opponents                   | Players       |
 
-### Additional Files
+### Reference Documentation
 
-- **[TODO.md](./TODO.md)** - Consolidated task list and improvements
+| Document                                           | Purpose                                  | Audience         |
+| -------------------------------------------------- | ---------------------------------------- | ---------------- |
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)**           | System design, data flow, infrastructure | Architects       |
+| **[AI-MATRIX-RESULTS.md](./AI-MATRIX-RESULTS.md)** | Latest AI performance metrics            | AI researchers   |
+| **[TODO.md](./TODO.md)**                           | Current tasks and future plans           | Project managers |
 
-## 🎯 Quick Reference
+## 🚀 Quick Reference
 
-### For New Developers
-
-1. Start with [ARCHITECTURE.md](./ARCHITECTURE.md) to understand the system design
-2. Read [AI-SYSTEM.md](./AI-SYSTEM.md) for comprehensive AI implementation details
-3. Check [GAME-GUIDE.md](./GAME-GUIDE.md) for game mechanics and strategy
-4. Use [DEVELOPMENT.md](./DEVELOPMENT.md) for development workflow and troubleshooting
-5. Review [CLOUDFLARE-DEPLOYMENT.md](./CLOUDFLARE-DEPLOYMENT.md) for deployment information
-
-### For AI Development
-
-1. Review [AI-SYSTEM.md](./AI-SYSTEM.md) for complete AI system information
-2. Check [DEVELOPMENT.md](./DEVELOPMENT.md) for training and testing procedures
-
-### For Testing
-
-1. Read [DEVELOPMENT.md](./DEVELOPMENT.md) for comprehensive testing strategies
-2. Use the troubleshooting section for common issues
-
-## 📊 Performance Summary
-
-For the latest, detailed AI performance results (win rates, speed, and recommendations), see [AI-MATRIX-RESULTS.md](./AI-MATRIX-RESULTS.md). All stats are generated automatically by the AI matrix test and kept up to date.
-
-## 🚀 Latest Training Options
-
-### PyTorch Training (Recommended)
+### Development Commands
 
 ```bash
-# Quick test (100 games, 10 epochs)
-npm run train:pytorch:quick
-
-# Standard training (1000 games, 50 epochs)
-npm run train:pytorch
-
-# Production training (2000 games, 100 epochs)
-npm run train:pytorch:production
-
-# v5 training (2000 games, 100 epochs, ~30 min)
-npm run train:pytorch:v5
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run check        # Run all checks (lint, test, type-check)
+npm run deploy       # Deploy to Cloudflare
 ```
 
-### Rust Training (Legacy)
+### AI Development
 
 ```bash
-# Quick test (100 games, 10 epochs)
-npm run train:rust:quick
-
-# Standard training (1000 games, 50 epochs)
-npm run train:rust
-
-# Production training (2000 games, 100 epochs)
-npm run train:rust:production
+npm run test:ai-comparison    # Test AI performance
+npm run evolve:genetic-params # Evolve AI parameters
+npm run train                 # Train ML models
 ```
 
-## 🧬 Genetic Parameter Evolution
-
-You can evolve and validate the genetic parameters for the classic AI using the following scripts:
+### Database Management
 
 ```bash
-# Evolve new genetic parameters (runs Rust evolution, saves to ml/data/genetic_params/evolved.json)
-npm run evolve:genetic-params
-
-# Validate evolved parameters against default (runs 100 games, prints win rates)
-npm run validate:genetic-params
+npm run db:setup              # Setup local database
+npm run db:migrate            # Run migrations
+npm run db:shell              # Database shell
 ```
 
-### Evolution Process
+## 🎯 Current Status
 
-The evolution script uses a robust genetic algorithm with:
+### ✅ Completed Features
 
-- **Population size:** 50 individuals
-- **Generations:** 50 generations
-- **Games per evaluation:** 100 games per individual
-- **Post-evolution validation:** 1000 games to confirm improvement
-- **Quality threshold:** Only saves parameters if they significantly outperform defaults
+- **WASM AI Integration**: Rust/WASM AI system fully integrated and working
+- **Dual AI System**: Classic minimax AI + ML neural network AI
+- **Offline Support**: PWA with full offline gameplay
+- **Cloudflare Deployment**: Production deployment with D1 database
+- **Comprehensive Testing**: 66+ tests passing, E2E coverage
 
-### Current Results (July 2025)
+### 🔄 Active Development
 
-**Evolved Parameters Performance:**
+- **ML AI Training**: Ongoing neural network training and optimization
+- **Performance Optimization**: Continuous AI performance improvements
+- **Feature Enhancement**: UI improvements and new game modes
 
-- **Significant improvement** over default parameters
-- **Evolution time:** ~42 minutes
-- **Validation confirmed:** 1000-game test confirms improvement
+### 📋 Next Steps
 
-For detailed performance metrics, see [AI-MATRIX-RESULTS.md](./AI-MATRIX-RESULTS.md).
+See **[TODO.md](./TODO.md)** for detailed roadmap and current tasks.
 
-**Key Parameter Changes:**
+## 🏗️ Architecture Overview
 
-- `win_score`: 10000 → 8354 (-1646)
+The project uses a modern web architecture:
 
-- `position_weight`: 15 → 30 (+15)
+- **Frontend**: Next.js 15 with React, TypeScript, Tailwind CSS
+- **AI Engine**: Rust compiled to WebAssembly for client-side execution
+- **Database**: Cloudflare D1 (production), SQLite (development)
+- **Deployment**: Cloudflare Workers with GitHub Actions CI/CD
 
+### Key Components
 
+- **Game Logic**: Pure functions in `src/lib/game-logic.ts`
+- **AI Services**: WASM integration in `src/lib/wasm-ai-service.ts`
+- **State Management**: Zustand with Immer in `src/lib/game-store.ts`
+- **Database**: Drizzle ORM with migrations
 
-The evolved parameters significantly outperform the defaults and are now used in production.
+## 🤖 AI System
 
-## 🔄 Recent Updates
+The game features a sophisticated dual AI system:
 
-- **July 2025**: Consolidated documentation into 4 comprehensive files
-- **July 2025**: Successful genetic parameter evolution - evolved parameters significantly outperform defaults
-- **July 2025**: PyTorch V5 model achieves strong performance against Classic AI
-- **July 2025**: Pure Rust training migration with 10-20x performance improvements
-- **July 2025**: Apple Silicon GPU optimization for ML training
+### Classic AI (Minimax)
 
-## 📝 Contributing
+- **Algorithm**: Minimax with alpha-beta pruning
+- **Performance**: ~17ms per move, competitive play
+- **Features**: Transposition tables, genetic parameters
 
-When updating documentation:
+### ML AI (Neural Network)
 
-1. Keep information concise and to the point
-2. Update the appropriate consolidated file
-3. Maintain cross-references between documents
-4. Update this README when adding new documentation
+- **Architecture**: Value + policy networks
+- **Training**: Self-play with genetic algorithms
+- **Performance**: Creative, unpredictable playstyle
 
-## 📁 File Organization
+### Performance Results
 
-### Consolidated Files
+Latest AI matrix test results show:
 
-- **ARCHITECTURE.md**: System design, components, deployment, database, and infrastructure
-- **AI-SYSTEM.md**: Complete AI system including Classic AI, ML AI, testing, training, and development history
-- **DEVELOPMENT.md**: Development workflow, testing strategies, troubleshooting, and best practices
-- **GAME-GUIDE.md**: Game rules, strategy, historical context, and user information
+- **EMM-Depth6**: 82.6% average win rate (strongest)
+- **EMM-Depth3**: 45.7% average win rate (balanced)
+- **Heuristic**: 34.3% average win rate (educational)
 
-### Removed Files (Consolidated)
+See **[AI-MATRIX-RESULTS.md](./AI-MATRIX-RESULTS.md)** for detailed metrics.
 
-- `architecture-overview.md` → Consolidated into `ARCHITECTURE.md`
-- `ai-system.md` → Consolidated into `AI-SYSTEM.md`
-- `ml-system-overview.md` → Consolidated into `AI-SYSTEM.md`
-- `testing-strategy.md` → Consolidated into `DEVELOPMENT.md`
-- `ai-testing-strategy.md` → Consolidated into `AI-SYSTEM.md`
-- `cloudflare-worker-infrastructure.md` → Consolidated into `ARCHITECTURE.md`
-- `scripts-reference.md` → Consolidated into `DEVELOPMENT.md`
-- `game-rules-strategy.md` → Consolidated into `GAME-GUIDE.md`
-- `troubleshooting.md` → Consolidated into `DEVELOPMENT.md`
-- `ai-development-history.md` → Consolidated into `AI-SYSTEM.md`
+## 🧪 Testing Strategy
 
-## Testing and Quality
+The project uses a comprehensive testing approach:
 
-- All Rust doc tests are fast and reliable (minimal config, no long-running examples)
-- All unit, integration, and doc tests pass as of this commit
-- High test coverage is maintained (see coverage report)
-- E2E tests (Playwright) are robust and verify real database saves
+- **Unit Tests**: Pure functions, schemas, game logic (Vitest)
+- **Integration Tests**: Game store, AI services
+- **E2E Tests**: Full game flows (Playwright)
+- **AI Tests**: Performance matrix, competitive testing
+
+### Test Commands
+
+```bash
+npm run test              # Unit tests
+npm run test:e2e          # End-to-end tests
+npm run test:ai-comparison # AI performance tests
+npm run test:coverage     # Coverage report
+```
+
+## 📊 Performance
+
+### Build Performance
+
+- **Development**: Hot reload with WASM caching
+- **Production**: Optimized builds with tree shaking
+- **Deployment**: ~60KB worker bundle
+
+### Runtime Performance
+
+- **AI Response**: < 20ms per move
+- **Game Loading**: < 2 seconds
+- **Offline Support**: Full functionality without network
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+| Issue             | Quick Fix                   |
+| ----------------- | --------------------------- |
+| WASM not loading  | `npm run build:wasm-assets` |
+| Database errors   | `npm run db:setup`          |
+| Build failures    | `npm run nuke`              |
+| Deployment issues | Check `wrangler.toml`       |
+
+### Getting Help
+
+1. Check **[DEVELOPMENT.md](./DEVELOPMENT.md)** troubleshooting section
+2. Review GitHub Issues for known problems
+3. Check Cloudflare Workers logs: `npm run logs`
+
+## 📈 Analytics
+
+The game includes comprehensive analytics:
+
+- **Game Statistics**: Win rates, move counts, duration
+- **AI Performance**: Response times, evaluation metrics
+- **User Behavior**: Game completion rates, AI selection
+
+All data is privacy-focused with anonymous player IDs.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Read the documentation thoroughly
+2. Run `npm run check` before submitting
+3. Add tests for new features
+4. Update documentation for changes
+
+## 📄 License
+
+MIT License - see [LICENSE](../LICENSE) for details.
+
+---
+
+**Last Updated**: July 2025  
+**Version**: 1.0.0  
+**Status**: Production Ready ✅

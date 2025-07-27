@@ -7,7 +7,7 @@ use std::fs;
 
 const POPULATION_SIZE: usize = 50;
 const GENERATIONS: usize = 50;
-const GAMES_PER_EVAL: usize = 100;
+const GAMES_PER_EVAL: usize = 100; // Back to original value for proper evolution
 const MUTATION_RATE: f64 = 0.3;
 const MUTATION_STRENGTH: f64 = 1.0;
 const CROSSOVER_RATE: f64 = 0.5;
@@ -51,28 +51,39 @@ fn evaluate_params_tournament(evolved_params: &GeneticParams) -> f64 {
     let results: Vec<bool> = (0..GAMES_PER_EVAL)
         .into_par_iter()
         .map(|_| {
-            let mut game_state = GameState::new();
             let mut moves_played = 0;
             let max_moves = 42; // Maximum moves in Connect Four (6x7 board)
 
+            // Randomly decide which player uses evolved parameters
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
+            let evolved_is_player2 = rng.gen_bool(0.5);
+
+            // Create neutral game state (doesn't matter which params we use for the game state itself)
+            let mut game_state = GameState::new();
+
             while !game_state.is_game_over() && moves_played < max_moves {
                 let current_player = game_state.current_player;
-                let is_evolved_turn = current_player == Player::Player2;
+                let is_evolved_turn = if evolved_is_player2 {
+                    current_player == Player::Player2
+                } else {
+                    current_player == Player::Player1
+                };
 
-                // Use different parameters based on whose turn it is
-                let test_params = if is_evolved_turn {
+                // Use different parameters for AI move calculation based on whose turn it is
+                let ai_params = if is_evolved_turn {
                     evolved_params.clone()
                 } else {
                     default_params.clone()
                 };
 
-                // Create a new game state with the test parameters
-                let mut test_state = GameState::with_genetic_params(test_params);
-                test_state.board = game_state.board.clone();
-                test_state.current_player = game_state.current_player;
+                // Create a temporary state for AI move calculation
+                let mut ai_state = GameState::with_genetic_params(ai_params);
+                ai_state.board = game_state.board.clone();
+                ai_state.current_player = game_state.current_player;
 
                 let mut ai = AI::new();
-                let (best_move, _) = ai.get_best_move(&test_state, 5);
+                let (best_move, _) = ai.get_best_move(&ai_state, 5);
 
                 if let Some(column) = best_move {
                     game_state.make_move(column).ok();
@@ -83,19 +94,34 @@ fn evaluate_params_tournament(evolved_params: &GeneticParams) -> f64 {
                 moves_played += 1;
             }
 
-            // Determine winner - evolved params are Player2
+            // Determine winner - evolved params win if they are the winner
             if let Some(winner) = game_state.get_winner() {
-                winner == Player::Player2 // Evolved params win
+                if evolved_is_player2 {
+                    winner == Player::Player2
+                } else {
+                    winner == Player::Player1
+                }
             } else {
-                // Game ended in draw, evaluate final position
-                let evolved_eval = game_state.evaluate();
-                evolved_eval > 0 // Positive eval means Player2 (evolved) is winning
+                // Game ended in draw, evaluate final position using evolved parameters
+                let mut evolved_state = GameState::with_genetic_params(evolved_params.clone());
+                evolved_state.board = game_state.board.clone();
+                evolved_state.current_player = game_state.current_player;
+                let evolved_eval = evolved_state.evaluate();
+
+                // Evolved player wins if their evaluation shows they're winning
+                if evolved_is_player2 {
+                    evolved_eval < 0 // Negative eval means Player2 (evolved) is winning
+                } else {
+                    evolved_eval > 0 // Positive eval means Player1 (evolved) is winning
+                }
             }
         })
         .collect();
 
     let wins = results.iter().filter(|&&won| won).count();
-    wins as f64 / GAMES_PER_EVAL as f64
+    let fitness = wins as f64 / GAMES_PER_EVAL as f64;
+
+    fitness
 }
 
 fn validate_against_default(evolved_params: &GeneticParams, num_games: usize) -> f64 {
@@ -107,22 +133,31 @@ fn validate_against_default(evolved_params: &GeneticParams, num_games: usize) ->
             let mut moves_played = 0;
             let max_moves = 42;
 
+            // Randomly decide which player uses evolved parameters
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
+            let evolved_is_player2 = rng.gen_bool(0.5);
+
             while !game_state.is_game_over() && moves_played < max_moves {
                 let current_player = game_state.current_player;
-                let is_evolved_turn = current_player == Player::Player2;
+                let is_evolved_turn = if evolved_is_player2 {
+                    current_player == Player::Player2
+                } else {
+                    current_player == Player::Player1
+                };
 
-                let test_params = if is_evolved_turn {
+                let ai_params = if is_evolved_turn {
                     evolved_params.clone()
                 } else {
                     default_params.clone()
                 };
 
-                let mut test_state = GameState::with_genetic_params(test_params);
-                test_state.board = game_state.board.clone();
-                test_state.current_player = game_state.current_player;
+                let mut ai_state = GameState::with_genetic_params(ai_params);
+                ai_state.board = game_state.board.clone();
+                ai_state.current_player = game_state.current_player;
 
                 let mut ai = AI::new();
-                let (best_move, _) = ai.get_best_move(&test_state, 5);
+                let (best_move, _) = ai.get_best_move(&ai_state, 5);
 
                 if let Some(column) = best_move {
                     game_state.make_move(column).ok();
@@ -133,10 +168,24 @@ fn validate_against_default(evolved_params: &GeneticParams, num_games: usize) ->
             }
 
             if let Some(winner) = game_state.get_winner() {
-                winner == Player::Player2
+                if evolved_is_player2 {
+                    winner == Player::Player2
+                } else {
+                    winner == Player::Player1
+                }
             } else {
-                let evolved_eval = game_state.evaluate();
-                evolved_eval > 0
+                // Game ended in draw, evaluate final position using evolved parameters
+                let mut evolved_state = GameState::with_genetic_params(evolved_params.clone());
+                evolved_state.board = game_state.board.clone();
+                evolved_state.current_player = game_state.current_player;
+                let evolved_eval = evolved_state.evaluate();
+
+                // Evolved player wins if their evaluation shows they're winning
+                if evolved_is_player2 {
+                    evolved_eval < 0
+                } else {
+                    evolved_eval > 0
+                }
             }
         })
         .collect();
@@ -146,67 +195,13 @@ fn validate_against_default(evolved_params: &GeneticParams, num_games: usize) ->
 }
 
 fn crossover(parent1: &GeneticParams, parent2: &GeneticParams) -> GeneticParams {
-    let mut child = GeneticParams::default();
-
-    // Simple uniform crossover
-    if rand::random::<f64>() < CROSSOVER_RATE {
-        child.center_control_weight = parent1.center_control_weight;
-    } else {
-        child.center_control_weight = parent2.center_control_weight;
-    }
-
-    if rand::random::<f64>() < CROSSOVER_RATE {
-        child.piece_count_weight = parent1.piece_count_weight;
-    } else {
-        child.piece_count_weight = parent2.piece_count_weight;
-    }
-
-    if rand::random::<f64>() < CROSSOVER_RATE {
-        child.threat_weight = parent1.threat_weight;
-    } else {
-        child.threat_weight = parent2.threat_weight;
-    }
-
-    if rand::random::<f64>() < CROSSOVER_RATE {
-        child.mobility_weight = parent1.mobility_weight;
-    } else {
-        child.mobility_weight = parent2.mobility_weight;
-    }
-
-    if rand::random::<f64>() < CROSSOVER_RATE {
-        child.vertical_control_weight = parent1.vertical_control_weight;
-    } else {
-        child.vertical_control_weight = parent2.vertical_control_weight;
-    }
-
-    if rand::random::<f64>() < CROSSOVER_RATE {
-        child.horizontal_control_weight = parent1.horizontal_control_weight;
-    } else {
-        child.horizontal_control_weight = parent2.horizontal_control_weight;
-    }
-
-    child
+    // Use the built-in crossover method from the GeneticParams struct
+    parent1.crossover(parent2, CROSSOVER_RATE)
 }
 
 fn mutate(params: &mut GeneticParams) {
-    if rand::random::<f64>() < MUTATION_RATE {
-        params.center_control_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
-    }
-    if rand::random::<f64>() < MUTATION_RATE {
-        params.piece_count_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
-    }
-    if rand::random::<f64>() < MUTATION_RATE {
-        params.threat_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
-    }
-    if rand::random::<f64>() < MUTATION_RATE {
-        params.mobility_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
-    }
-    if rand::random::<f64>() < MUTATION_RATE {
-        params.vertical_control_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
-    }
-    if rand::random::<f64>() < MUTATION_RATE {
-        params.horizontal_control_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
-    }
+    // Use the built-in mutation method from the GeneticParams struct
+    *params = params.random_mutation(MUTATION_RATE, MUTATION_STRENGTH);
 }
 
 fn main() {
@@ -301,6 +296,16 @@ fn main() {
     println!("\n🎯 Evolution complete!");
     println!("🏆 Best fitness achieved: {:.3}", best_fitness);
     println!("📋 Best parameters:");
+    println!("  Win score: {}", best_params.win_score);
+    println!("  Loss score: {}", best_params.loss_score);
+    println!("  Center column value: {}", best_params.center_column_value);
+    println!(
+        "  Adjacent center value: {}",
+        best_params.adjacent_center_value
+    );
+    println!("  Outer column value: {}", best_params.outer_column_value);
+    println!("  Edge column value: {}", best_params.edge_column_value);
+    println!("  Row height weight: {:.3}", best_params.row_height_weight);
     println!(
         "  Center control weight: {:.3}",
         best_params.center_control_weight
@@ -319,6 +324,7 @@ fn main() {
         "  Horizontal control weight: {:.3}",
         best_params.horizontal_control_weight
     );
+    println!("  Defensive weight: {:.3}", best_params.defensive_weight);
 
     // Validate against default parameters
     let validation_score = validate_against_default(&best_params, 1000);
@@ -329,6 +335,6 @@ fn main() {
 
     // Save evolved parameters
     let evolved_json = serde_json::to_string_pretty(&best_params).unwrap();
-    fs::write("ml/data/genetic_params/evolved.json", evolved_json).unwrap();
-    println!("💾 Evolved parameters saved to ml/data/genetic_params/evolved.json");
+    fs::write("../../ml/data/genetic_params/evolved.json", evolved_json).unwrap();
+    println!("💾 Evolved parameters saved to ../../ml/data/genetic_params/evolved.json");
 }

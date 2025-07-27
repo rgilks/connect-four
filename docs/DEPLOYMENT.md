@@ -1,4 +1,4 @@
-# Cloudflare Deployment Guide
+# Deployment Guide
 
 This guide covers deploying and managing the Connect Four application on Cloudflare Workers, D1 Database, and custom domains.
 
@@ -7,7 +7,7 @@ This guide covers deploying and managing the Connect Four application on Cloudfl
 ### One-Command Deployment
 
 ```bash
-./scripts/deploy.sh
+npm run deploy
 ```
 
 This script handles:
@@ -17,9 +17,7 @@ This script handles:
 - Running database migrations
 - Deploying to Cloudflare Workers
 
-### Manual Deployment Steps
-
-If you prefer manual control:
+### Manual Deployment
 
 ```bash
 # 1. Build WASM assets
@@ -29,10 +27,16 @@ npm run build:wasm-assets
 npm run build:cf
 
 # 3. Run database migrations
-wrangler d1 migrations apply connect-four-db --remote
+npm run db:migrate
 
 # 4. Deploy
 wrangler deploy
+```
+
+### Quick Deploy (Skip Tests)
+
+```bash
+npm run deploy:quick
 ```
 
 ## 📋 Prerequisites
@@ -114,13 +118,13 @@ wrangler secret put SECRET_NAME
 wrangler d1 info connect-four-db
 
 # Run migrations
-wrangler d1 migrations apply connect-four-db --remote
+npm run db:migrate
 
 # Execute SQL commands
 wrangler d1 execute connect-four-db --command "SELECT * FROM games LIMIT 10;"
 
 # Open database shell
-wrangler d1 execute connect-four-db --interactive
+npm run db:shell
 
 # Backup database
 wrangler d1 export connect-four-db --output backup.sql
@@ -133,25 +137,25 @@ wrangler d1 execute connect-four-db --file backup.sql
 
 ```bash
 # Reset local database
-npm run db:local:reset
+npm run db:setup
 
 # Run local migrations
 npm run migrate:local
 ```
 
-## 🔍 Monitoring and Debugging
+## 📊 Monitoring and Debugging
 
 ### View Logs
 
 ```bash
 # Real-time logs
-wrangler tail --format pretty
+npm run logs
 
-# Recent logs
+# JSON format
 wrangler tail --format json
 
-# Filter logs
-wrangler tail --format pretty | grep "ERROR"
+# Filter errors
+wrangler tail | grep "ERROR"
 ```
 
 ### Performance Monitoring
@@ -256,81 +260,80 @@ zone_name = "your-domain.com"
 
 ### Common Issues
 
-1. **Build Failures**:
+| Issue               | Quick Fix                                |
+| ------------------- | ---------------------------------------- |
+| Build failures      | `npm run nuke && npm run build:cf`       |
+| Database connection | `wrangler d1 info connect-four-db`       |
+| WASM loading        | `npm run build:wasm-assets`              |
+| Deployment failures | Check `wrangler.toml` and authentication |
 
-   ```bash
-   # Clean and rebuild
-   npm run nuke
-   npm run build:cf
-   ```
-
-2. **Database Connection Issues**:
-
-   ```bash
-   # Check database status
-   wrangler d1 info connect-four-db
-
-   # Test connection
-   wrangler d1 execute connect-four-db --command "SELECT 1;"
-   ```
-
-3. **WASM Loading Issues**:
-
-   ```bash
-   # Rebuild WASM assets
-   npm run build:wasm-assets
-
-   # Check asset paths
-   ls -la .open-next/assets/
-   ```
-
-4. **Deployment Failures**:
-
-   ```bash
-   # Check wrangler version
-   wrangler --version
-
-   # Update wrangler
-   npm install -g wrangler@latest
-
-   # Check authentication
-   wrangler whoami
-   ```
-
-### Performance Optimization
-
-1. **Asset Optimization**:
-   - Ensure WASM files are properly cached
-   - Use appropriate cache headers
-   - Optimize image assets
-
-2. **Database Optimization**:
-   - Add indexes for frequently queried columns
-   - Use connection pooling
-   - Monitor query performance
-
-3. **Worker Optimization**:
-   - Minimize bundle size
-   - Use appropriate compatibility flags
-   - Monitor cold start times
-
-## 📊 Analytics and Monitoring
-
-### Cloudflare Analytics
-
-- **Web Analytics**: Built into Cloudflare dashboard
-- **Workers Analytics**: Monitor function execution
-- **D1 Analytics**: Database performance metrics
-
-### Custom Monitoring
+### Build Issues
 
 ```bash
-# Set up custom metrics
-wrangler tail --format json | jq '.metrics'
-
-# Monitor specific endpoints
-wrangler tail --format pretty | grep "/api/"
+# Clean and rebuild
+npm run nuke
+npm run build:cf
 ```
+
+### Database Issues
+
+```bash
+# Check database status
+wrangler d1 info connect-four-db
+
+# Test connection
+wrangler d1 execute connect-four-db --command "SELECT 1;"
+```
+
+### WASM Loading Issues
+
+```bash
+# Rebuild WASM assets
+npm run build:wasm-assets
+
+# Check asset paths
+ls -la .open-next/assets/
+```
+
+### Deployment Failures
+
+```bash
+# Check wrangler version
+wrangler --version
+
+# Update wrangler
+npm install -g wrangler@latest
+
+# Check authentication
+wrangler whoami
+```
+
+### Authentication Issues
+
+```bash
+wrangler login
+wrangler whoami
+```
+
+## 📈 Performance Optimization
+
+### Asset Optimization
+
+1. **WASM Files**: Ensure proper caching with appropriate headers
+2. **Cache Headers**: Use appropriate cache headers for static assets
+3. **Image Optimization**: Optimize image assets for web delivery
+
+### Database Optimization
+
+1. **Indexes**: Add indexes for frequently queried columns
+2. **Connection Pooling**: Use connection pooling where appropriate
+3. **Query Performance**: Monitor and optimize slow queries
+
+### Worker Optimization
+
+1. **Bundle Size**: Minimize worker bundle size
+2. **Compatibility Flags**: Use appropriate compatibility flags
+3. **Cold Start Times**: Monitor and optimize cold start performance
 
 ## 🔐 Security
 
@@ -364,6 +367,44 @@ const securityHeaders = [
 ];
 ```
 
+## 📊 Analytics and Monitoring
+
+### Cloudflare Analytics
+
+- **Web Analytics**: Built into Cloudflare dashboard
+- **Workers Analytics**: Monitor function execution
+- **D1 Analytics**: Database performance metrics
+
+### Custom Monitoring
+
+```bash
+# Set up custom metrics
+wrangler tail --format json | jq '.metrics'
+
+# Monitor specific endpoints
+wrangler tail --format pretty | grep "/api/"
+```
+
+## 🆘 Emergency Commands
+
+### Rollback
+
+```bash
+wrangler rollback
+```
+
+### Emergency Deploy
+
+```bash
+npm run deploy:quick
+```
+
+### Check Health
+
+```bash
+curl https://connect-4.tre.systems/health
+```
+
 ## 📚 Additional Resources
 
 - [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
@@ -379,3 +420,8 @@ If you encounter issues:
 2. Review Cloudflare Workers logs
 3. Check the GitHub Issues for known problems
 4. Consult the Cloudflare community forums
+
+---
+
+**Last Updated**: July 2025  
+**Status**: Production Ready ✅

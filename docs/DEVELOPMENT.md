@@ -1,23 +1,39 @@
 # Development Guide
 
-## 🚨 Current AI Implementation Status
+## 🚀 Quick Start
 
-**IMPORTANT**: The game currently uses a basic JavaScript heuristic AI, NOT the sophisticated Rust/WASM AI system that was built.
+Get the project running in 5 minutes:
 
-### Current State
+```bash
+# Clone and install
+git clone https://github.com/rgilks/connect-four.git
+cd connect-four
+npm install
 
-- **Active AI**: Simple JavaScript heuristic in `src/lib/game-logic.ts`
-- **Available AI**: Advanced Rust/WASM system with minimax, neural networks, genetic algorithms
-- **Integration**: WASM AI exists but is not connected to the game
+# Setup database and build WASM
+npm run db:setup
+npm run build:wasm-assets
 
-### Next Steps for AI Integration
+# Start development
+npm run dev
+```
 
-1. Create `src/lib/wasm-ai-service.ts` to handle WASM module loading
-2. Replace JavaScript AI with WASM Classic AI
-3. Add AI type selection (Classic, ML, Heuristic)
-4. Implement fallback mechanisms
+The game will open at http://localhost:3000
 
-See [TODO.md](./TODO.md) for detailed integration plan.
+## ✅ Current Status
+
+### WASM AI Integration Complete with Evolved Parameters
+
+The sophisticated Rust/WASM AI system has been successfully integrated and is now being used in the game:
+
+- **Primary AI**: Rust/WASM Classic AI (minimax with alpha-beta pruning) ✅
+- **Fallback AI**: JavaScript heuristic (win/block detection) ✅
+- **Performance**: ~17ms per move, competitive play ✅
+- **Features**: Transposition tables, evolved genetic parameters, advanced evaluation ✅
+- **AI Strength**: EMM-Depth5 achieves 83.1% win rate with optimized parameters ✅
+- **Speed**: 11.4% faster performance with evolved genetic parameters ✅
+
+See [AI-SYSTEM.md](./AI-SYSTEM.md) for detailed AI system documentation.
 
 ## Development Workflow
 
@@ -166,15 +182,18 @@ npm run test:ml-hybrid
 ### AI Testing
 
 ```bash
+# Default AI comparison (50 games, EMM depths 1-6)
+npm run test:ai-comparison
+
 # Quick AI comparison (10 games)
 npm run test:ai-comparison:fast
 
-# Comprehensive AI comparison (100 games)
+# Comprehensive AI comparison (100 games, includes depth 7+)
 npm run test:ai-comparison:comprehensive
 
 # Matrix test only
 cd worker/rust_ai_core
-NUM_GAMES=20 cargo test test_ai_matrix -- --nocapture
+cargo test test_ai_matrix -- --nocapture
 ```
 
 ### End-to-End Testing
