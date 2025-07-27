@@ -112,13 +112,13 @@ The Connect Four game now has a **fully integrated and working Rust/WASM AI syst
 
 **Problem**: WASM AI was working (choosing moves correctly) but throwing errors in the game store due to incorrect parsing of return values.
 
-**Root Cause**: The WASM API returns `JsValue` objects directly, but the TypeScript code was trying to parse them as if they might be JSON strings.
+**Root Cause**: The WASM API returns `Map` objects, but the TypeScript code was trying to access them like regular JavaScript objects.
 
 **Solution Applied**:
-1. ✅ **Fixed TypeScript interfaces**: Updated `WASMAIInstance` to reflect actual return types (objects, not strings)
-2. ✅ **Removed unnecessary parsing**: Eliminated `JSON.parse()` calls for WASM return values
-3. ✅ **Fixed property mapping**: Corrected property name mapping between WASM API and TypeScript interfaces
-4. ✅ **Updated all AI methods**: Applied consistent fix to `getBestMove`, `getHeuristicMove`, and `getMLMove`
+1. ✅ **Fixed Map object handling**: Added proper handling for `Map` objects returned by WASM API
+2. ✅ **Used Map.get() method**: Now correctly extracts values using `result.get('move')`, `result.get('evaluations')`, etc.
+3. ✅ **Added compatibility**: Handles both Map and regular object formats for future compatibility
+4. ✅ **Fixed move validation**: Added proper validation for move values (0-6 range) with error logging
 
 **Result**: WASM AI now works without errors, providing smooth gameplay with proper move selection and evaluation.
 
