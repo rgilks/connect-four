@@ -1,23 +1,37 @@
 # Development Guide
 
-## 🚨 Current AI Implementation Status
+## 🚀 Quick Start
 
-**IMPORTANT**: The game currently uses a basic JavaScript heuristic AI, NOT the sophisticated Rust/WASM AI system that was built.
+Get the project running in 5 minutes:
 
-### Current State
+```bash
+# Clone and install
+git clone https://github.com/rgilks/connect-four.git
+cd connect-four
+npm install
 
-- **Active AI**: Simple JavaScript heuristic in `src/lib/game-logic.ts`
-- **Available AI**: Advanced Rust/WASM system with minimax, neural networks, genetic algorithms
-- **Integration**: WASM AI exists but is not connected to the game
+# Setup database and build WASM
+npm run db:setup
+npm run build:wasm-assets
 
-### Next Steps for AI Integration
+# Start development
+npm run dev
+```
 
-1. Create `src/lib/wasm-ai-service.ts` to handle WASM module loading
-2. Replace JavaScript AI with WASM Classic AI
-3. Add AI type selection (Classic, ML, Heuristic)
-4. Implement fallback mechanisms
+The game will open at http://localhost:3000
 
-See [TODO.md](./TODO.md) for detailed integration plan.
+## ✅ Current Status
+
+### WASM AI Integration Complete
+
+The sophisticated Rust/WASM AI system has been successfully integrated and is now being used in the game:
+
+- **Primary AI**: Rust/WASM Classic AI (minimax with alpha-beta pruning) ✅
+- **Fallback AI**: JavaScript heuristic (win/block detection) ✅
+- **Performance**: ~17ms per move, competitive play ✅
+- **Features**: Transposition tables, genetic parameters, advanced evaluation ✅
+
+See [AI-SYSTEM.md](./AI-SYSTEM.md) for detailed AI system documentation.
 
 ## Development Workflow
 
