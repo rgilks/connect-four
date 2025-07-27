@@ -1,6 +1,6 @@
 {
-  "win_score": 6148,
-  "loss_score": -10635,
+  "win_score": 10000,
+  "loss_score": -10000,
   "center_column_value": 177,
   "adjacent_center_value": 30,
   "outer_column_value": 13,
@@ -8,7 +8,7 @@
   "row_height_weight": 0.6463293515793129,
   "center_control_weight": 0.9361248157306565,
   "piece_count_weight": 1.5542650924149264,
-  "threat_weight": 0.7375030231341871,
+  "threat_weight": 1.0,
   "mobility_weight": 1.5114307098768234,
   "vertical_control_weight": 1.564570449643441,
   "horizontal_control_weight": 1.9700272874481652,

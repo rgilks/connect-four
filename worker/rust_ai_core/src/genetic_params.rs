@@ -28,8 +28,8 @@ pub struct GeneticParams {
 impl Default for GeneticParams {
     fn default() -> Self {
         Self {
-            win_score: 5096,
-            loss_score: -10257,
+            win_score: 10000,
+            loss_score: -10000,
             center_column_value: 165,
             adjacent_center_value: 97,
             outer_column_value: 17,
@@ -249,8 +249,8 @@ mod tests {
     #[test]
     fn test_default_params() {
         let params = GeneticParams::default();
-        assert_eq!(params.win_score, 5096);
-        assert_eq!(params.loss_score, -10257);
+        assert_eq!(params.win_score, 10000);
+        assert_eq!(params.loss_score, -10000);
         assert_eq!(params.center_column_value, 165);
         assert_eq!(params.center_control_weight, 2.022);
         assert_eq!(params.threat_weight, 1.588);

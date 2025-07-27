@@ -32,8 +32,6 @@ function printBoard(board: Board, moveInfo?: string) {
     }
     console.log(rowStr);
   }
-  console.log('0123456');
-  console.log('-------');
 }
 
 export function initializeGame(): GameState {
