@@ -102,17 +102,25 @@ fn evaluate_params_tournament(evolved_params: &GeneticParams) -> f64 {
                     winner == Player::Player1
                 }
             } else {
-                // Game ended in draw, evaluate final position using evolved parameters
+                // Game ended in draw - this should be rare in Connect Four
+                // For draws, we'll assign based on who had the advantage
+                // Use a neutral evaluation approach to avoid bias
                 let mut evolved_state = GameState::with_genetic_params(evolved_params.clone());
                 evolved_state.board = game_state.board.clone();
                 evolved_state.current_player = game_state.current_player;
                 let evolved_eval = evolved_state.evaluate();
 
-                // Evolved player wins if their evaluation shows they're winning
+                let mut default_state = GameState::with_genetic_params(default_params.clone());
+                default_state.board = game_state.board.clone();
+                default_state.current_player = game_state.current_player;
+                let default_eval = default_state.evaluate();
+
+                // Compare evaluations from both perspectives
+                // If evolved params think they're winning AND default params agree, then evolved wins
                 if evolved_is_player2 {
-                    evolved_eval < 0 // Negative eval means Player2 (evolved) is winning
+                    evolved_eval < 0 && default_eval < 0 // Both think Player2 is winning
                 } else {
-                    evolved_eval > 0 // Positive eval means Player1 (evolved) is winning
+                    evolved_eval > 0 && default_eval > 0 // Both think Player1 is winning
                 }
             }
         })
@@ -174,17 +182,22 @@ fn validate_against_default(evolved_params: &GeneticParams, num_games: usize) ->
                     winner == Player::Player1
                 }
             } else {
-                // Game ended in draw, evaluate final position using evolved parameters
+                // Game ended in draw - use neutral evaluation approach
                 let mut evolved_state = GameState::with_genetic_params(evolved_params.clone());
                 evolved_state.board = game_state.board.clone();
                 evolved_state.current_player = game_state.current_player;
                 let evolved_eval = evolved_state.evaluate();
 
-                // Evolved player wins if their evaluation shows they're winning
+                let mut default_state = GameState::with_genetic_params(default_params.clone());
+                default_state.board = game_state.board.clone();
+                default_state.current_player = game_state.current_player;
+                let default_eval = default_state.evaluate();
+
+                // Compare evaluations from both perspectives
                 if evolved_is_player2 {
-                    evolved_eval < 0
+                    evolved_eval < 0 && default_eval < 0
                 } else {
-                    evolved_eval > 0
+                    evolved_eval > 0 && default_eval > 0
                 }
             }
         })

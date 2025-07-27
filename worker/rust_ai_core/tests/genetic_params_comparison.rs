@@ -111,12 +111,15 @@ fn play_single_game(
             winner == Player::Player1
         }
     } else {
-        // Game ended in draw, evaluate final position
+        // Game ended in draw - use neutral evaluation approach
         let evolved_eval = game_state.evaluate();
+        
+        // For draws, we need to be more conservative
+        // Only count as evolved win if there's a clear advantage
         if evolved_is_player2 {
-            evolved_eval < 0 // Negative eval means Player2 (evolved) is winning
+            evolved_eval < -100 // Significant advantage for Player2
         } else {
-            evolved_eval > 0 // Positive eval means Player1 (evolved) is winning
+            evolved_eval > 100 // Significant advantage for Player1
         }
     };
 

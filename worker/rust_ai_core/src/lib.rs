@@ -117,6 +117,17 @@ impl GameState {
         self.get_valid_moves().is_empty()
     }
 
+    pub fn is_empty_board(&self) -> bool {
+        for col in 0..COLS {
+            for row in 0..ROWS {
+                if self.board[col][row] != Cell::Empty {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
     pub fn get_winner(&self) -> Option<Player> {
         // Check for winning lines
         for col in 0..COLS {
@@ -555,6 +566,12 @@ impl GameState {
                 }
             }
         }
+        
+        // Ensure mobility is neutral for empty board
+        if self.is_empty_board() {
+            return 0;
+        }
+        
         mobility
     }
 
