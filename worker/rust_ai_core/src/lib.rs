@@ -674,6 +674,48 @@ impl AI {
             return (Some(valid_moves[0]), vec![]);
         }
 
+        // First, check for immediate wins
+        for &col in &valid_moves {
+            let mut next_state = state.clone();
+            if next_state.make_move(col).is_ok() {
+                if next_state.has_winner() && next_state.get_winner() == Some(state.current_player) {
+                    // This move wins immediately - choose it!
+                    return (Some(col), vec![MoveEvaluation {
+                        column: col,
+                        score: if state.current_player == Player::Player1 { 10000.0 } else { -10000.0 },
+                        move_type: "win".to_string(),
+                    }]);
+                }
+            }
+        }
+
+        // Second, check for moves that block opponent's immediate win
+        for &col in &valid_moves {
+            let mut next_state = state.clone();
+            if next_state.make_move(col).is_ok() {
+                // Check if opponent can win on their next move
+                let opponent_moves = next_state.get_valid_moves();
+                let mut opponent_can_win = false;
+                for &opp_col in &opponent_moves {
+                    let mut opp_next_state = next_state.clone();
+                    if opp_next_state.make_move(opp_col).is_ok() {
+                        if opp_next_state.has_winner() && opp_next_state.get_winner() == Some(state.current_player.opponent()) {
+                            opponent_can_win = true;
+                            break;
+                        }
+                    }
+                }
+                if opponent_can_win {
+                    // This move blocks opponent's win - prioritize it
+                    return (Some(col), vec![MoveEvaluation {
+                        column: col,
+                        score: if state.current_player == Player::Player1 { 5000.0 } else { -5000.0 },
+                        move_type: "block".to_string(),
+                    }]);
+                }
+            }
+        }
+
         let mut move_evaluations = Vec::new();
         let mut best_move: Option<u8> = None;
         let mut best_score = if state.current_player == Player::Player1 {
