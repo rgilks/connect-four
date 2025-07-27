@@ -66,17 +66,41 @@ pub struct GameState {
 
 impl GameState {
     pub fn new() -> Self {
+        Self::new_random_first_player()
+    }
+
+    pub fn new_random_first_player() -> Self {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let first_player = if rng.gen_bool(0.5) {
+            Player::Player1
+        } else {
+            Player::Player2
+        };
+
         GameState {
             board: [[Cell::Empty; ROWS]; COLS],
-            current_player: Player::Player1,
+            current_player: first_player,
             genetic_params: GeneticParams::default(),
         }
     }
 
     pub fn with_genetic_params(genetic_params: GeneticParams) -> Self {
+        Self::with_genetic_params_random_first_player(genetic_params)
+    }
+
+    pub fn with_genetic_params_random_first_player(genetic_params: GeneticParams) -> Self {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let first_player = if rng.gen_bool(0.5) {
+            Player::Player1
+        } else {
+            Player::Player2
+        };
+
         GameState {
             board: [[Cell::Empty; ROWS]; COLS],
-            current_player: Player::Player1,
+            current_player: first_player,
             genetic_params,
         }
     }
@@ -303,6 +327,12 @@ impl GameState {
         let horizontal_weight = self.genetic_params.horizontal_control_weight as i32;
         score += horizontal_p1 * horizontal_weight;
         score -= horizontal_p2 * horizontal_weight;
+
+        // Defensive evaluation - reward blocking opponent threats
+        let defensive_p1 = self.defensive_score(Player::Player1);
+        let defensive_p2 = self.defensive_score(Player::Player2);
+        score += defensive_p1;
+        score -= defensive_p2;
 
         // Evaluation is always from Player1's perspective (positive = Player1 advantage)
         score
@@ -551,6 +581,39 @@ impl GameState {
             }
         }
         score
+    }
+
+    pub fn defensive_score(&self, player: Player) -> i32 {
+        let opponent = player.opponent();
+        let mut defensive_score = 0;
+
+        // Check each column for defensive opportunities
+        for col in 0..COLS {
+            if self.can_place_in_column(col) {
+                let row = self.get_lowest_empty_row(col);
+
+                // Test if placing a piece here would block an opponent threat
+                let mut test_board = self.board;
+                test_board[col][row] = Cell::from_player(player);
+
+                // Check if this blocks an opponent's winning move
+                if self.check_win_at_test(&test_board, col, row, opponent) {
+                    defensive_score += 5000; // High value for blocking opponent win
+                } else {
+                    // Check if this blocks opponent's 3-in-a-row threat
+                    let opponent_threat_before =
+                        self.count_threats_at(&self.board, col, row, opponent);
+                    let opponent_threat_after =
+                        self.count_threats_at(&test_board, col, row, opponent);
+
+                    if opponent_threat_after < opponent_threat_before {
+                        defensive_score += (opponent_threat_before - opponent_threat_after) * 100;
+                    }
+                }
+            }
+        }
+
+        defensive_score
     }
 }
 
@@ -823,7 +886,11 @@ mod tests {
             .board
             .iter()
             .all(|col| col.iter().all(|&cell| cell == Cell::Empty)));
-        assert_eq!(game_state.current_player, Player::Player1);
+        // First player is now randomized, so just check it's one of the two players
+        assert!(
+            game_state.current_player == Player::Player1
+                || game_state.current_player == Player::Player2
+        );
     }
 
     #[test]
@@ -845,9 +912,13 @@ mod tests {
     #[test]
     fn test_make_move_simple() {
         let mut game_state = GameState::new();
+        let first_player = game_state.current_player;
         assert!(game_state.make_move(3).is_ok());
-        assert_eq!(game_state.board[3][ROWS - 1], Cell::Player1);
-        assert_eq!(game_state.current_player, Player::Player2);
+        assert_eq!(
+            game_state.board[3][ROWS - 1],
+            Cell::from_player(first_player)
+        );
+        assert_eq!(game_state.current_player, first_player.opponent());
     }
 
     #[test]
@@ -865,33 +936,37 @@ mod tests {
     #[test]
     fn test_horizontal_win() {
         let mut game_state = GameState::new();
-        // Player 1 places pieces horizontally
+        let first_player = game_state.current_player;
+
+        // First player places pieces horizontally
         game_state.make_move(0).unwrap();
-        game_state.current_player = Player::Player1;
+        game_state.current_player = first_player;
         game_state.make_move(1).unwrap();
-        game_state.current_player = Player::Player1;
+        game_state.current_player = first_player;
         game_state.make_move(2).unwrap();
-        game_state.current_player = Player::Player1;
+        game_state.current_player = first_player;
         game_state.make_move(3).unwrap();
 
         assert!(game_state.has_winner());
-        assert_eq!(game_state.get_winner(), Some(Player::Player1));
+        assert_eq!(game_state.get_winner(), Some(first_player));
     }
 
     #[test]
     fn test_vertical_win() {
         let mut game_state = GameState::new();
-        // Player 1 places pieces vertically
+        let first_player = game_state.current_player;
+
+        // First player places pieces vertically
         game_state.make_move(0).unwrap();
-        game_state.current_player = Player::Player1;
+        game_state.current_player = first_player;
         game_state.make_move(0).unwrap();
-        game_state.current_player = Player::Player1;
+        game_state.current_player = first_player;
         game_state.make_move(0).unwrap();
-        game_state.current_player = Player::Player1;
+        game_state.current_player = first_player;
         game_state.make_move(0).unwrap();
 
         assert!(game_state.has_winner());
-        assert_eq!(game_state.get_winner(), Some(Player::Player1));
+        assert_eq!(game_state.get_winner(), Some(first_player));
     }
 
     #[test]

@@ -370,26 +370,37 @@ mod tests {
     #[test]
     fn test_piece_count_features() {
         let mut state = GameState::new();
-        state.make_move(3).unwrap(); // Player 1 places a piece
-        state.current_player = Player::Player1;
-        state.make_move(4).unwrap(); // Player 1 places another piece
+        let first_player = state.current_player;
+
+        state.make_move(3).unwrap(); // First player places a piece
+        state.current_player = first_player;
+        state.make_move(4).unwrap(); // First player places another piece
 
         let features = GameFeatures::from_game_state(&state);
 
-        // Should have 2 pieces for Player 1
-        let p1_pieces_idx = 44; // Strategic features start at 42, pieces_count is at index 44
+        // Should have 2 pieces for the first player
+        let p1_pieces_idx = if first_player == Player::Player1 {
+            44
+        } else {
+            45
+        }; // Player1 at 44, Player2 at 45
         assert_eq!(features.features[p1_pieces_idx], 2.0);
     }
 
     #[test]
     fn test_center_control_features() {
         let mut state = GameState::new();
-        state.make_move(3).unwrap(); // Player 1 places in center
+        let first_player = state.current_player;
+        state.make_move(3).unwrap(); // First player places in center
 
         let features = GameFeatures::from_game_state(&state);
 
-        // Center control should be computed
-        let center_control_idx = 42; // First strategic feature
+        // Center control should be computed for the first player
+        let center_control_idx = if first_player == Player::Player1 {
+            42
+        } else {
+            43
+        }; // Player1 at 42, Player2 at 43
         assert!(features.features[center_control_idx] > 0.0);
     }
 

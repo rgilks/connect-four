@@ -23,16 +23,18 @@ fn test_basic_game_flow() {
     println!("-------------------------");
 
     let mut game_state = GameState::new();
+    let first_player = game_state.current_player;
+    let second_player = first_player.opponent();
 
-    // Player1 makes first move
+    // First player makes first move
     assert!(game_state.make_move(3).is_ok());
-    assert_eq!(game_state.current_player, Player::Player2);
-    assert_eq!(game_state.board[3][5], Cell::Player1); // Bottom row
+    assert_eq!(game_state.current_player, second_player);
+    assert_eq!(game_state.board[3][5], Cell::from_player(first_player)); // Bottom row
 
-    // Player2 makes second move
+    // Second player makes second move
     assert!(game_state.make_move(3).is_ok());
-    assert_eq!(game_state.current_player, Player::Player1);
-    assert_eq!(game_state.board[3][4], Cell::Player2); // Second from bottom
+    assert_eq!(game_state.current_player, first_player);
+    assert_eq!(game_state.board[3][4], Cell::from_player(second_player)); // Second from bottom
 
     println!("✅ Basic game flow working correctly");
 }
@@ -64,10 +66,10 @@ fn test_win_detection() {
 fn test_draw_detection() {
     println!("\n🤝 Test 3: Draw Detection");
     println!("------------------------");
-    
+
     // Test that a full board is game over
     let mut game_state = GameState::new();
-    
+
     // Fill the board in a pattern that doesn't create wins
     for col in 0..7 {
         for _row in 0..6 {
@@ -76,12 +78,12 @@ fn test_draw_detection() {
             }
         }
     }
-    
+
     println!("Filled board:");
     print_board(&game_state);
-    
+
     assert!(game_state.is_game_over());
-    
+
     // Check if there's a winner or it's a draw
     if game_state.has_winner() {
         println!("Winner: {:?}", game_state.get_winner());

@@ -55,9 +55,18 @@ fn evaluate_params_tournament(evolved_params: &GeneticParams) -> f64 {
             let mut moves_played = 0;
             let max_moves = 42; // Maximum moves in Connect Four (6x7 board)
 
+            // Randomly decide which player uses evolved parameters
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
+            let evolved_is_player2 = rng.gen_bool(0.5);
+
             while !game_state.is_game_over() && moves_played < max_moves {
                 let current_player = game_state.current_player;
-                let is_evolved_turn = current_player == Player::Player2;
+                let is_evolved_turn = if evolved_is_player2 {
+                    current_player == Player::Player2
+                } else {
+                    current_player == Player::Player1
+                };
 
                 // Use different parameters based on whose turn it is
                 let test_params = if is_evolved_turn {
@@ -83,13 +92,24 @@ fn evaluate_params_tournament(evolved_params: &GeneticParams) -> f64 {
                 moves_played += 1;
             }
 
-            // Determine winner - evolved params are Player2
+            // Determine winner - evolved params win if they are the winner
             if let Some(winner) = game_state.get_winner() {
-                winner == Player::Player2 // Evolved params win
+                if evolved_is_player2 {
+                    winner == Player::Player2
+                } else {
+                    winner == Player::Player1
+                }
             } else {
-                // Game ended in draw, evaluate final position
-                let evolved_eval = game_state.evaluate();
-                evolved_eval > 0 // Positive eval means Player2 (evolved) is winning
+                // Game ended in draw, evaluate final position using evolved parameters
+                let mut evolved_state = GameState::with_genetic_params(evolved_params.clone());
+                evolved_state.board = game_state.board.clone();
+                evolved_state.current_player = game_state.current_player;
+                let evolved_eval = evolved_state.evaluate();
+                if evolved_is_player2 {
+                    evolved_eval < 0 // Negative eval means Player2 (evolved) is winning
+                } else {
+                    evolved_eval > 0 // Positive eval means Player1 (evolved) is winning
+                }
             }
         })
         .collect();
@@ -107,9 +127,18 @@ fn validate_against_default(evolved_params: &GeneticParams, num_games: usize) ->
             let mut moves_played = 0;
             let max_moves = 42;
 
+            // Randomly decide which player uses evolved parameters
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
+            let evolved_is_player2 = rng.gen_bool(0.5);
+
             while !game_state.is_game_over() && moves_played < max_moves {
                 let current_player = game_state.current_player;
-                let is_evolved_turn = current_player == Player::Player2;
+                let is_evolved_turn = if evolved_is_player2 {
+                    current_player == Player::Player2
+                } else {
+                    current_player == Player::Player1
+                };
 
                 let test_params = if is_evolved_turn {
                     evolved_params.clone()
@@ -133,10 +162,21 @@ fn validate_against_default(evolved_params: &GeneticParams, num_games: usize) ->
             }
 
             if let Some(winner) = game_state.get_winner() {
-                winner == Player::Player2
+                if evolved_is_player2 {
+                    winner == Player::Player2
+                } else {
+                    winner == Player::Player1
+                }
             } else {
-                let evolved_eval = game_state.evaluate();
-                evolved_eval > 0
+                let mut evolved_state = GameState::with_genetic_params(evolved_params.clone());
+                evolved_state.board = game_state.board.clone();
+                evolved_state.current_player = game_state.current_player;
+                let evolved_eval = evolved_state.evaluate();
+                if evolved_is_player2 {
+                    evolved_eval < 0
+                } else {
+                    evolved_eval > 0
+                }
             }
         })
         .collect();

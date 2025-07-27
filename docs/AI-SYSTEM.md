@@ -219,30 +219,39 @@ The AI matrix test provides comprehensive performance analysis including:
 - Performance Rankings: Win rates, speed analysis, recommendations
 - Configurable Games: 5-100 games per match via NUM_GAMES environment variable
 
-**Fast Tests (Default)**:
+**Default Tests (50 games, EMM depths 1-6)**:
 
+- Standard AI comparison with 50 games per match
+- Includes Random, Heuristic, and EMM depths 1-6
+- Balanced performance and speed testing
+
+**Fast Tests (10 games)**:
+
+- Quick validation with 10 games per match
 - Basic functionality validation
 - AI player trait verification
-- Performance metrics calculation
 
 **Slow Tests (Optional)**:
 
-- Depth 4 minimax testing
+- Depth 7+ minimax testing
 - Comprehensive ML model evaluation
-- Extended game simulations
+- Extended game simulations (100+ games)
 
 ### Running Tests
 
 ```bash
-# Quick test suite
+# Default test suite (50 games, EMM depths 1-6)
+npm run test:ai-comparison
+
+# Fast test suite (10 games)
 npm run test:ai-comparison:fast
 
-# Comprehensive test suite
+# Comprehensive test suite (100 games, includes depth 7+)
 npm run test:ai-comparison:comprehensive
 
 # Matrix test only
 cd worker/rust_ai_core
-NUM_GAMES=20 cargo test test_ai_matrix -- --nocapture
+cargo test test_ai_matrix -- --nocapture
 ```
 
 ### Test Results Format
@@ -275,11 +284,14 @@ The AI matrix test generates comprehensive results including:
 **Quick run**:
 
 ```bash
-# Default (10 games per match) - Now runs in parallel!
+# Default (50 games per match, EMM depths 1-6) - Now runs in parallel!
 cargo test test_ai_matrix -- --nocapture
 
-# More games (50 per match) - Much faster with parallelization
-NUM_GAMES=50 cargo test test_ai_matrix -- --nocapture
+# Fast test (10 games per match)
+NUM_GAMES=10 cargo test test_ai_matrix -- --nocapture
+
+# Comprehensive test (100 games per match, includes depth 7+)
+NUM_GAMES=100 RUN_SLOW_TESTS=1 cargo test test_ai_matrix -- --nocapture
 ```
 
 **Performance Improvements**:

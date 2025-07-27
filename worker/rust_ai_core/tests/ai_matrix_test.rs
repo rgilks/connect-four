@@ -59,6 +59,7 @@ enum AIType {
     EMMDepth5,
     EMMDepth6,
     EMMDepth7,
+    EMMDepth20,
 }
 
 impl AIType {
@@ -73,6 +74,7 @@ impl AIType {
             AIType::EMMDepth5 => "EMM-Depth5",
             AIType::EMMDepth6 => "EMM-Depth6",
             AIType::EMMDepth7 => "EMM-Depth7",
+            AIType::EMMDepth20 => "EMM-Depth20",
         }
     }
 }
@@ -170,6 +172,8 @@ fn evaluate_position(game_state: &GameState, player: Player) -> f32 {
     }
 }
 
+
+
 #[derive(Debug)]
 struct GameResult {
     winner: Player,
@@ -185,6 +189,10 @@ fn play_game(
     // Use evolved parameters for the game state
     let evolved_params = get_evolved_params();
     let mut game_state = GameState::with_genetic_params(evolved_params);
+
+    // Use the intended first player (no random swapping)
+    let actual_ai1_first = ai1_plays_first;
+
     let mut moves_played = 0;
     let mut ai1_time_ms = 0;
     let mut ai2_time_ms = 0;
@@ -192,7 +200,7 @@ fn play_game(
 
     while !game_state.is_game_over() && moves_played < max_moves {
         let best_move = if game_state.current_player == Player::Player1 {
-            if ai1_plays_first {
+            if actual_ai1_first {
                 let start = Instant::now();
                 let move_result = ai1.get_move(&game_state);
                 let duration = start.elapsed();
@@ -206,7 +214,7 @@ fn play_game(
                 move_result
             }
         } else {
-            if ai1_plays_first {
+            if actual_ai1_first {
                 let start = Instant::now();
                 let move_result = ai2.get_move(&game_state);
                 let duration = start.elapsed();
@@ -237,12 +245,22 @@ fn play_game(
     let winner = if let Some(winner) = game_state.get_winner() {
         winner
     } else {
-        // Game ended in draw, evaluate final position
+        // Game ended in draw - this should be rare in Connect Four
+        // For draws, we'll assign based on who had the advantage
         let final_eval = game_state.evaluate();
         if final_eval > 0 {
-            Player::Player2
+            Player::Player1  // Player1 had advantage
+        } else if final_eval < 0 {
+            Player::Player2  // Player2 had advantage
         } else {
-            Player::Player1
+            // True draw - randomly assign winner
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
+            if rng.gen_bool(0.5) {
+                Player::Player1
+            } else {
+                Player::Player2
+            }
         }
     };
 
@@ -261,36 +279,23 @@ fn create_ai_player(ai_type: &AIType) -> Result<Box<dyn AIPlayer>, Box<dyn std::
         AIType::EMMDepth1 => Ok(Box::new(ExpectiminimaxAI::new(1))),
         AIType::EMMDepth2 => Ok(Box::new(ExpectiminimaxAI::new(2))),
         AIType::EMMDepth3 => Ok(Box::new(ExpectiminimaxAI::new(3))),
-        AIType::EMMDepth4 => {
-            // Only run depth 4 if explicitly requested
-            if std::env::var("RUN_SLOW_TESTS").is_ok() {
-                Ok(Box::new(ExpectiminimaxAI::new(4)))
-            } else {
-                Err("Depth 4 tests require RUN_SLOW_TESTS=1".into())
-            }
-        }
-        AIType::EMMDepth5 => {
-            // Only run depth 5 if explicitly requested
-            if std::env::var("RUN_SLOW_TESTS").is_ok() {
-                Ok(Box::new(ExpectiminimaxAI::new(5)))
-            } else {
-                Err("Depth 5 tests require RUN_SLOW_TESTS=1".into())
-            }
-        }
-        AIType::EMMDepth6 => {
-            // Only run depth 6 if explicitly requested
-            if std::env::var("RUN_SLOW_TESTS").is_ok() {
-                Ok(Box::new(ExpectiminimaxAI::new(6)))
-            } else {
-                Err("Depth 6 tests require RUN_SLOW_TESTS=1".into())
-            }
-        }
+        AIType::EMMDepth4 => Ok(Box::new(ExpectiminimaxAI::new(4))),
+        AIType::EMMDepth5 => Ok(Box::new(ExpectiminimaxAI::new(5))),
+        AIType::EMMDepth6 => Ok(Box::new(ExpectiminimaxAI::new(6))),
         AIType::EMMDepth7 => {
             // Only run depth 7 if explicitly requested
             if std::env::var("RUN_SLOW_TESTS").is_ok() {
                 Ok(Box::new(ExpectiminimaxAI::new(7)))
             } else {
                 Err("Depth 7 tests require RUN_SLOW_TESTS=1".into())
+            }
+        }
+        AIType::EMMDepth20 => {
+            // Only run depth 20 if explicitly requested
+            if std::env::var("RUN_SLOW_TESTS").is_ok() {
+                Ok(Box::new(ExpectiminimaxAI::new(20)))
+            } else {
+                Err("Depth 20 tests require RUN_SLOW_TESTS=1".into())
             }
         }
     }
@@ -370,9 +375,9 @@ fn test_ai_matrix() {
 
     // Get number of games from environment or use default
     let num_games = std::env::var("NUM_GAMES")
-        .unwrap_or_else(|_| "10".to_string())
+        .unwrap_or_else(|_| "50".to_string())
         .parse::<u32>()
-        .unwrap_or(10);
+        .unwrap_or(50);
 
     println!("Configuration:");
     println!("  Games per match: {}", num_games);
@@ -389,14 +394,15 @@ fn test_ai_matrix() {
         AIType::EMMDepth1,
         AIType::EMMDepth2,
         AIType::EMMDepth3,
+        AIType::EMMDepth4,
+        AIType::EMMDepth5,
+        AIType::EMMDepth6,
     ];
 
-    // Add depths 4-7 only if slow tests are enabled
+    // Add depth 7 and 20 only if slow tests are enabled
     if std::env::var("RUN_SLOW_TESTS").is_ok() {
-        ai_types.push(AIType::EMMDepth4);
-        ai_types.push(AIType::EMMDepth5);
-        ai_types.push(AIType::EMMDepth6);
         ai_types.push(AIType::EMMDepth7);
+        ai_types.push(AIType::EMMDepth20);
     }
 
     println!("Testing {} AI types:", ai_types.len());

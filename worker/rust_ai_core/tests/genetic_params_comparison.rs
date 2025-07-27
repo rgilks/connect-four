@@ -53,9 +53,18 @@ fn play_single_game(
     let mut evolved_time = 0;
     let mut default_time = 0;
 
+    // Randomly decide which player uses evolved parameters
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    let evolved_is_player2 = rng.gen_bool(0.5);
+
     while !game_state.is_game_over() && moves_played < max_moves {
         let current_player = game_state.current_player;
-        let is_evolved_turn = current_player == Player::Player2;
+        let is_evolved_turn = if evolved_is_player2 {
+            current_player == Player::Player2
+        } else {
+            current_player == Player::Player1
+        };
 
         // Use different parameters based on whose turn it is
         let test_params = if is_evolved_turn {
@@ -96,11 +105,19 @@ fn play_single_game(
 
     // Determine winner
     let evolved_wins = if let Some(winner) = game_state.get_winner() {
-        winner == Player::Player2 // Evolved params are Player2
+        if evolved_is_player2 {
+            winner == Player::Player2
+        } else {
+            winner == Player::Player1
+        }
     } else {
         // Game ended in draw, evaluate final position
         let evolved_eval = game_state.evaluate();
-        evolved_eval > 0 // Positive eval means Player2 (evolved) is winning
+        if evolved_is_player2 {
+            evolved_eval < 0 // Negative eval means Player2 (evolved) is winning
+        } else {
+            evolved_eval > 0 // Positive eval means Player1 (evolved) is winning
+        }
     };
 
     GameResult {

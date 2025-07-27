@@ -14,7 +14,7 @@ function createEmptyBoard(): Board {
 }
 
 export function initializeGame(): GameState {
-  const startingPlayer: Player = 'player1'; // Fixed to avoid hydration mismatch
+  const startingPlayer: Player = Math.random() < 0.5 ? 'player1' : 'player2';
   return {
     board: createEmptyBoard(),
     currentPlayer: startingPlayer,
@@ -77,15 +77,20 @@ export async function makeAIMove(gameState: GameState): Promise<number> {
     // Clear transposition table to ensure fresh calculations
     wasmAI.clearTranspositionTable();
     const response = await wasmAI.getBestMove(gameState, 5);
-    
+
     // Check if we got a valid move (0-6 for columns)
-    if (response.move !== null && response.move !== undefined && response.move >= 0 && response.move < 7) {
+    if (
+      response.move !== null &&
+      response.move !== undefined &&
+      response.move >= 0 &&
+      response.move < 7
+    ) {
       console.log(
         `🤖 WASM AI chose column ${response.move} (evaluated ${response.nodesEvaluated} nodes)`
       );
       return response.move;
     }
-    
+
     console.error('WASM AI returned invalid move:', response.move);
   } catch (error) {
     console.error('WASM AI failed:', error);
@@ -94,8 +99,6 @@ export async function makeAIMove(gameState: GameState): Promise<number> {
 
   throw new Error('No valid move found');
 }
-
-
 
 function otherPlayer(player: Player): Player {
   return player === 'player1' ? 'player2' : 'player1';

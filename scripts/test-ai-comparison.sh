@@ -9,7 +9,7 @@ echo "🤖 AI Comparison Test Suite"
 echo "=========================="
 
 # Configuration
-NUM_GAMES=${NUM_GAMES:-10}
+NUM_GAMES=${NUM_GAMES:-50}
 INCLUDE_SLOW_TESTS=${INCLUDE_SLOW_TESTS:-false}
 OUTPUT_FILE=${OUTPUT_FILE:-"ai_comparison_results.json"}
 RANDOM_SEED=${RANDOM_SEED:-42}
@@ -189,14 +189,14 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "  rust        - Run Rust comprehensive tests"
     echo ""
     echo "Environment variables:"
-    echo "  NUM_GAMES         - Number of games per match (default: 10)"
+    echo "  NUM_GAMES         - Number of games per match (default: 50)"
     echo "  INCLUDE_SLOW_TESTS - Include slow tests (default: false)"
     echo "  OUTPUT_FILE       - Results output file (default: ai_comparison_results.json)"
     echo "  RANDOM_SEED       - Random seed for reproducible results (default: 42)"
     echo ""
     echo "Examples:"
-    echo "  $0                    # Run all tests with default settings"
-    echo "  NUM_GAMES=50 $0       # Run with 50 games per match"
+    echo "  $0                    # Run all tests with default settings (50 games, EMM depths 1-6)"
+    echo "  NUM_GAMES=10 $0       # Run with 10 games per match (fast)"
     echo "  $0 performance        # Run only performance benchmarks"
     echo "  INCLUDE_SLOW_TESTS=true $0 rust  # Run comprehensive tests with slow tests"
     exit 0

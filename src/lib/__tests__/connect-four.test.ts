@@ -8,7 +8,7 @@ describe('Connect Four Game Logic', () => {
     expect(game.board).toHaveLength(7);
     expect(game.board[0]).toHaveLength(6);
     expect(game.board.every(col => col.every(cell => cell === null))).toBe(true);
-    expect(game.currentPlayer).toBe('player1');
+    expect(['player1', 'player2']).toContain(game.currentPlayer);
     expect(game.gameStatus).toBe('playing');
     expect(game.winner).toBe(null);
     expect(game.history).toHaveLength(0);
@@ -31,57 +31,64 @@ describe('Connect Four Game Logic', () => {
   it('should debug board structure', () => {
     const game = initializeGame();
     let currentGame = game;
-    // First move: player1 in column 0, should go to row 5 (bottom)
+    const firstPlayer = currentGame.currentPlayer;
+    const secondPlayer = firstPlayer === 'player1' ? 'player2' : 'player1';
+
+    // First move: first player in column 0, should go to row 5 (bottom)
     currentGame = makeMove(currentGame, 0);
-    expect(currentGame.board[0][5]).toBe('player1');
-    // Second move: player2 in column 0, should go to row 4
+    expect(currentGame.board[0][5]).toBe(firstPlayer);
+    // Second move: second player in column 0, should go to row 4
     currentGame = makeMove(currentGame, 0);
-    expect(currentGame.board[0][4]).toBe('player2');
-    // Third move: player1 in column 0, should go to row 3
+    expect(currentGame.board[0][4]).toBe(secondPlayer);
+    // Third move: first player in column 0, should go to row 3
     currentGame = makeMove(currentGame, 0);
-    expect(currentGame.board[0][3]).toBe('player1');
+    expect(currentGame.board[0][3]).toBe(firstPlayer);
   });
 
   it('should detect horizontal win', () => {
     const game = initializeGame();
     let currentGame = game;
-    // player1: col0, row5
+    const firstPlayer = currentGame.currentPlayer;
+
+    // first player: col0, row5
     currentGame = makeMove(currentGame, 0);
-    // player2: col0, row4
+    // second player: col0, row4
     currentGame = makeMove(currentGame, 0);
-    // player1: col1, row5
+    // first player: col1, row5
     currentGame = makeMove(currentGame, 1);
-    // player2: col1, row4
+    // second player: col1, row4
     currentGame = makeMove(currentGame, 1);
-    // player1: col2, row5
+    // first player: col2, row5
     currentGame = makeMove(currentGame, 2);
-    // player2: col2, row4
+    // second player: col2, row4
     currentGame = makeMove(currentGame, 2);
-    // player1: col3, row5 (should win)
+    // first player: col3, row5 (should win)
     currentGame = makeMove(currentGame, 3);
     expect(currentGame.gameStatus).toBe('finished');
-    expect(currentGame.winner).toBe('player1');
+    expect(currentGame.winner).toBe(firstPlayer);
   });
 
   it('should detect vertical win', () => {
     const game = initializeGame();
     let currentGame = game;
-    // player1: col3, row5
+    const firstPlayer = currentGame.currentPlayer;
+
+    // first player: col3, row5
     currentGame = makeMove(currentGame, 3);
-    // player2: col0, row5
+    // second player: col0, row5
     currentGame = makeMove(currentGame, 0);
-    // player1: col3, row4
+    // first player: col3, row4
     currentGame = makeMove(currentGame, 3);
-    // player2: col0, row4
+    // second player: col0, row4
     currentGame = makeMove(currentGame, 0);
-    // player1: col3, row3
+    // first player: col3, row3
     currentGame = makeMove(currentGame, 3);
-    // player2: col0, row3
+    // second player: col0, row3
     currentGame = makeMove(currentGame, 0);
-    // player1: col3, row2 (should win)
+    // first player: col3, row2 (should win)
     currentGame = makeMove(currentGame, 3);
     expect(currentGame.gameStatus).toBe('finished');
-    expect(currentGame.winner).toBe('player1');
+    expect(currentGame.winner).toBe(firstPlayer);
   });
 
   it('should detect draw when board is full', () => {
@@ -101,7 +108,7 @@ describe('Connect Four Game Logic', () => {
 
   it('should make AI moves', async () => {
     const game = initializeGame();
-    
+
     try {
       const aiMove = await makeAIMove(game);
       expect(aiMove).toBeGreaterThanOrEqual(0);
@@ -136,22 +143,24 @@ describe('Connect Four Game Logic', () => {
   it('should debug win detection step by step', () => {
     const game = initializeGame();
     let currentGame = game;
-    // player1: col0, row5
+    const firstPlayer = currentGame.currentPlayer;
+
+    // first player: col0, row5
     currentGame = makeMove(currentGame, 0);
-    // player2: col0, row4
+    // second player: col0, row4
     currentGame = makeMove(currentGame, 0);
-    // player1: col1, row5
+    // first player: col1, row5
     currentGame = makeMove(currentGame, 1);
-    // player2: col1, row4
+    // second player: col1, row4
     currentGame = makeMove(currentGame, 1);
-    // player1: col2, row5
+    // first player: col2, row5
     currentGame = makeMove(currentGame, 2);
-    // player2: col2, row4
+    // second player: col2, row4
     currentGame = makeMove(currentGame, 2);
-    // player1: col3, row5 (should win)
+    // first player: col3, row5 (should win)
     currentGame = makeMove(currentGame, 3);
     expect(currentGame.gameStatus).toBe('finished');
-    expect(currentGame.winner).toBe('player1');
+    expect(currentGame.winner).toBe(firstPlayer);
   });
 
   it('should test win detection with simple case', () => {

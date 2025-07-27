@@ -166,15 +166,18 @@ npm run test:ml-hybrid
 ### AI Testing
 
 ```bash
+# Default AI comparison (50 games, EMM depths 1-6)
+npm run test:ai-comparison
+
 # Quick AI comparison (10 games)
 npm run test:ai-comparison:fast
 
-# Comprehensive AI comparison (100 games)
+# Comprehensive AI comparison (100 games, includes depth 7+)
 npm run test:ai-comparison:comprehensive
 
 # Matrix test only
 cd worker/rust_ai_core
-NUM_GAMES=20 cargo test test_ai_matrix -- --nocapture
+cargo test test_ai_matrix -- --nocapture
 ```
 
 ### End-to-End Testing
