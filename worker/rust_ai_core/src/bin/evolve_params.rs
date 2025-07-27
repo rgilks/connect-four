@@ -186,67 +186,13 @@ fn validate_against_default(evolved_params: &GeneticParams, num_games: usize) ->
 }
 
 fn crossover(parent1: &GeneticParams, parent2: &GeneticParams) -> GeneticParams {
-    let mut child = GeneticParams::default();
-
-    // Simple uniform crossover
-    if rand::random::<f64>() < CROSSOVER_RATE {
-        child.center_control_weight = parent1.center_control_weight;
-    } else {
-        child.center_control_weight = parent2.center_control_weight;
-    }
-
-    if rand::random::<f64>() < CROSSOVER_RATE {
-        child.piece_count_weight = parent1.piece_count_weight;
-    } else {
-        child.piece_count_weight = parent2.piece_count_weight;
-    }
-
-    if rand::random::<f64>() < CROSSOVER_RATE {
-        child.threat_weight = parent1.threat_weight;
-    } else {
-        child.threat_weight = parent2.threat_weight;
-    }
-
-    if rand::random::<f64>() < CROSSOVER_RATE {
-        child.mobility_weight = parent1.mobility_weight;
-    } else {
-        child.mobility_weight = parent2.mobility_weight;
-    }
-
-    if rand::random::<f64>() < CROSSOVER_RATE {
-        child.vertical_control_weight = parent1.vertical_control_weight;
-    } else {
-        child.vertical_control_weight = parent2.vertical_control_weight;
-    }
-
-    if rand::random::<f64>() < CROSSOVER_RATE {
-        child.horizontal_control_weight = parent1.horizontal_control_weight;
-    } else {
-        child.horizontal_control_weight = parent2.horizontal_control_weight;
-    }
-
-    child
+    // Use the built-in crossover method from the GeneticParams struct
+    parent1.crossover(parent2, CROSSOVER_RATE)
 }
 
 fn mutate(params: &mut GeneticParams) {
-    if rand::random::<f64>() < MUTATION_RATE {
-        params.center_control_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
-    }
-    if rand::random::<f64>() < MUTATION_RATE {
-        params.piece_count_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
-    }
-    if rand::random::<f64>() < MUTATION_RATE {
-        params.threat_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
-    }
-    if rand::random::<f64>() < MUTATION_RATE {
-        params.mobility_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
-    }
-    if rand::random::<f64>() < MUTATION_RATE {
-        params.vertical_control_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
-    }
-    if rand::random::<f64>() < MUTATION_RATE {
-        params.horizontal_control_weight += (rand::random::<f64>() - 0.5) * MUTATION_STRENGTH;
-    }
+    // Use the built-in mutation method from the GeneticParams struct
+    *params = params.random_mutation(MUTATION_RATE, MUTATION_STRENGTH);
 }
 
 fn main() {
@@ -369,6 +315,6 @@ fn main() {
 
     // Save evolved parameters
     let evolved_json = serde_json::to_string_pretty(&best_params).unwrap();
-    fs::write("ml/data/genetic_params/evolved.json", evolved_json).unwrap();
-    println!("💾 Evolved parameters saved to ml/data/genetic_params/evolved.json");
+    fs::write("../../ml/data/genetic_params/evolved.json", evolved_json).unwrap();
+    println!("💾 Evolved parameters saved to ../../ml/data/genetic_params/evolved.json");
 }

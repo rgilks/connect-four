@@ -1,13 +1,16 @@
 {
-  "win_score": 8354,
-  "position_weight": 30,
-  "safety_bonus": -13,
-  "advancement_bonus": 11,
-  "center_column_bonus": 4,
-  "center_control_weight": 1.0,
-  "piece_count_weight": 0.5,
-  "threat_weight": 2.0,
-  "mobility_weight": 0.8,
-  "vertical_control_weight": 1.2,
-  "horizontal_control_weight": 1.0
+  "win_score": 12968,
+  "loss_score": -5459,
+  "center_column_value": 107,
+  "adjacent_center_value": 85,
+  "outer_column_value": 18,
+  "edge_column_value": 5,
+  "row_height_weight": 1.2054899564345416,
+  "center_control_weight": 2.196136814391199,
+  "piece_count_weight": 0.3625024260806091,
+  "threat_weight": 4.333060017054894,
+  "mobility_weight": 0.6894950096626404,
+  "vertical_control_weight": 0.6785808846896658,
+  "horizontal_control_weight": 0.9317928994845821,
+  "defensive_weight": 2.348936549511329
 }

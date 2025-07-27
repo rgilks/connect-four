@@ -252,8 +252,8 @@ impl GameState {
     pub fn evaluate_with_genetic_params(&self) -> i32 {
         if let Some(winner) = self.get_winner() {
             return match winner {
-                Player::Player1 => 10000,
-                Player::Player2 => -10000,
+                Player::Player1 => self.genetic_params.win_score,
+                Player::Player2 => self.genetic_params.loss_score,
             };
         }
 
@@ -263,23 +263,23 @@ impl GameState {
 
         let mut score = 0;
 
-        // Position evaluation - prefer center columns
+        // Position evaluation using genetic parameters
         for col in 0..COLS {
             let column_value = match col {
-                3 => 100,    // Center column
-                2 | 4 => 50, // Adjacent to center
-                1 | 5 => 10, // Further from center
-                0 | 6 => 1,  // Edge columns
-                _ => 1,
+                3 => self.genetic_params.center_column_value,    // Center column
+                2 | 4 => self.genetic_params.adjacent_center_value, // Adjacent to center
+                1 | 5 => self.genetic_params.outer_column_value, // Further from center
+                0 | 6 => self.genetic_params.edge_column_value,  // Edge columns
+                _ => self.genetic_params.edge_column_value,
             };
 
             for row in 0..ROWS {
                 match self.board[col][row] {
                     Cell::Player1 => {
-                        score += column_value * (ROWS - row) as i32;
+                        score += (column_value as f64 * (ROWS - row) as f64 * self.genetic_params.row_height_weight) as i32;
                     }
                     Cell::Player2 => {
-                        score -= column_value * (ROWS - row) as i32;
+                        score -= (column_value as f64 * (ROWS - row) as f64 * self.genetic_params.row_height_weight) as i32;
                     }
                     Cell::Empty => {}
                 }
@@ -328,11 +328,12 @@ impl GameState {
         score += horizontal_p1 * horizontal_weight;
         score -= horizontal_p2 * horizontal_weight;
 
-        // Defensive evaluation - reward blocking opponent threats
+        // Defensive evaluation using genetic parameters
         let defensive_p1 = self.defensive_score(Player::Player1);
         let defensive_p2 = self.defensive_score(Player::Player2);
-        score += defensive_p1;
-        score -= defensive_p2;
+        let defensive_weight = self.genetic_params.defensive_weight as i32;
+        score += defensive_p1 * defensive_weight;
+        score -= defensive_p2 * defensive_weight;
 
         // Evaluation is always from Player1's perspective (positive = Player1 advantage)
         score

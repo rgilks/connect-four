@@ -137,6 +137,33 @@ The Connect Four game now has a **fully integrated and working Rust/WASM AI syst
 
 **Result**: Now using consistent lowercase format everywhere (`player1`, `player2`, `empty`) - much cleaner and simpler! WASM AI integration is fully functional.
 
+### Genetic Parameter Evolution Enhancement ✅ ENHANCED
+
+**Problem**: Genetic evolution was only evolving 6 weight parameters instead of all parameters that should be evolvable, limiting optimization potential.
+
+**Root Cause**: The `GeneticParams` struct only contained feature weights, but the evaluation function had hardcoded values for win scores, position weights, and other parameters that should be evolvable.
+
+**Solution Applied**:
+
+1. ✅ **Expanded GeneticParams struct**: Added all evolvable parameters:
+   - `win_score` and `loss_score` for win/loss evaluation
+   - `center_column_value`, `adjacent_center_value`, `outer_column_value`, `edge_column_value` for position evaluation
+   - `row_height_weight` for row height weighting
+   - `defensive_weight` for defensive evaluation
+   - All existing feature weights
+
+2. ✅ **Updated evaluation function**: Modified to use genetic parameters instead of hardcoded values:
+   - Win/loss scores now use `genetic_params.win_score` and `genetic_params.loss_score`
+   - Position evaluation uses evolvable column values
+   - Row height weighting uses `genetic_params.row_height_weight`
+   - Defensive evaluation uses `genetic_params.defensive_weight`
+
+3. ✅ **Enhanced evolution code**: Updated to use built-in mutation and crossover methods
+
+4. ✅ **Updated JSON files**: Both `default.json` and `evolved.json` now contain all 14 evolvable parameters
+
+**Result**: Now evolving all 14 parameters that are actually used in the evaluation function, providing much more comprehensive optimization. Genetic evolution should be significantly more effective at finding optimal parameter combinations.
+
 ### WASM Loading Issue ✅ RESOLVED
 
 **Problem**: WASM AI module was failing to load with error "Cannot find module '/wasm/connect_four_ai_core.js'"
