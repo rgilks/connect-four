@@ -23,9 +23,8 @@ async function startGame(page: Page) {
   // Check if we're on the AI selection screen
   const aiSelectionPanel = page.getByTestId('ai-selection-classic');
   if (await aiSelectionPanel.isVisible()) {
-    // Select classic AI and start game
+    // Select classic AI and start game - clicking the card directly starts the game
     await aiSelectionPanel.click();
-    await page.getByTestId('start-game-button').click();
     await page.waitForTimeout(600); // Wait for transition
   }
   

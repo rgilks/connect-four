@@ -39,6 +39,7 @@ The game features a sophisticated AI system with multiple opponents to choose fr
 ### AI Selection Interface
 
 Players can select their preferred AI opponent from a beautiful card-based interface that shows:
+
 - AI type and description
 - Performance characteristics
 - Visual indicators for selection
@@ -71,6 +72,12 @@ npm run train:self-play:production
 
 # Advanced training with attention and residual connections
 npm run train:self-play:advanced
+
+# Intensive 6-hour training session (5000 games, 200 epochs)
+npm run train:intensive
+
+# Monitor intensive training progress
+npm run train:intensive:monitor
 ```
 
 See [Self-Play Training Guide](./docs/SELF-PLAY-TRAINING.md) for detailed information.

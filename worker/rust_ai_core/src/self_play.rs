@@ -73,7 +73,7 @@ impl SelfPlayTrainer {
     fn optimize_cpu_usage() {
         // Use a static flag to ensure we only configure the thread pool once
         static INITIALIZED: std::sync::Once = std::sync::Once::new();
-        
+
         INITIALIZED.call_once(|| {
             // Detect system architecture and optimize thread pool
             let num_cores = std::thread::available_parallelism()
@@ -121,7 +121,10 @@ impl SelfPlayTrainer {
             self.config.mcts_simulations
         );
         println!("Temperature: {}", self.config.temperature);
-        println!("🔄 Using parallel processing with batch size: {}", std::cmp::min(10, self.config.num_games));
+        println!(
+            "🔄 Using parallel processing with batch size: {}",
+            std::cmp::min(10, self.config.num_games)
+        );
 
         let start_time = Instant::now();
 
@@ -130,10 +133,21 @@ impl SelfPlayTrainer {
 
         // Process games in parallel batches
         let batch_size = std::cmp::min(10, self.config.num_games); // Adapt batch size to number of games
-        println!("🔄 Starting batch processing with {} games per batch", batch_size);
-        for batch_start in (0..self.config.num_games).step_by(batch_size) {
+        println!(
+            "🔄 Starting batch processing with {} games per batch",
+            batch_size
+        );
+        for (batch_idx, batch_start) in (0..self.config.num_games).step_by(batch_size).enumerate() {
             let batch_end = std::cmp::min(batch_start + batch_size, self.config.num_games);
-            println!("🔄 Processing batch: games {} to {}", batch_start, batch_end - 1);
+            // Only log batch start for every 10th batch or if total games <= 100
+            if self.config.num_games <= 100 || batch_idx % 10 == 0 {
+                println!(
+                    "🔄 Processing batch {}: games {} to {}",
+                    batch_idx + 1,
+                    batch_start,
+                    batch_end - 1
+                );
+            }
             let batch_games: Vec<Vec<serde_json::Value>> = (batch_start..batch_end)
                 .into_par_iter()
                 .map(|game_idx| {
@@ -157,20 +171,27 @@ impl SelfPlayTrainer {
                     }
 
                     // Create a new trainer instance for each thread
-                    println!("🎮 Starting game {}", game_idx + 1);
+                    // Only log game start/completion for every 100th game or if total games <= 100
+                    if self.config.num_games <= 100 || game_idx % 100 == 0 {
+                        println!("🎮 Starting game {}", game_idx + 1);
+                    }
                     let mut thread_trainer = SelfPlayTrainer::new(self.config.clone());
                     let result = thread_trainer.play_game(game_idx);
-                    println!("✅ Completed game {}", game_idx + 1);
+                    if self.config.num_games <= 100 || game_idx % 100 == 0 {
+                        println!("✅ Completed game {}", game_idx + 1);
+                    }
                     result
                 })
                 .collect();
 
             // Flatten batch results
-            println!("🔄 Flattening batch results...");
             for game_data in batch_games {
                 training_data.extend(game_data);
             }
-            println!("✅ Batch complete, total samples: {}", training_data.len());
+            // Only log batch completion for every 10th batch or if total games <= 100
+            if self.config.num_games <= 100 || batch_idx % 10 == 0 {
+                println!("✅ Batch {} complete, total samples: {}", batch_idx + 1, training_data.len());
+            }
         }
 
         let total_time = start_time.elapsed();
@@ -192,7 +213,14 @@ impl SelfPlayTrainer {
         let mut game_data = Vec::new();
         let mut move_count = 0;
 
-        println!("  🎯 Game {}: Starting with {} MCTS simulations", game_idx + 1, self.config.mcts_simulations);
+        // Only log game start for every 100th game or if total games <= 100
+        if self.config.num_games <= 100 || game_idx % 100 == 0 {
+            println!(
+                "  🎯 Game {}: Starting with {} MCTS simulations",
+                game_idx + 1,
+                self.config.mcts_simulations
+            );
+        }
 
         while !game_state.is_game_over() {
             let features = GameFeatures::from_game_state(&game_state);
@@ -202,7 +230,17 @@ impl SelfPlayTrainer {
             let _current_policy = self.get_policy(&game_state);
 
             // Get MCTS move probabilities
-            println!("  🎯 Game {}: Move {}, running MCTS search...", game_idx + 1, move_count + 1);
+            // Only log MCTS progress for every 50th move or if total games <= 10
+            let should_log_moves =
+                self.config.num_games <= 10 || (game_idx % 100 == 0 && move_count % 50 == 0);
+            if should_log_moves {
+                println!(
+                    "  🎯 Game {}: Move {}, running MCTS search...",
+                    game_idx + 1,
+                    move_count + 1
+                );
+            }
+
             let mcts_start = std::time::Instant::now();
             let (best_move, move_probs) = {
                 let value_fn = |state: &GameState| self.ai.evaluate_position(state);
@@ -234,7 +272,16 @@ impl SelfPlayTrainer {
                 self.mcts.search(game_state.clone(), &value_fn, &policy_fn)
             };
             let mcts_duration = mcts_start.elapsed();
-            println!("  ✅ Game {}: Move {}, MCTS completed in {:.2}s", game_idx + 1, move_count + 1, mcts_duration.as_secs_f64());
+
+            // Only log MCTS completion for the same conditions as start
+            if should_log_moves {
+                println!(
+                    "  ✅ Game {}: Move {}, MCTS completed in {:.2}s",
+                    game_idx + 1,
+                    move_count + 1,
+                    mcts_duration.as_secs_f64()
+                );
+            }
 
             // Add Dirichlet noise for exploration
             let noisy_probs = self.add_dirichlet_noise(&move_probs);
