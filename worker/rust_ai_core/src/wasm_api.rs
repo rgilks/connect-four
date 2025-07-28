@@ -1,6 +1,7 @@
 use super::genetic_params::GeneticParams;
 use super::{GameState, HeuristicAI, AI};
 use super::ml_ai::MLAI;
+use super::mcts::MCTS;
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen;
 
@@ -9,6 +10,7 @@ pub struct ConnectFourAI {
     ai: AI,
     heuristic_ai: HeuristicAI,
     ml_ai: MLAI,
+    mcts: MCTS,
 }
 
 #[wasm_bindgen]
@@ -19,6 +21,7 @@ impl ConnectFourAI {
             ai: AI::new(),
             heuristic_ai: HeuristicAI::new(),
             ml_ai: MLAI::new(),
+            mcts: MCTS::new(1.0, 100),
         }
     }
 
@@ -57,9 +60,43 @@ impl ConnectFourAI {
         let state: GameState = serde_wasm_bindgen::from_value(board_state.clone())
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-        let response = self.ml_ai.get_best_move(&state);
+        // Check if game is over
+        if state.is_game_over() {
+            return Err(JsValue::from_str("Game is already over"));
+        }
 
-        Ok(serde_wasm_bindgen::to_value(&response).map_err(|e| JsValue::from_str(&e.to_string()))?)
+        // Get valid moves
+        let valid_moves = state.get_valid_moves();
+        if valid_moves.is_empty() {
+            return Err(JsValue::from_str("No valid moves available"));
+        }
+
+        // Use ML AI's direct get_best_move method
+        let ml_response = self.ml_ai.get_best_move(&state);
+
+        // Convert move_evaluations to the expected format
+        let move_evaluations: Vec<serde_json::Value> = ml_response.diagnostics.move_evaluations
+            .iter()
+            .map(|eval| serde_json::json!({
+                "column": eval.column,
+                "score": eval.score,
+                "moveType": eval.move_type
+            }))
+            .collect();
+
+        let result = serde_json::json!({
+            "move": ml_response.r#move.map(|m| m as u32),
+            "evaluation": ml_response.evaluation,
+            "thinking": ml_response.thinking,
+            "diagnostics": {
+                "validMoves": ml_response.diagnostics.valid_moves,
+                "moveEvaluations": move_evaluations,
+                "valueNetworkOutput": ml_response.diagnostics.value_network_output,
+                "policyNetworkOutputs": ml_response.diagnostics.policy_network_outputs
+            }
+        });
+
+        Ok(serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))?)
     }
 
     pub fn evaluate_position(&self, board_state: &JsValue) -> Result<f32, JsValue> {

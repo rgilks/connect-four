@@ -97,26 +97,31 @@ impl MCTS {
         }
 
         // Select best move
-        let best_move = root_node
-            .valid_moves
-            .iter()
-            .max_by(|&&a, &&b| {
-                let a_visits = self.nodes[root_node
-                    .children
-                    .iter()
-                    .position(|&c| self.get_move_from_parent(root_idx, c) == a)
-                    .unwrap_or(0)]
-                .visits;
-                let b_visits = self.nodes[root_node
-                    .children
-                    .iter()
-                    .position(|&c| self.get_move_from_parent(root_idx, c) == b)
-                    .unwrap_or(0)]
-                .visits;
-                a_visits.cmp(&b_visits)
-            })
-            .copied()
-            .unwrap_or(0);
+        let best_move = if root_node.valid_moves.is_empty() {
+            // No valid moves available
+            0
+        } else {
+            root_node
+                .valid_moves
+                .iter()
+                .max_by(|&&a, &&b| {
+                    let a_visits = self.nodes[root_node
+                        .children
+                        .iter()
+                        .position(|&c| self.get_move_from_parent(root_idx, c) == a)
+                        .unwrap_or(0)]
+                    .visits;
+                    let b_visits = self.nodes[root_node
+                        .children
+                        .iter()
+                        .position(|&c| self.get_move_from_parent(root_idx, c) == b)
+                        .unwrap_or(0)]
+                    .visits;
+                    a_visits.cmp(&b_visits)
+                })
+                .copied()
+                .unwrap_or(root_node.valid_moves[0]) // Fallback to first valid move
+        };
 
         (best_move, move_probs)
     }

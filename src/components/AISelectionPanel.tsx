@@ -10,8 +10,8 @@ const AI_OPTIONS = [
   {
     aiType: 'classic' as AIType,
     title: 'Classic AI',
-    description: 'Traditional minimax algorithm with alpha-beta pruning. Fast and reliable.',
-    subtitle: 'Minimax + Alpha-Beta',
+    description: 'Traditional minimax algorithm with alpha-beta pruning. Depth 5 for strong play.',
+    subtitle: 'Minimax + Alpha-Beta (Depth 5)',
     colorClass: 'text-green-400',
     borderColorClass: 'border-green-500/50',
     icon: '🧠',
@@ -19,20 +19,11 @@ const AI_OPTIONS = [
   {
     aiType: 'ml' as AIType,
     title: 'ML AI',
-    description: 'Neural network trained on genetic algorithm data. Balanced performance.',
-    subtitle: 'Neural Network',
+    description: 'Monte Carlo Tree Search with neural network evaluation. Advanced strategic play.',
+    subtitle: 'MCTS + Neural Network',
     colorClass: 'text-blue-400',
     borderColorClass: 'border-blue-500/50',
     icon: '🤖',
-  },
-  {
-    aiType: 'self-play' as AIType,
-    title: 'Self-Play AI',
-    description: 'Advanced neural network trained through self-play with MCTS. Most sophisticated.',
-    subtitle: 'Self-Play + MCTS',
-    colorClass: 'text-purple-400',
-    borderColorClass: 'border-purple-500/50',
-    icon: '🎯',
   },
 ];
 
@@ -41,13 +32,10 @@ interface AISelectionPanelProps {
 }
 
 export default function AISelectionPanel({ onStartGame }: AISelectionPanelProps) {
-  const { selectedAI, actions } = useGameStore();
+  const { actions } = useGameStore();
 
   const handleAISelection = (aiType: AIType) => {
     actions.setAI(aiType);
-  };
-
-  const handleStartGame = () => {
     actions.reset();
     onStartGame?.();
   };
@@ -61,12 +49,10 @@ export default function AISelectionPanel({ onStartGame }: AISelectionPanelProps)
     >
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-white mb-4">Choose Your AI Opponent</h2>
-        <p className="text-gray-300 text-lg">
-          Select from our advanced AI systems, each with different strengths and strategies
-        </p>
+        <p className="text-gray-300 text-lg">Click on an AI to start playing immediately</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
         {AI_OPTIONS.map(option => (
           <AISelectionCard
             key={option.aiType}
@@ -76,7 +62,7 @@ export default function AISelectionPanel({ onStartGame }: AISelectionPanelProps)
             subtitle={option.subtitle}
             colorClass={option.colorClass}
             borderColorClass={option.borderColorClass}
-            isSelected={selectedAI === option.aiType}
+            isSelected={false}
             onClick={() => handleAISelection(option.aiType)}
             data-testid={`ai-selection-${option.aiType}`}
           />
@@ -84,24 +70,21 @@ export default function AISelectionPanel({ onStartGame }: AISelectionPanelProps)
       </div>
 
       <div className="mt-8 text-center">
+        <p className="text-gray-400 text-sm">Or watch them play against each other</p>
         <motion.button
-          onClick={handleStartGame}
-          className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200"
+          onClick={() => {
+            actions.setAI('classic');
+            actions.setGameMode('ai-vs-ai');
+            actions.reset();
+            onStartGame?.();
+          }}
+          className="mt-4 px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors duration-200"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          data-testid="start-game-button"
+          data-testid="ai-vs-ai-button"
         >
-          Start Game with {AI_OPTIONS.find(opt => opt.aiType === selectedAI)?.title}
+          Watch AI vs AI
         </motion.button>
-      </div>
-
-      <div className="mt-6 text-center text-sm text-gray-400">
-        <p>
-          Current selection:{' '}
-          <span className="text-white font-semibold">
-            {AI_OPTIONS.find(opt => opt.aiType === selectedAI)?.title}
-          </span>
-        </p>
       </div>
     </motion.div>
   );

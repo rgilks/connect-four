@@ -37,7 +37,7 @@ export const GameStateSchema = z.object({
 });
 export type GameState = z.infer<typeof GameStateSchema>;
 
-export const AITypeSchema = z.enum(['classic', 'ml', 'self-play']);
+export const AITypeSchema = z.enum(['classic', 'ml']);
 export type AIType = z.infer<typeof AITypeSchema>;
 
 export const GameModeSchema = z.enum(['human-vs-human', 'human-vs-ai', 'ai-vs-ai']);
