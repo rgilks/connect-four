@@ -338,7 +338,9 @@ class SelfPlayTrainer:
             logger.info("🎮 Starting Rust self-play generation...")
             process = subprocess.Popen(
                 cmd,
-                cwd=str(Path(__file__).parent.parent.parent / "worker" / "rust_ai_core"),
+                cwd=str(
+                    Path(__file__).parent.parent.parent / "worker" / "rust_ai_core"
+                ),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -386,10 +388,14 @@ class SelfPlayTrainer:
         )
         value_targets = torch.tensor(
             [sample["value_target"] for sample in training_data], dtype=torch.float32
-        ).unsqueeze(1)
+        )
         policy_targets = torch.tensor(
             [sample["policy_target"] for sample in training_data], dtype=torch.float32
         )
+
+        # Ensure policy targets are properly shaped for cross-entropy loss
+        # policy_targets should be [batch_size, num_actions] for argmax operation
+        # The data from Rust is already in the correct format: [batch_size, 7]
 
         # Split into train/validation
         split_idx = int(len(training_data) * (1 - self.config.validation_split))
@@ -444,18 +450,29 @@ class SelfPlayTrainer:
             # Forward pass
             value_outputs = self.value_network(features)
             policy_outputs = self.policy_network(features)
+            
+            # Ensure policy outputs have correct shape
+            policy_outputs = policy_outputs.squeeze()
 
             # Calculate losses
-            # Fix value network output shape and ensure targets match
-            value_outputs = value_outputs.squeeze(
-                -1
-            )  # Remove extra dimension if present
-            value_targets = value_targets.squeeze(-1)  # Ensure targets match
+            # Ensure value outputs and targets have matching shapes
+            value_outputs = value_outputs.squeeze()  # Remove all single dimensions
+            value_targets = value_targets.squeeze()  # Remove all single dimensions
+            value_targets = value_targets.float()  # Ensure targets are float
+            
+
+            
             value_loss = F.mse_loss(value_outputs, value_targets)
 
-            # Use KL divergence for probability distributions
-            policy_outputs_probs = F.softmax(policy_outputs, dim=1)
-            policy_loss = F.kl_div(policy_outputs_probs.log(), policy_targets, reduction='batchmean')
+            # Use KL divergence for policy since targets are probability distributions
+            # Convert policy outputs to log probabilities for KL divergence
+            policy_log_probs = F.log_softmax(policy_outputs, dim=1)
+            
+
+            
+            policy_loss = F.kl_div(
+                policy_log_probs, policy_targets, reduction="batchmean"
+            )
             total_batch_loss = value_loss + policy_loss
 
             # Backward pass
@@ -511,18 +528,23 @@ class SelfPlayTrainer:
                 # Forward pass
                 value_outputs = self.value_network(features)
                 policy_outputs = self.policy_network(features)
+                
+                # Ensure policy outputs have correct shape
+                policy_outputs = policy_outputs.squeeze()
 
                 # Calculate losses
-                # Fix value network output shape and ensure targets match
-                value_outputs = value_outputs.squeeze(
-                    -1
-                )  # Remove extra dimension if present
-                value_targets = value_targets.squeeze(-1)  # Ensure targets match
+                # Ensure value outputs and targets have matching shapes
+                value_outputs = value_outputs.squeeze()  # Remove all single dimensions
+                value_targets = value_targets.squeeze()  # Remove all single dimensions
+                value_targets = value_targets.float()  # Ensure targets are float
                 value_loss = F.mse_loss(value_outputs, value_targets)
 
-                # Use KL divergence for probability distributions
-                policy_outputs_probs = F.softmax(policy_outputs, dim=1)
-                policy_loss = F.kl_div(policy_outputs_probs.log(), policy_targets, reduction='batchmean')
+                # Use KL divergence for policy since targets are probability distributions
+                # Convert policy outputs to log probabilities for KL divergence
+                policy_log_probs = F.log_softmax(policy_outputs, dim=1)
+                policy_loss = F.kl_div(
+                    policy_log_probs, policy_targets, reduction="batchmean"
+                )
                 total_batch_loss = value_loss + policy_loss
 
                 total_value_loss += value_loss.item()

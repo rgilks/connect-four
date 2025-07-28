@@ -6,7 +6,7 @@ fn main() {
     let ai = MLAI::new();
     let game_state = GameState::new();
     let features = GameFeatures::from_game_state(&game_state);
-    let features_array = features.to_array();
+    let _features_array = features.to_array();
 
     println!("🔄 Running 1000 neural network evaluations...");
     let start = std::time::Instant::now();

@@ -28,6 +28,14 @@ Both networks can optionally use:
 - **Attention Layers**: Multi-head attention for processing game state features
 - **Residual Connections**: Skip connections for training deep networks
 
+### Recent Improvements
+
+**Fixed Tensor Shape Issues (July 2025)**:
+- Resolved broadcasting warnings in value loss calculation
+- Fixed policy network output shape mismatches
+- Both networks now learn properly with correct loss values
+- Training shows steady improvement in both value and policy losses
+
 ### MCTS Integration
 
 MCTS is used during self-play to:
@@ -53,6 +61,9 @@ npm run train:self-play:production
 
 # Advanced training with attention and residual connections
 npm run train:self-play:advanced
+
+# Intensive training with high MCTS simulations
+npm run train:intensive
 ```
 
 ### Custom Training

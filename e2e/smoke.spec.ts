@@ -146,7 +146,6 @@ test.describe('Game Completion and Database Saves', () => {
     
     // Select classic AI and start game again
     await page.getByTestId('ai-selection-classic').click();
-    await page.getByTestId('start-game-button').click();
     await page.waitForTimeout(600);
     
     // Should return to game board
@@ -207,7 +206,6 @@ test.describe('Error Handling and Edge Cases', () => {
     
     // Select classic AI and start game again
     await page.getByTestId('ai-selection-classic').click();
-    await page.getByTestId('start-game-button').click();
     await page.waitForTimeout(600);
 
     // Should be back to game board
