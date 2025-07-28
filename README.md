@@ -73,7 +73,7 @@ npm run train:self-play:production
 # Advanced training with attention and residual connections
 npm run train:self-play:advanced
 
-# Intensive 6-hour training session (5000 games, 200 epochs)
+# Intensive training session (5000 games, 200 epochs, ~13 minutes)
 npm run train:intensive
 
 # Monitor intensive training progress

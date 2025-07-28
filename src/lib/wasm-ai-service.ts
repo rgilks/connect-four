@@ -394,8 +394,8 @@ export async function initializeWASMAI(): Promise<void> {
 
   // Try to load ML weights (trained Connect Four model)
   try {
-    console.log('🔍 Loading ML weights from /ml/data/weights/best_model.json...');
-    const weightsResponse = await fetch('/ml/data/weights/best_model.json');
+    console.log('🔍 Loading ML weights from /ml/data/weights/ml_ai_weights_intensive_13min.json...');
+    const weightsResponse = await fetch('/ml/data/weights/ml_ai_weights_intensive_13min.json');
     console.log('🔍 Weights response status:', weightsResponse.status, weightsResponse.ok);
     
     if (weightsResponse.ok) {

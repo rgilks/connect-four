@@ -17,7 +17,7 @@ The intensive training script (`npm run train:intensive`) is designed for creati
 - **MCTS Simulations**: 2,000 per move (2.5x more for better evaluation)
 - **Attention Layers**: Enabled for pattern recognition
 - **Residual Connections**: Enabled for deeper networks
-- **Output**: `ml_ai_weights_intensive_6hr.json`
+- **Output**: `ml_ai_weights_intensive_13min.json`
 
 ### Key Features
 
@@ -40,7 +40,7 @@ This command:
 
 1. Uses `caffeinate -i` to prevent system sleep
 2. Runs Python training script with enhanced parameters
-3. Saves results to `ml/data/weights/ml_ai_weights_intensive_6hr.json`
+3. Saves results to `ml/data/weights/ml_ai_weights_intensive_13min.json`
 
 ### Monitor Training Progress
 
@@ -96,7 +96,7 @@ caffeinate -i python3 ml/scripts/train_self_play.py \
 
 ### Model Weights
 
-- `ml/data/weights/ml_ai_weights_intensive_6hr.json` - Final trained model
+- `ml/data/weights/ml_ai_weights_intensive_13min.json` - Final trained model
 
 ### Training Data
 
