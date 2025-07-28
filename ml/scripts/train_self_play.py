@@ -58,7 +58,7 @@ class SelfPlayTrainingConfig:
         self.training_data_dir.mkdir(parents=True, exist_ok=True)
 
         # Ensure weights directory exists
-        self.weights_dir = Path.cwd() / "ml" / "data" / "weights"
+        self.weights_dir = Path(__file__).parent.parent / "data" / "weights"
         self.weights_dir.mkdir(parents=True, exist_ok=True)
 
         # Update temp file path to use training data directory
@@ -72,7 +72,7 @@ class SelfPlayTrainingConfig:
 
     def load_unified_config(self) -> Dict[str, Any]:
         """Load unified training configuration"""
-        config_path = Path("ml/config/training.json")
+        config_path = Path(__file__).parent.parent / "config" / "training.json"
         if config_path.exists():
             with open(config_path, "r") as f:
                 return json.load(f)
@@ -338,7 +338,7 @@ class SelfPlayTrainer:
             logger.info("🎮 Starting Rust self-play generation...")
             process = subprocess.Popen(
                 cmd,
-                cwd="../../worker/rust_ai_core",
+                cwd=str(Path(__file__).parent.parent.parent / "worker" / "rust_ai_core"),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
