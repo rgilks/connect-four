@@ -1,4 +1,4 @@
-use connect_four_ai_core::{genetic_params::GeneticParams, GameState, Player, AI};
+use connect_four_ai_core::{genetic_params::GeneticParams, GameState, Player, AI, ml_ai::MLAI};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::time::Instant;
@@ -60,6 +60,8 @@ enum AIType {
     EMMDepth6,
     EMMDepth7,
     EMMDepth20,
+    MLDefault,
+    MLSelfPlay,
 }
 
 impl AIType {
@@ -75,6 +77,8 @@ impl AIType {
             AIType::EMMDepth6 => "EMM-Depth6",
             AIType::EMMDepth7 => "EMM-Depth7",
             AIType::EMMDepth20 => "EMM-Depth20",
+            AIType::MLDefault => "ML-Default",
+            AIType::MLSelfPlay => "ML-SelfPlay",
         }
     }
 }
@@ -156,6 +160,74 @@ impl AIPlayer for ExpectiminimaxAI {
 
     fn reset(&mut self) {
         self.ai.clear_transposition_table();
+    }
+}
+
+struct MLDefaultAI {
+    ai: MLAI,
+}
+
+impl MLDefaultAI {
+    fn new() -> Self {
+        Self { ai: MLAI::new() }
+    }
+}
+
+impl AIPlayer for MLDefaultAI {
+    fn get_move(&mut self, game_state: &GameState) -> Option<usize> {
+        let response = self.ai.get_best_move(game_state);
+        response.r#move.map(|m| m as usize)
+    }
+
+    fn reset(&mut self) {
+        // ML AI doesn't need reset
+    }
+}
+
+struct MLSelfPlayAI {
+    ai: MLAI,
+}
+
+impl MLSelfPlayAI {
+    fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        let mut ai = MLAI::new();
+
+        // Try to load self-play weights
+        let weights_path = "ml/data/weights/ml_ai_weights_self_play.json";
+        if let Ok(weights_data) = std::fs::read_to_string(weights_path) {
+            if let Ok(weights) = serde_json::from_str::<serde_json::Value>(&weights_data) {
+                if let (Some(value_weights), Some(policy_weights)) = (
+                    weights.get("value_weights").and_then(|w| w.as_array()),
+                    weights.get("policy_weights").and_then(|w| w.as_array()),
+                ) {
+                    let value_weights: Vec<f32> = value_weights
+                        .iter()
+                        .filter_map(|w| w.as_f64().map(|f| f as f32))
+                        .collect();
+                    let policy_weights: Vec<f32> = policy_weights
+                        .iter()
+                        .filter_map(|w| w.as_f64().map(|f| f as f32))
+                        .collect();
+
+                    if !value_weights.is_empty() && !policy_weights.is_empty() {
+                        ai.load_weights(&value_weights, &policy_weights);
+                    }
+                }
+            }
+        }
+
+        Ok(Self { ai })
+    }
+}
+
+impl AIPlayer for MLSelfPlayAI {
+    fn get_move(&mut self, game_state: &GameState) -> Option<usize> {
+        let response = self.ai.get_best_move(game_state);
+        response.r#move.map(|m| m as usize)
+    }
+
+    fn reset(&mut self) {
+        // ML AI doesn't need reset
     }
 }
 
@@ -296,6 +368,11 @@ fn create_ai_player(ai_type: &AIType) -> Result<Box<dyn AIPlayer>, Box<dyn std::
                 Err("Depth 20 tests require RUN_SLOW_TESTS=1".into())
             }
         }
+        AIType::MLDefault => Ok(Box::new(MLDefaultAI::new())),
+        AIType::MLSelfPlay => match MLSelfPlayAI::new() {
+            Ok(ai) => Ok(Box::new(ai)),
+            Err(e) => Err(format!("Failed to load self-play model: {}", e).into()),
+        },
     }
 }
 
@@ -385,7 +462,7 @@ fn test_ai_matrix() {
     );
     println!();
 
-    // Define AI types to test (ML AI excluded until models are trained)
+    // Define AI types to test (including ML AI models)
     let mut ai_types = vec![
         AIType::Random,
         AIType::Heuristic,
@@ -395,6 +472,8 @@ fn test_ai_matrix() {
         AIType::EMMDepth4,
         AIType::EMMDepth5,
         AIType::EMMDepth6,
+        AIType::MLDefault,
+        AIType::MLSelfPlay,
     ];
 
     // Add depth 7 and 20 only if slow tests are enabled

@@ -1,4 +1,4 @@
-const CACHE_VERSION = '1753728704806-local-v1.0.0';
+const CACHE_VERSION = '1753729387076-local-v1.0.0';
 const CACHE_NAME = `connect-4-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline';
 

@@ -1,10 +1,19 @@
 # AI System Documentation
 
-**✅ CURRENT STATE: WASM AI INTEGRATED WITH EVOLVED PARAMETERS AND SELF-PLAY TRAINING**
+**✅ CURRENT STATE: WASM AI INTEGRATED WITH EVOLVED PARAMETERS, SELF-PLAY TRAINING, AND ML AI TESTING**
 
-The sophisticated Rust/WASM AI system has been successfully integrated and is now being used in the game. The game now uses the advanced WASM AI with evolved genetic parameters and self-play training capabilities for maximum strength and fallback to JavaScript AI.
+The sophisticated Rust/WASM AI system has been successfully integrated and is now being used in the game. The game now uses the advanced WASM AI with evolved genetic parameters, self-play training capabilities, and comprehensive ML AI testing for maximum strength and fallback to JavaScript AI.
 
 ## Recent Improvements (27/07/2025)
+
+### ML AI Integration and Testing
+
+- **Achievement**: Successfully integrated ML AI models into comprehensive test matrix
+- **Models Added**: ML-Default (untrained) and ML-SelfPlay (trained) models
+- **Test Coverage**: 10 AI types including both classic and ML AI models
+- **Performance Results**: ML-SelfPlay shows 16.7% average win rate, ML-Default shows 30.6%
+- **Speed**: Both ML models are very fast (0.0ms/move)
+- **Model Loading**: Self-play model successfully loads weights from trained neural network
 
 ### Self-Play Training System Enhanced
 
