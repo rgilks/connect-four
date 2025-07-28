@@ -80,7 +80,7 @@ class SelfPlayTrainingConfig:
             # Fallback to default configuration
             return {
                 "network_architecture": {
-                    "input_size": 150,
+                    "input_size": 100,
                     "hidden_sizes": [256, 128, 64, 32],
                     "value_output_size": 1,
                     "policy_output_size": 7,
@@ -306,13 +306,13 @@ class SelfPlayTrainer:
 
         # Create config for Rust data generation
         rust_config = {
-            "num_games": self.config.num_games,
-            "mcts_simulations": self.config.mcts_simulations,
-            "exploration_constant": self.config.exploration_constant,
-            "temperature": self.config.temperature,
-            "dirichlet_alpha": self.config.dirichlet_alpha,
-            "dirichlet_epsilon": self.config.dirichlet_epsilon,
-            "output_file": self.config.temp_data_file,
+            "training_defaults": {
+                "num_games": self.config.num_games,
+                "mcts_simulations": self.config.mcts_simulations,
+            },
+            "output_formats": {
+                "unified": self.config.temp_data_file,
+            },
         }
 
         # Save config to temporary file
@@ -338,7 +338,7 @@ class SelfPlayTrainer:
             logger.info("🎮 Starting Rust self-play generation...")
             process = subprocess.Popen(
                 cmd,
-                cwd="worker/rust_ai_core",
+                cwd="../../worker/rust_ai_core",
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -446,8 +446,16 @@ class SelfPlayTrainer:
             policy_outputs = self.policy_network(features)
 
             # Calculate losses
+            # Fix value network output shape and ensure targets match
+            value_outputs = value_outputs.squeeze(
+                -1
+            )  # Remove extra dimension if present
+            value_targets = value_targets.squeeze(-1)  # Ensure targets match
             value_loss = F.mse_loss(value_outputs, value_targets)
-            policy_loss = F.cross_entropy(policy_outputs, policy_targets.argmax(dim=1))
+
+            # Use KL divergence for probability distributions
+            policy_outputs_probs = F.softmax(policy_outputs, dim=1)
+            policy_loss = F.kl_div(policy_outputs_probs.log(), policy_targets, reduction='batchmean')
             total_batch_loss = value_loss + policy_loss
 
             # Backward pass
@@ -505,10 +513,16 @@ class SelfPlayTrainer:
                 policy_outputs = self.policy_network(features)
 
                 # Calculate losses
+                # Fix value network output shape and ensure targets match
+                value_outputs = value_outputs.squeeze(
+                    -1
+                )  # Remove extra dimension if present
+                value_targets = value_targets.squeeze(-1)  # Ensure targets match
                 value_loss = F.mse_loss(value_outputs, value_targets)
-                policy_loss = F.cross_entropy(
-                    policy_outputs, policy_targets.argmax(dim=1)
-                )
+
+                # Use KL divergence for probability distributions
+                policy_outputs_probs = F.softmax(policy_outputs, dim=1)
+                policy_loss = F.kl_div(policy_outputs_probs.log(), policy_targets, reduction='batchmean')
                 total_batch_loss = value_loss + policy_loss
 
                 total_value_loss += value_loss.item()
@@ -559,12 +573,14 @@ class SelfPlayTrainer:
 
             epoch_time = time.time() - epoch_start_time
 
-            logger.info(f"Epoch {epoch + 1}/{self.config.epochs} ({epoch_time:.1f}s):")
             logger.info(
-                f"  Train - Value: {train_value_loss:.4f}, Policy: {train_policy_loss:.4f}, Total: {train_total_loss:.4f}"
+                f"📊 Epoch {epoch + 1}/{self.config.epochs} ({epoch_time:.1f}s)"
             )
             logger.info(
-                f"  Val   - Value: {val_value_loss:.4f}, Policy: {val_policy_loss:.4f}, Total: {val_total_loss:.4f}"
+                f"  🎯 Train: Value={train_value_loss:.4f} | Policy={train_policy_loss:.4f} | Total={train_total_loss:.4f}"
+            )
+            logger.info(
+                f"  ✅ Val:   Value={val_value_loss:.4f} | Policy={val_policy_loss:.4f} | Total={val_total_loss:.4f}"
             )
 
             # Early stopping

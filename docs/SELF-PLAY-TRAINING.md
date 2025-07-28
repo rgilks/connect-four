@@ -97,7 +97,7 @@ The default network architecture is defined in `ml/config/training.json`:
 ```json
 {
   "network_architecture": {
-    "input_size": 150,
+    "input_size": 100,
     "hidden_sizes": [256, 128, 64, 32],
     "value_output_size": 1,
     "policy_output_size": 7

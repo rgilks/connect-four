@@ -127,6 +127,23 @@ impl MCTS {
         value_fn: &dyn Fn(&GameState) -> f32,
         policy_fn: &dyn Fn(&GameState) -> Vec<f32>,
     ) -> f32 {
+        self.simulate_with_depth(node_idx, value_fn, policy_fn, 0)
+    }
+
+    fn simulate_with_depth(
+        &mut self,
+        node_idx: usize,
+        value_fn: &dyn Fn(&GameState) -> f32,
+        policy_fn: &dyn Fn(&GameState) -> Vec<f32>,
+        depth: usize,
+    ) -> f32 {
+        const MAX_SIMULATION_DEPTH: usize = 100;
+
+        if depth > MAX_SIMULATION_DEPTH {
+            // Return a neutral value if we've gone too deep
+            return 0.0;
+        }
+
         {
             let node = &self.nodes[node_idx];
             if node.is_terminal {
@@ -161,7 +178,7 @@ impl MCTS {
             .copied()
             .unwrap_or(node_idx);
 
-        let value = self.simulate(best_child_idx, value_fn, policy_fn);
+        let value = self.simulate_with_depth(best_child_idx, value_fn, policy_fn, depth + 1);
         self.backpropagate(node_idx, value);
         value
     }
@@ -231,12 +248,15 @@ impl MCTS {
     fn backpropagate(&mut self, node_idx: usize, value: f32) {
         let mut current_idx = node_idx;
 
-        while let Some(node) = self.nodes.get_mut(current_idx) {
-            node.visits += 1;
-            node.total_value += value;
-            current_idx = node.parent.unwrap_or(current_idx);
+        while current_idx < self.nodes.len() {
+            let parent_idx = self.nodes[current_idx].parent;
+            self.nodes[current_idx].visits += 1;
+            self.nodes[current_idx].total_value += value;
 
-            if current_idx == node_idx {
+            if let Some(parent) = parent_idx {
+                current_idx = parent;
+            } else {
+                // Reached root node
                 break;
             }
         }

@@ -71,39 +71,44 @@ impl SelfPlayTrainer {
     }
 
     fn optimize_cpu_usage() {
-        // Detect system architecture and optimize thread pool
-        let num_cores = std::thread::available_parallelism()
-            .map(|n| n.get())
-            .unwrap_or(4);
+        // Use a static flag to ensure we only configure the thread pool once
+        static INITIALIZED: std::sync::Once = std::sync::Once::new();
+        
+        INITIALIZED.call_once(|| {
+            // Detect system architecture and optimize thread pool
+            let num_cores = std::thread::available_parallelism()
+                .map(|n| n.get())
+                .unwrap_or(4);
 
-        // For M1 Macs (8 performance cores), use all performance cores for maximum training speed
-        let optimal_threads = if cfg!(target_arch = "aarch64") && cfg!(target_os = "macos") {
-            // Apple Silicon - use all performance cores
-            std::cmp::min(num_cores, 8)
-        } else if num_cores >= 16 {
-            // High-core systems - leave 2 cores for system
-            num_cores.saturating_sub(2)
-        } else if num_cores >= 8 {
-            // Mid-range systems - leave 1 core for system
-            num_cores.saturating_sub(1)
-        } else {
-            // Smaller systems - use all cores
-            num_cores
-        };
+            // For M1 Macs (8 performance cores), use all performance cores for maximum training speed
+            let optimal_threads = if cfg!(target_arch = "aarch64") && cfg!(target_os = "macos") {
+                // Apple Silicon - use all performance cores
+                std::cmp::min(num_cores, 8)
+            } else if num_cores >= 16 {
+                // High-core systems - leave 2 cores for system
+                num_cores.saturating_sub(2)
+            } else if num_cores >= 8 {
+                // Mid-range systems - leave 1 core for system
+                num_cores.saturating_sub(1)
+            } else {
+                // Smaller systems - use all cores
+                num_cores
+            };
 
-        // Configure rayon thread pool for optimal performance
-        rayon::ThreadPoolBuilder::new()
-            .num_threads(optimal_threads)
-            .stack_size(8 * 1024 * 1024) // 8MB stack for deep recursion
-            .build_global()
-            .unwrap_or_else(|_| {
-                println!("⚠️  Could not configure optimal thread pool, using default");
-            });
+            // Configure rayon thread pool for optimal performance
+            rayon::ThreadPoolBuilder::new()
+                .num_threads(optimal_threads)
+                .stack_size(8 * 1024 * 1024) // 8MB stack for deep recursion
+                .build_global()
+                .unwrap_or_else(|_| {
+                    println!("⚠️  Could not configure optimal thread pool, using default");
+                });
 
-        println!(
-            "🍎 CPU Optimization: Using {} performance cores on {} total cores",
-            optimal_threads, num_cores
-        );
+            println!(
+                "🍎 CPU Optimization: Using {} performance cores on {} total cores",
+                optimal_threads, num_cores
+            );
+        });
     }
 
     pub fn generate_training_data(&mut self) -> Vec<serde_json::Value> {
@@ -116,6 +121,7 @@ impl SelfPlayTrainer {
             self.config.mcts_simulations
         );
         println!("Temperature: {}", self.config.temperature);
+        println!("🔄 Using parallel processing with batch size: {}", std::cmp::min(10, self.config.num_games));
 
         let start_time = Instant::now();
 
@@ -123,17 +129,27 @@ impl SelfPlayTrainer {
         let mut training_data = Vec::new();
 
         // Process games in parallel batches
-        let batch_size = 10; // Process 10 games at a time
+        let batch_size = std::cmp::min(10, self.config.num_games); // Adapt batch size to number of games
+        println!("🔄 Starting batch processing with {} games per batch", batch_size);
         for batch_start in (0..self.config.num_games).step_by(batch_size) {
             let batch_end = std::cmp::min(batch_start + batch_size, self.config.num_games);
+            println!("🔄 Processing batch: games {} to {}", batch_start, batch_end - 1);
             let batch_games: Vec<Vec<serde_json::Value>> = (batch_start..batch_end)
                 .into_par_iter()
                 .map(|game_idx| {
-                    if game_idx % self.config.save_every == 0 {
+                    // Show progress for every game when total games is small, or every 10% otherwise
+                    let progress_interval = if self.config.num_games <= 10 {
+                        1 // Show progress for every game
+                    } else {
+                        std::cmp::max(self.config.num_games / 10, 10)
+                    };
+                    if game_idx % progress_interval == 0 {
                         let elapsed = start_time.elapsed();
                         let games_per_sec = (game_idx + 1) as f64 / elapsed.as_secs_f64();
+                        let percent_complete = ((game_idx + 1) * 100) / self.config.num_games;
                         println!(
-                            "🎮 Game {}/{} ({:.1} games/sec)",
+                            "🎮 Progress: {}% ({}/{}) - {:.1} games/sec",
+                            percent_complete,
                             game_idx + 1,
                             self.config.num_games,
                             games_per_sec
@@ -141,26 +157,32 @@ impl SelfPlayTrainer {
                     }
 
                     // Create a new trainer instance for each thread
+                    println!("🎮 Starting game {}", game_idx + 1);
                     let mut thread_trainer = SelfPlayTrainer::new(self.config.clone());
-                    thread_trainer.play_game(game_idx)
+                    let result = thread_trainer.play_game(game_idx);
+                    println!("✅ Completed game {}", game_idx + 1);
+                    result
                 })
                 .collect();
 
             // Flatten batch results
+            println!("🔄 Flattening batch results...");
             for game_data in batch_games {
                 training_data.extend(game_data);
             }
+            println!("✅ Batch complete, total samples: {}", training_data.len());
         }
 
         let total_time = start_time.elapsed();
-        println!("✅ Self-play training complete!");
-        println!("Total time: {:.2} seconds", total_time.as_secs_f64());
-        println!("Games played: {}", self.config.num_games);
-        println!("Training samples: {}", training_data.len());
+        println!("🎉 Self-play generation complete!");
+        println!("⏱️  Total time: {:.2} seconds", total_time.as_secs_f64());
+        println!("🎮 Games played: {}", self.config.num_games);
+        println!("📊 Training samples: {}", training_data.len());
         println!(
-            "Average samples per game: {:.1}",
+            "📈 Average samples per game: {:.1}",
             training_data.len() as f64 / self.config.num_games as f64
         );
+        println!("🚀 Ready for neural network training...");
 
         training_data
     }
@@ -170,6 +192,8 @@ impl SelfPlayTrainer {
         let mut game_data = Vec::new();
         let mut move_count = 0;
 
+        println!("  🎯 Game {}: Starting with {} MCTS simulations", game_idx + 1, self.config.mcts_simulations);
+
         while !game_state.is_game_over() {
             let features = GameFeatures::from_game_state(&game_state);
             let features_array = features.to_array();
@@ -178,6 +202,8 @@ impl SelfPlayTrainer {
             let _current_policy = self.get_policy(&game_state);
 
             // Get MCTS move probabilities
+            println!("  🎯 Game {}: Move {}, running MCTS search...", game_idx + 1, move_count + 1);
+            let mcts_start = std::time::Instant::now();
             let (best_move, move_probs) = {
                 let value_fn = |state: &GameState| self.ai.evaluate_position(state);
                 let policy_fn = |state: &GameState| {
@@ -207,6 +233,8 @@ impl SelfPlayTrainer {
 
                 self.mcts.search(game_state.clone(), &value_fn, &policy_fn)
             };
+            let mcts_duration = mcts_start.elapsed();
+            println!("  ✅ Game {}: Move {}, MCTS completed in {:.2}s", game_idx + 1, move_count + 1, mcts_duration.as_secs_f64());
 
             // Add Dirichlet noise for exploration
             let noisy_probs = self.add_dirichlet_noise(&move_probs);

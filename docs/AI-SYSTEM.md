@@ -1,10 +1,19 @@
 # AI System Documentation
 
-**✅ CURRENT STATE: WASM AI INTEGRATED WITH EVOLVED PARAMETERS AND DEPTH 5**
+**✅ CURRENT STATE: WASM AI INTEGRATED WITH EVOLVED PARAMETERS AND SELF-PLAY TRAINING**
 
-The sophisticated Rust/WASM AI system has been successfully integrated and is now being used in the game. The game now uses the advanced WASM AI with evolved genetic parameters at depth 5 for maximum strength and fallback to JavaScript AI.
+The sophisticated Rust/WASM AI system has been successfully integrated and is now being used in the game. The game now uses the advanced WASM AI with evolved genetic parameters and self-play training capabilities for maximum strength and fallback to JavaScript AI.
 
 ## Recent Improvements (27/07/2025)
+
+### Self-Play Training System Enhanced
+
+- **Achievement**: Fixed critical tensor shape mismatch issues in self-play training
+- **Issue Resolved**: Neural network input/output dimension conflicts (100 vs 150 features)
+- **Loss Function**: Improved KL divergence loss for probability distributions
+- **Training Speed**: ~75 games/second generation, ~139 games/second during training
+- **Model Quality**: Successfully trained models with 19.0 samples per game
+- **Architecture**: Advanced neural networks with attention layers and residual connections
 
 ### Genetic Parameter Evolution Completed
 
@@ -344,7 +353,7 @@ The ML AI offers a different challenge with playstyle developed from observing t
 
 ### Architecture
 
-- **Input**: 150-dimensional feature vector representing game state
+- **Input**: 100-dimensional feature vector representing game state
 - **Model**: Two neural networks sharing input:
   - Value network: predicts expected outcome
   - Policy network: predicts best move (probability distribution)
@@ -352,7 +361,7 @@ The ML AI offers a different challenge with playstyle developed from observing t
 
 ### Model Structure
 
-- Input: 150 features
+- Input: 100 features
 - Hidden: 256 → 128 → 64 → 32 (ReLU activation)
 - Output: Value (1 neuron, tanh), Policy (7 neurons, softmax)
 
@@ -498,7 +507,7 @@ NUM_GAMES=100 RUN_SLOW_TESTS=1 cargo test test_ai_matrix -- --nocapture
 ### Data Generation
 
 - **Method**: Self-play games with parallel processing
-- **Features**: 150+ game state features
+- **Features**: 100 game state features
 - **Targets**: Value function (win/loss prediction) and policy (move probabilities)
 
 ### Training Presets
@@ -620,7 +629,7 @@ cargo test test_genetic_params_comparison -- --nocapture
 
 - Add self-play reinforcement learning
 - Implement Monte Carlo Tree Search on top of neural network
-- Optimize feature engineering (review 150 features)
+- Optimize feature engineering (review 100 features)
 
 ### Long Term (Next Year)
 
