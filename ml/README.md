@@ -16,7 +16,7 @@ pip install -r requirements.txt
 npm run train:quick
 
 # 3. Standard training (30 minutes)
-npm run train:pytorch
+npm run train:genetic:pytorch
 
 # 4. Check results
 ls ml/data/weights/
@@ -67,7 +67,7 @@ ml/
 
 ## 🧠 Training System
 
-The ML training system has been consolidated into a single, unified interface that supports both Rust and PyTorch backends:
+The ML training system has been consolidated into a single, unified interface that supports both Rust and PyTorch backends, plus advanced self-play training with MCTS:
 
 ### Quick Start Commands
 
@@ -79,10 +79,22 @@ npm run train
 npm run train:quick
 
 # Standard training (1000 games, 50 epochs)
-npm run train:pytorch
+npm run train:genetic:pytorch
 
 # Production training (2000 games, 100 epochs)
-npm run train:pytorch:production
+npm run train:genetic:pytorch:production
+
+# Advanced self-play training with MCTS
+npm run train:self-play
+
+# Quick self-play training (100 games, 10 epochs, 400 MCTS simulations)
+npm run train:self-play:quick
+
+# Production self-play training (2000 games, 100 epochs, 1200 MCTS simulations)
+npm run train:self-play:production
+
+# Advanced self-play with attention and residual connections
+npm run train:self-play:advanced
 ```
 
 ### Advanced Usage
@@ -96,6 +108,12 @@ npm run train:pytorch:production
 
 # Production training with custom output
 ./ml/scripts/train.sh --preset production --output my_weights.json
+
+# Advanced self-play training with custom parameters
+./ml/scripts/train_self_play.sh --num-games 1500 --epochs 75 --mcts-simulations 1000
+
+# Self-play with attention and residual connections
+./ml/scripts/train_self_play.sh --use-attention --use-residual --preset production
 ```
 
 ### Training Presets
@@ -109,6 +127,19 @@ npm run train:pytorch:production
 - **auto**: Automatically selects PyTorch (if GPU available) or Rust
 - **pytorch**: Uses PyTorch with **required** GPU acceleration (CUDA/MPS)
 - **rust**: Uses pure Rust implementation with optimized CPU parallelization
+- **self-play**: Advanced self-play training with MCTS exploration and PyTorch neural networks
+
+### Self-Play Training Features
+
+The new self-play training system includes:
+
+- **Monte Carlo Tree Search (MCTS)**: Advanced exploration for better move selection
+- **Dirichlet Noise**: Prevents overfitting and encourages exploration
+- **Attention Layers**: Multi-head attention for processing game state features
+- **Residual Connections**: Deep networks with skip connections
+- **Curriculum Learning**: Progressive difficulty increase
+- **Progressive Training**: Iterative improvement through multiple generations
+- **Advanced Neural Networks**: Separate value and policy networks with modern architectures
 
 ### Performance Characteristics
 
@@ -131,13 +162,14 @@ python3 ml/scripts/convert_weights.py input.json --format rust --output rust_wei
 
 ### Current Models
 
-| Model          | Training Games | Epochs | Status                     |
-| -------------- | -------------- | ------ | -------------------------- |
-| **PyTorch V5** | 2000           | 100    | ✅ **Latest Model** |
-| **ML-V2**      | 1000           | 50     | ✅ **Strong Performance**  |
-| **ML-Fast**    | 1000           | 50     | ✅ **Good Performance**    |
-| **ML-V4**      | 5000           | 100    | ✅ **Good Performance**    |
-| **ML-Hybrid**  | 1000           | 50     | ✅ **Hybrid Approach**   |
+| Model            | Training Games | Epochs | MCTS Sims | Features                  | Status                    |
+| ---------------- | -------------- | ------ | --------- | ------------------------- | ------------------------- |
+| **Self-Play V1** | 1000           | 50     | 800       | MCTS, Attention, Residual | 🚧 **In Development**     |
+| **PyTorch V5**   | 2000           | 100    | -         | Standard                  | ✅ **Latest Model**       |
+| **ML-V2**        | 1000           | 50     | -         | Standard                  | ✅ **Strong Performance** |
+| **ML-Fast**      | 1000           | 50     | -         | Standard                  | ✅ **Good Performance**   |
+| **ML-V4**        | 5000           | 100    | -         | Standard                  | ✅ **Good Performance**   |
+| **ML-Hybrid**    | 1000           | 50     | -         | Standard                  | ✅ **Hybrid Approach**    |
 
 For detailed performance metrics, see [AI-MATRIX-RESULTS.md](../docs/AI-MATRIX-RESULTS.md).
 
@@ -186,7 +218,7 @@ python3 -c "import torch; print(torch.backends.mps.is_available())"
 
 ```bash
 # Use Rust backend for CPU-only training
-npm run train:rust:quick
+npm run train:genetic:quick
 
 # Or reduce training parameters
 ./ml/scripts/train.sh --num-games 100 --epochs 10

@@ -27,7 +27,12 @@ export interface WASMMLResponse {
   thinking: string;
   diagnostics: {
     validMoves: number[];
-    moveEvaluations: Array<{
+    moveEvaluations?: Array<{
+      column: number;
+      score: number;
+      moveType: string;
+    }>;
+    move_evaluations?: Array<{
       column: number;
       score: number;
       moveType: string;
@@ -60,21 +65,7 @@ interface WASMAIInstance {
     }>;
     nodes_evaluated: number;
   };
-  get_ml_move: (state: unknown) => {
-    move: number | null;
-    evaluation: number;
-    thinking: string;
-    diagnostics: {
-      validMoves: number[];
-      moveEvaluations: Array<{
-        column: number;
-        score: number;
-        moveType: string;
-      }>;
-      valueNetworkOutput: number;
-      policyNetworkOutputs: number[];
-    };
-  };
+  get_ml_move: (state: unknown) => unknown;
   evaluate_position: (state: unknown) => number;
   load_ml_weights: (value_weights: unknown, policy_weights: unknown) => void;
   clear_transposition_table: () => void;
@@ -295,16 +286,45 @@ class WASMAIService {
     }
 
     try {
+      console.log('🔍 ML AI: Converting game state to WASM...');
       const wasmState = await this.convertGameStateToWASM(gameState);
+      console.log('🔍 ML AI: Calling WASM get_ml_move...');
       const result = this.ai.get_ml_move(wasmState);
+      console.log('🔍 ML AI: Raw result:', result);
+
+      // Convert Map to plain object if needed
+      let move: number | null;
+      let evaluation: number;
+      let thinking: string;
+      let diagnostics: WASMMLResponse['diagnostics'];
+
+      if (result instanceof Map) {
+        move = result.get('move') as number | null;
+        evaluation = result.get('evaluation') as number;
+        thinking = result.get('thinking') as string;
+        const rawDiagnostics = result.get('diagnostics');
+        diagnostics = rawDiagnostics as WASMMLResponse['diagnostics'];
+      } else {
+        const obj = result as Record<string, unknown>;
+        move = obj.move as number | null;
+        evaluation = obj.evaluation as number;
+        thinking = obj.thinking as string;
+        diagnostics = obj.diagnostics as WASMMLResponse['diagnostics'];
+      }
+
+      console.log('🔍 ML AI: Parsed move:', move);
+      console.log('🔍 ML AI: Parsed evaluation:', evaluation);
+      console.log('🔍 ML AI: Parsed thinking:', thinking);
+      console.log('🔍 ML AI: Parsed diagnostics:', diagnostics);
 
       return {
-        move: result.move,
-        evaluation: result.evaluation,
-        thinking: result.thinking,
-        diagnostics: result.diagnostics,
+        move: move,
+        evaluation: evaluation,
+        thinking: thinking,
+        diagnostics: diagnostics,
       };
     } catch (error) {
+      console.error('🔍 ML AI: Error details:', error);
       throw new Error(`WASM ML AI failed: ${error}`);
     }
   }
@@ -372,21 +392,34 @@ export async function initializeWASMAI(): Promise<void> {
   const service = getWASMAIService();
   await service.initialize();
 
-  // Try to load ML weights (currently using test weights from another game)
+  // Try to load ML weights (trained Connect Four model)
   try {
-    const weightsResponse = await fetch('/ml/data/weights/test_weights.json');
+    console.log('🔍 Loading ML weights from /ml/data/weights/best_model.json...');
+    const weightsResponse = await fetch('/ml/data/weights/best_model.json');
+    console.log('🔍 Weights response status:', weightsResponse.status, weightsResponse.ok);
+    
     if (weightsResponse.ok) {
-      const weights = (await weightsResponse.json()) as {
-        value_weights?: number[];
-        policy_weights?: number[];
+      const model = (await weightsResponse.json()) as {
+        value_network?: { weights: number[] };
+        policy_network?: { weights: number[] };
       };
-      if (weights.value_weights && weights.policy_weights) {
-        await service.loadMLWeights(weights.value_weights, weights.policy_weights);
-        console.log('✅ ML weights loaded successfully (test weights from another game)');
+      console.log('🔍 Model structure:', Object.keys(model));
+      console.log('🔍 Value network exists:', !!model.value_network);
+      console.log('🔍 Policy network exists:', !!model.policy_network);
+      console.log('🔍 Value weights length:', model.value_network?.weights?.length);
+      console.log('🔍 Policy weights length:', model.policy_network?.weights?.length);
+      
+      if (model.value_network?.weights && model.policy_network?.weights) {
+        await service.loadMLWeights(model.value_network.weights, model.policy_network.weights);
+        console.log('✅ ML weights loaded successfully (trained Connect Four model)');
+      } else {
+        console.warn('Model format not recognized - missing weights arrays');
       }
+    } else {
+      console.error('Failed to fetch ML weights:', weightsResponse.status, weightsResponse.statusText);
     }
   } catch (error) {
-    console.warn('Could not load ML weights:', error);
+    console.error('Could not load ML weights:', error);
   }
 }
 

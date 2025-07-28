@@ -1,10 +1,28 @@
 # AI System Documentation
 
-**✅ CURRENT STATE: WASM AI INTEGRATED WITH EVOLVED PARAMETERS AND DEPTH 5**
+**✅ CURRENT STATE: WASM AI INTEGRATED WITH EVOLVED PARAMETERS, SELF-PLAY TRAINING, AND ML AI TESTING**
 
-The sophisticated Rust/WASM AI system has been successfully integrated and is now being used in the game. The game now uses the advanced WASM AI with evolved genetic parameters at depth 5 for maximum strength and fallback to JavaScript AI.
+The sophisticated Rust/WASM AI system has been successfully integrated and is now being used in the game. The game now uses the advanced WASM AI with evolved genetic parameters, self-play training capabilities, and comprehensive ML AI testing for maximum strength and fallback to JavaScript AI.
 
 ## Recent Improvements (27/07/2025)
+
+### ML AI Integration and Testing
+
+- **Achievement**: Successfully integrated ML AI models into comprehensive test matrix
+- **Models Added**: ML-Default (untrained) and ML-SelfPlay (trained) models
+- **Test Coverage**: 10 AI types including both classic and ML AI models
+- **Performance Results**: ML-SelfPlay shows 16.7% average win rate, ML-Default shows 30.6%
+- **Speed**: Both ML models are very fast (0.0ms/move)
+- **Model Loading**: Self-play model successfully loads weights from trained neural network
+
+### Self-Play Training System Enhanced
+
+- **Achievement**: Fixed critical tensor shape mismatch issues in self-play training
+- **Issue Resolved**: Neural network input/output dimension conflicts (100 vs 150 features)
+- **Loss Function**: Improved KL divergence loss for probability distributions
+- **Training Speed**: ~75 games/second generation, ~139 games/second during training
+- **Model Quality**: Successfully trained models with 19.0 samples per game
+- **Architecture**: Advanced neural networks with attention layers and residual connections
 
 ### Genetic Parameter Evolution Completed
 
@@ -344,7 +362,7 @@ The ML AI offers a different challenge with playstyle developed from observing t
 
 ### Architecture
 
-- **Input**: 150-dimensional feature vector representing game state
+- **Input**: 100-dimensional feature vector representing game state
 - **Model**: Two neural networks sharing input:
   - Value network: predicts expected outcome
   - Policy network: predicts best move (probability distribution)
@@ -352,7 +370,7 @@ The ML AI offers a different challenge with playstyle developed from observing t
 
 ### Model Structure
 
-- Input: 150 features
+- Input: 100 features
 - Hidden: 256 → 128 → 64 → 32 (ReLU activation)
 - Output: Value (1 neuron, tanh), Policy (7 neurons, softmax)
 
@@ -498,7 +516,7 @@ NUM_GAMES=100 RUN_SLOW_TESTS=1 cargo test test_ai_matrix -- --nocapture
 ### Data Generation
 
 - **Method**: Self-play games with parallel processing
-- **Features**: 150+ game state features
+- **Features**: 100 game state features
 - **Targets**: Value function (win/loss prediction) and policy (move probabilities)
 
 ### Training Presets
@@ -551,10 +569,10 @@ NUM_GAMES=100 RUN_SLOW_TESTS=1 cargo test test_ai_matrix -- --nocapture
 npm run train:quick
 
 # Production PyTorch training
-npm run train:pytorch:production
+npm run train:genetic:pytorch:production
 
 # Custom Rust training
-npm run train:rust -- --num-games 500 --epochs 25
+npm run train:genetic -- --num-games 500 --epochs 25
 ```
 
 ## Development History
@@ -620,7 +638,7 @@ cargo test test_genetic_params_comparison -- --nocapture
 
 - Add self-play reinforcement learning
 - Implement Monte Carlo Tree Search on top of neural network
-- Optimize feature engineering (review 150 features)
+- Optimize feature engineering (review 100 features)
 
 ### Long Term (Next Year)
 

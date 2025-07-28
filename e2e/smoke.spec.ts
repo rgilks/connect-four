@@ -19,7 +19,17 @@ async function dismissErrorModalIfPresent(page: Page) {
 
 async function startGame(page: Page) {
   await page.goto('/');
-  // The game starts directly without mode selection
+  
+  // Check if we're on the AI selection screen
+  const aiSelectionPanel = page.getByTestId('ai-selection-classic');
+  if (await aiSelectionPanel.isVisible()) {
+    // Select classic AI and start game
+    await aiSelectionPanel.click();
+    await page.getByTestId('start-game-button').click();
+    await page.waitForTimeout(600); // Wait for transition
+  }
+  
+  // The game board should now be visible
   await expect(page.getByTestId('game-board')).toBeVisible();
   // Wait for the animation to complete (0.5s duration + buffer)
   await page.waitForTimeout(600);
@@ -132,6 +142,14 @@ test.describe('Game Completion and Database Saves', () => {
     // Click reset button
     await page.getByTestId('reset-game').click();
 
+    // Should return to AI selection screen
+    await expect(page.getByTestId('ai-selection-classic')).toBeVisible();
+    
+    // Select classic AI and start game again
+    await page.getByTestId('ai-selection-classic').click();
+    await page.getByTestId('start-game-button').click();
+    await page.waitForTimeout(600);
+    
     // Should return to game board
     await expect(page.getByTestId('game-board')).toBeVisible();
   });
@@ -185,10 +203,15 @@ test.describe('Error Handling and Edge Cases', () => {
     // Wait for the page to load and game state to be restored
     await page.waitForTimeout(1000);
 
-    // Should be back to game board
-    await expect(page.getByTestId('game-board')).toBeVisible();
+    // Should be back to AI selection screen
+    await expect(page.getByTestId('ai-selection-classic')).toBeVisible();
+    
+    // Select classic AI and start game again
+    await page.getByTestId('ai-selection-classic').click();
+    await page.getByTestId('start-game-button').click();
+    await page.waitForTimeout(600);
 
-    // Game board should be visible
+    // Should be back to game board
     await expect(page.getByTestId('game-board')).toBeVisible();
   });
 });

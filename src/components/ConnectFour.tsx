@@ -11,6 +11,7 @@ import GameBoard from './GameBoard';
 import AnimatedBackground from './AnimatedBackground';
 import HowToPlayPanel from './HowToPlayPanel';
 import ErrorModal from './ErrorModal';
+import AISelectionPanel from './AISelectionPanel';
 
 function isStandalonePWA() {
   if (typeof window === 'undefined') return false;
@@ -22,6 +23,7 @@ export default function ConnectFour() {
   const gameState = useGameState();
   const { makeAIMove, reset } = useGameActions();
   const aiThinking = useGameStore(state => state.aiThinking);
+  const gameMode = useGameStore(state => state.gameMode);
   const { errorModal } = useUIStore();
   const { hideError } = useUIStore(state => state.actions);
 
@@ -29,6 +31,7 @@ export default function ConnectFour() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [showAISelection, setShowAISelection] = useState(true);
 
   useEffect(() => {
     setIsStandalone(isStandalonePWA());
@@ -46,11 +49,13 @@ export default function ConnectFour() {
 
   // Handle AI moves
   useEffect(() => {
-    if (
+    const shouldMakeAIMove =
       gameState.gameStatus === 'playing' &&
-      gameState.currentPlayer === 'player2' &&
-      !aiThinking
-    ) {
+      !aiThinking &&
+      (gameMode === 'ai-vs-ai' ||
+        (gameMode === 'human-vs-ai' && gameState.currentPlayer === 'player2'));
+
+    if (shouldMakeAIMove) {
       const timer = setTimeout(() => {
         try {
           makeAIMove();
@@ -61,7 +66,7 @@ export default function ConnectFour() {
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [gameState.gameStatus, gameState.currentPlayer, aiThinking, makeAIMove]);
+  }, [gameState.gameStatus, gameState.currentPlayer, aiThinking, makeAIMove, gameMode]);
 
   // Handle game completion sounds
   useEffect(() => {
@@ -78,6 +83,7 @@ export default function ConnectFour() {
 
   const handleReset = () => {
     reset();
+    setShowAISelection(true);
   };
 
   const toggleSound = () => {
@@ -91,6 +97,10 @@ export default function ConnectFour() {
 
   const handleCloseHowToPlay = () => {
     setShowHowToPlay(false);
+  };
+
+  const handleStartGame = () => {
+    setShowAISelection(false);
   };
 
   return (
@@ -144,33 +154,51 @@ export default function ConnectFour() {
           </div>
         )}
 
-        <div className="w-full max-w-md">
-          <motion.div
-            className="text-center mb-6"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h1 className="text-4xl font-bold text-white mb-2 title-glow">Connect 4</h1>
-            <p className="text-gray-300 text-sm">Drop your pieces to get four in a row!</p>
-            {process.env.NODE_ENV === 'development' && isMounted && (
-              <div className="text-xs text-gray-500 mt-2">
-                Status: {gameState.gameStatus} | Player: {gameState.currentPlayer} | AI Thinking:{' '}
-                {aiThinking ? 'Yes' : 'No'}
-              </div>
-            )}
-          </motion.div>
+        {showAISelection ? (
+          <div className="w-full">
+            <motion.div
+              className="text-center mb-6"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <h1 className="text-4xl font-bold text-white mb-2 title-glow">Connect 4</h1>
+              <p className="text-gray-300 text-sm">Choose your AI opponent and start playing!</p>
+            </motion.div>
 
-          <GameBoard
-            gameState={gameState}
-            aiThinking={aiThinking}
-            onResetGame={handleReset}
-            soundEnabled={soundEnabled}
-            onToggleSound={toggleSound}
-            onShowHowToPlay={handleShowHowToPlay}
-            data-testid="game-board-component"
-          />
-        </div>
+            <AISelectionPanel onStartGame={handleStartGame} />
+          </div>
+        ) : (
+          <div className="w-full max-w-md">
+            <motion.div
+              className="text-center mb-6"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <h1 className="text-4xl font-bold text-white mb-2 title-glow">Connect 4</h1>
+              <p className="text-gray-300 text-sm">Drop your pieces to get four in a row!</p>
+              {process.env.NODE_ENV === 'development' && isMounted && (
+                <div className="text-xs text-gray-500 mt-2">
+                  Status: {gameState.gameStatus} | Player: {gameState.currentPlayer} | AI Thinking:{' '}
+                  {aiThinking ? 'Yes' : 'No'}
+                </div>
+              )}
+            </motion.div>
+
+            <GameBoard
+              gameState={gameState}
+              aiThinking={aiThinking}
+              onResetGame={handleReset}
+              soundEnabled={soundEnabled}
+              onToggleSound={toggleSound}
+              onShowHowToPlay={handleShowHowToPlay}
+              watchMode={gameMode === 'ai-vs-ai'}
+              gameMode={gameMode}
+              data-testid="game-board-component"
+            />
+          </div>
+        )}
       </div>
 
       <HowToPlayPanel isOpen={showHowToPlay} onClose={handleCloseHowToPlay} />

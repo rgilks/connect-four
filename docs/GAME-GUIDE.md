@@ -157,6 +157,32 @@ The game features sophisticated AI opponents with evolved genetic parameters:
 6. **Heuristic**: 29.7% average win rate (educational)
 7. **Random**: 7.4% average win rate (baseline)
 
+## AI vs AI Mode
+
+Watch two AI opponents battle it out in an automated match! This mode allows you to observe how different AI strategies play against each other.
+
+### How to Access
+
+- Click the **"Watch AI vs AI"** button on the AI selection screen
+- The game will automatically start with both players controlled by AI
+- Sit back and watch the strategic battle unfold
+
+### Features
+
+- **Fully automated gameplay**: Both players are AI-controlled
+- **Real-time visualization**: Watch each move being calculated and executed
+- **Strategic insights**: Observe how different AI approaches handle the same positions
+- **No human interaction required**: Perfect for learning and entertainment
+- **Educational value**: See how AI evaluates positions and makes decisions
+
+### Use Cases
+
+- **Learning strategy**: Watch how strong AI plays to improve your own game
+- **AI comparison**: See how different AI types perform against each other
+- **Entertainment**: Enjoy watching high-level strategic play
+- **Analysis**: Study opening moves and mid-game tactics
+- **Testing**: Observe AI behavior and performance in real games
+
 ## Historical Significance
 
 Connect Four represents an important milestone in game theory and artificial intelligence:

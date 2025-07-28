@@ -9,7 +9,9 @@ pub mod wasm_api;
 pub mod features;
 pub mod genetic_params;
 pub mod ml_ai;
+pub mod mcts;
 pub mod neural_network;
+pub mod self_play;
 pub mod training;
 
 pub const ROWS: usize = 6;

@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { initializeGame, makeMove as makeMoveLogic, makeAIMove } from './game-logic';
 import { initializeWASMAI } from './wasm-ai-service';
-import type { GameState } from './types';
+import type { GameState, AIType, GameMode } from './types';
 import { useUIStore } from './ui-store';
 
 const LATEST_VERSION = 1;
@@ -13,6 +13,8 @@ type GameStore = {
   aiThinking: boolean;
   pendingMove: { column: number; player: 'player1' | 'player2' } | null;
   showWinnerModal: boolean;
+  selectedAI: AIType;
+  gameMode: GameMode;
   actions: {
     initialize: (fromStorage?: boolean) => void;
     makeMove: (column: number) => void;
@@ -20,6 +22,8 @@ type GameStore = {
     makeAIMove: () => void;
     reset: () => void;
     showWinnerModal: () => void;
+    setAI: (aiType: AIType) => void;
+    setGameMode: (mode: GameMode) => void;
   };
 };
 
@@ -30,6 +34,8 @@ export const useGameStore = create<GameStore>()(
       aiThinking: false,
       pendingMove: null,
       showWinnerModal: false,
+      selectedAI: 'classic' as AIType,
+      gameMode: 'human-vs-ai' as GameMode,
       actions: {
         initialize: () => {
           // Always create a fresh game with new random starting player
@@ -74,8 +80,15 @@ export const useGameStore = create<GameStore>()(
           });
         },
         makeAIMove: async () => {
-          const { gameState } = get();
-          if (gameState.gameStatus !== 'playing' || gameState.currentPlayer !== 'player2') return;
+          const { gameState, selectedAI, gameMode } = get();
+
+          // In AI vs AI mode, both players are AI
+          // In human vs AI mode, only player2 is AI
+          const isAITurn =
+            gameMode === 'ai-vs-ai' ||
+            (gameMode === 'human-vs-ai' && gameState.currentPlayer === 'player2');
+
+          if (gameState.gameStatus !== 'playing' || !isAITurn) return;
 
           set(state => {
             state.aiThinking = true;
@@ -84,19 +97,24 @@ export const useGameStore = create<GameStore>()(
           // Add a small delay to make AI thinking visible
           setTimeout(async () => {
             const currentState = get().gameState;
-            if (currentState.gameStatus === 'playing' && currentState.currentPlayer === 'player2') {
+            const currentGameMode = get().gameMode;
+            const isStillAITurn =
+              currentGameMode === 'ai-vs-ai' ||
+              (currentGameMode === 'human-vs-ai' && currentState.currentPlayer === 'player2');
+
+            if (currentState.gameStatus === 'playing' && isStillAITurn) {
               try {
-                const aiColumn = await makeAIMove(currentState);
+                const aiColumn = await makeAIMove(currentState, selectedAI);
                 // Set pending move for AI animation
                 set(state => {
-                  state.pendingMove = { column: aiColumn, player: 'player2' };
+                  state.pendingMove = { column: aiColumn, player: currentState.currentPlayer };
                   state.aiThinking = false;
                 });
 
                 // Complete the AI move after animation delay
                 setTimeout(() => {
                   const { gameState: updatedState, pendingMove } = get();
-                  if (pendingMove && pendingMove.player === 'player2') {
+                  if (pendingMove) {
                     const newState = makeMoveLogic(updatedState, pendingMove.column);
                     set(state => {
                       state.gameState = newState;
@@ -138,6 +156,16 @@ export const useGameStore = create<GameStore>()(
         showWinnerModal: () => {
           set(state => {
             state.showWinnerModal = true;
+          });
+        },
+        setAI: (aiType: AIType) => {
+          set(state => {
+            state.selectedAI = aiType;
+          });
+        },
+        setGameMode: (mode: GameMode) => {
+          set(state => {
+            state.gameMode = mode;
           });
         },
       },

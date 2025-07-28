@@ -30,12 +30,18 @@ Visit [http://localhost:3000](http://localhost:3000) to play!
 
 ## AI System
 
-The game features a sophisticated AI system with:
+The game features a sophisticated AI system with multiple opponents to choose from:
 
-- **Classic AI**: Minimax with alpha-beta pruning (Rust/WASM) at depth 1 for optimal performance
-- **Heuristic AI**: Fast win/block detection
-- **Evolved Parameters**: AI behavior optimized through genetic algorithms (76.0% win rate, 0.0ms/move)
-- **Multiple Depths**: Configurable search depth for different difficulty levels
+- **Classic AI**: Traditional minimax algorithm with alpha-beta pruning. Fast and reliable.
+- **ML AI**: Neural network trained on genetic algorithm data. Balanced performance.
+- **Self-Play AI**: Advanced neural network trained through self-play with MCTS exploration. Most sophisticated.
+
+### AI Selection Interface
+
+Players can select their preferred AI opponent from a beautiful card-based interface that shows:
+- AI type and description
+- Performance characteristics
+- Visual indicators for selection
 
 ### Genetic Algorithm Evolution
 
@@ -48,6 +54,26 @@ npm run evolve:genetic-params
 # Plot evolution results
 python scripts/plot_evolution.py evolution_params_20241201_143022.csv
 ```
+
+### Self-Play Training
+
+Advanced AI models are trained through self-play:
+
+```bash
+# Quick self-play training (100 games, 10 epochs)
+npm run train:self-play:quick
+
+# Standard self-play training (1000 games, 50 epochs)
+npm run train:self-play
+
+# Production self-play training (2000 games, 100 epochs)
+npm run train:self-play:production
+
+# Advanced training with attention and residual connections
+npm run train:self-play:advanced
+```
+
+See [Self-Play Training Guide](./docs/SELF-PLAY-TRAINING.md) for detailed information.
 
 This generates comprehensive CSV files tracking:
 
