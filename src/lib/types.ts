@@ -6,6 +6,8 @@ export type {
   GameState,
   GameAction,
   WinningLine,
+  AIType,
+  GameMode,
 } from './schemas';
 
 export {
@@ -16,4 +18,6 @@ export {
   GameStateSchema,
   GameActionSchema,
   WinningLineSchema,
+  AITypeSchema,
+  GameModeSchema,
 } from './schemas';

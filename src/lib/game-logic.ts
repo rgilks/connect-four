@@ -110,7 +110,7 @@ export function getValidMoves(board: Board): number[] {
     .filter(index => index !== -1);
 }
 
-export async function makeAIMove(gameState: GameState): Promise<number> {
+export async function makeAIMove(gameState: GameState, aiType: 'classic' | 'ml' | 'self-play' = 'classic'): Promise<number> {
   const wasmAI = getWASMAIService();
 
   if (!wasmAI.isReady) {
@@ -118,12 +118,39 @@ export async function makeAIMove(gameState: GameState): Promise<number> {
   }
 
   try {
-    console.log('\n🤖 AI thinking...');
+    console.log(`\n🤖 ${aiType.toUpperCase()} AI thinking...`);
     printBoard(gameState.board, 'Current board before AI move');
 
     // Clear transposition table to ensure fresh calculations
     wasmAI.clearTranspositionTable();
-    const response = await wasmAI.getBestMove(gameState, 1);
+    
+    let response;
+    switch (aiType) {
+      case 'classic':
+        response = await wasmAI.getBestMove(gameState, 1);
+        break;
+      case 'ml':
+        const mlResponse = await wasmAI.getMLMove(gameState);
+        response = {
+          move: mlResponse.move,
+          evaluations: mlResponse.diagnostics.moveEvaluations,
+          nodesEvaluated: 0,
+          transpositionHits: 0
+        };
+        break;
+      case 'self-play':
+        // For now, use ML AI as self-play (we'll enhance this later)
+        const selfPlayResponse = await wasmAI.getMLMove(gameState);
+        response = {
+          move: selfPlayResponse.move,
+          evaluations: selfPlayResponse.diagnostics.moveEvaluations,
+          nodesEvaluated: 0,
+          transpositionHits: 0
+        };
+        break;
+      default:
+        response = await wasmAI.getBestMove(gameState, 1);
+    }
 
     // Check if we got a valid move (0-6 for columns)
     if (

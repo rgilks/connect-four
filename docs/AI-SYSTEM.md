@@ -551,10 +551,10 @@ NUM_GAMES=100 RUN_SLOW_TESTS=1 cargo test test_ai_matrix -- --nocapture
 npm run train:quick
 
 # Production PyTorch training
-npm run train:pytorch:production
+npm run train:genetic:pytorch:production
 
 # Custom Rust training
-npm run train:rust -- --num-games 500 --epochs 25
+npm run train:genetic -- --num-games 500 --epochs 25
 ```
 
 ## Development History

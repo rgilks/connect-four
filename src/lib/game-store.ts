@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { initializeGame, makeMove as makeMoveLogic, makeAIMove } from './game-logic';
 import { initializeWASMAI } from './wasm-ai-service';
-import type { GameState } from './types';
+import type { GameState, AIType, GameMode } from './types';
 import { useUIStore } from './ui-store';
 
 const LATEST_VERSION = 1;
@@ -13,6 +13,8 @@ type GameStore = {
   aiThinking: boolean;
   pendingMove: { column: number; player: 'player1' | 'player2' } | null;
   showWinnerModal: boolean;
+  selectedAI: AIType;
+  gameMode: GameMode;
   actions: {
     initialize: (fromStorage?: boolean) => void;
     makeMove: (column: number) => void;
@@ -20,6 +22,8 @@ type GameStore = {
     makeAIMove: () => void;
     reset: () => void;
     showWinnerModal: () => void;
+    setAI: (aiType: AIType) => void;
+    setGameMode: (mode: GameMode) => void;
   };
 };
 
@@ -30,6 +34,8 @@ export const useGameStore = create<GameStore>()(
       aiThinking: false,
       pendingMove: null,
       showWinnerModal: false,
+      selectedAI: 'classic' as AIType,
+      gameMode: 'human-vs-ai' as GameMode,
       actions: {
         initialize: () => {
           // Always create a fresh game with new random starting player
@@ -74,7 +80,7 @@ export const useGameStore = create<GameStore>()(
           });
         },
         makeAIMove: async () => {
-          const { gameState } = get();
+          const { gameState, selectedAI } = get();
           if (gameState.gameStatus !== 'playing' || gameState.currentPlayer !== 'player2') return;
 
           set(state => {
@@ -86,7 +92,7 @@ export const useGameStore = create<GameStore>()(
             const currentState = get().gameState;
             if (currentState.gameStatus === 'playing' && currentState.currentPlayer === 'player2') {
               try {
-                const aiColumn = await makeAIMove(currentState);
+                const aiColumn = await makeAIMove(currentState, selectedAI);
                 // Set pending move for AI animation
                 set(state => {
                   state.pendingMove = { column: aiColumn, player: 'player2' };
@@ -138,6 +144,16 @@ export const useGameStore = create<GameStore>()(
         showWinnerModal: () => {
           set(state => {
             state.showWinnerModal = true;
+          });
+        },
+        setAI: (aiType: AIType) => {
+          set(state => {
+            state.selectedAI = aiType;
+          });
+        },
+        setGameMode: (mode: GameMode) => {
+          set(state => {
+            state.gameMode = mode;
           });
         },
       },
