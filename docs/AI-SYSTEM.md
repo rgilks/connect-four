@@ -1,8 +1,8 @@
 # AI System Documentation
 
-**✅ CURRENT STATE: WASM AI INTEGRATED WITH EVOLVED PARAMETERS AND DEPTH 1**
+**✅ CURRENT STATE: WASM AI INTEGRATED WITH EVOLVED PARAMETERS AND DEPTH 5**
 
-The sophisticated Rust/WASM AI system has been successfully integrated and is now being used in the game. The game now uses the advanced WASM AI with evolved genetic parameters at depth 1 for optimal performance and fallback to JavaScript AI.
+The sophisticated Rust/WASM AI system has been successfully integrated and is now being used in the game. The game now uses the advanced WASM AI with evolved genetic parameters at depth 5 for maximum strength and fallback to JavaScript AI.
 
 ## Recent Improvements (27/07/2025)
 
@@ -332,11 +332,10 @@ The evaluation function now uses evolved genetic parameters that are loaded from
 
 ### Search Depth Optimization
 
-Optimized for depth 1 search, providing the best performance/speed ratio:
+Optimized for depth 5 search, providing maximum strength:
 
-- **Production**: Depth 1 search for optimal balance (76.0% win rate, 0.0ms/move)
-- **Maximum Strength**: Depth 5 search for strongest play (83.1% win rate)
-- **Fast Alternative**: Depth 1 search for instant speed
+- **Production**: Depth 5 search for maximum strength (83.1% win rate, 95.2ms/move)
+- **Fast Alternative**: Depth 1 search for instant speed (76.0% win rate, 0.0ms/move)
 - **Testing**: Various depths for performance analysis
 
 ## ML AI

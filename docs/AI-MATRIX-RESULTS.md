@@ -46,8 +46,8 @@ Games per second: 41.8
 
 ## Recommendations
 
-- **EMM-Depth1 is now the production setting** (76.0% avg win rate, 0.0ms/move)
-- EMM-Depth1 provides excellent performance with instant response time
-- Use EMM-Depth5 for maximum strength when speed is not critical
+- **EMM-Depth5 is now the production setting** (83.1% avg win rate, 95.2ms/move)
+- EMM-Depth5 provides maximum strength with reasonable response time
+- Use EMM-Depth1 for instant speed when performance is critical
 - Use Random AI for baseline testing
 - Use Heuristic AI for educational purposes

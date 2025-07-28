@@ -134,11 +134,11 @@ The game features sophisticated AI opponents with evolved genetic parameters:
 
 - Uses minimax algorithm with alpha-beta pruning
 - **Evolved genetic parameters** for optimal evaluation function
-- **76.0% win rate** for EMM-Depth1 (production setting)
-- **0.0ms/move** for instant response time
+- **83.1% win rate** for EMM-Depth5 (production setting)
+- **95.2ms/move** for strong response time
 - All 14 evaluation parameters optimized through genetic algorithm
 - Configurable search depth (Depth1-6)
-- Fast and reliable play with superior strategic understanding
+- Strong and reliable play with superior strategic understanding
 
 ### ML AI (Neural Network)
 
@@ -149,8 +149,8 @@ The game features sophisticated AI opponents with evolved genetic parameters:
 
 ### AI Performance Rankings
 
-1. **EMM-Depth1**: 76.0% average win rate (production setting, 0.0ms/move)
-2. **EMM-Depth5**: 83.1% average win rate (maximum strength)
+1. **EMM-Depth5**: 83.1% average win rate (production setting, 95.2ms/move)
+2. **EMM-Depth1**: 76.0% average win rate (fast alternative, 0.0ms/move)
 3. **EMM-Depth6**: 78.3% average win rate (strong but slower)
 4. **EMM-Depth4**: 74.3% average win rate (good balance)
 5. **EMM-Depth3**: 48.0% average win rate (balanced challenge)

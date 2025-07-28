@@ -6,13 +6,15 @@ use rayon::prelude::*;
 use std::fs;
 use std::io::Write;
 
-const POPULATION_SIZE: usize = 50; // Increased for better exploration
-const GENERATIONS: usize = 100; // Increased for more thorough evolution
-const GAMES_PER_EVAL: usize = 50; // Reduced from 100 since depth 5 provides much better evaluation quality
-const MUTATION_RATE: f64 = 0.8; // Increased from 0.6 for more exploration
-const MUTATION_STRENGTH: f64 = 3.0; // Increased from 2.0 for more exploration
-const CROSSOVER_RATE: f64 = 0.7; // Increased from 0.5 for more diversity
-const SEARCH_DEPTH: u8 = 5; // Increased to depth 5 for better evaluation and to reduce perfect scores
+const POPULATION_SIZE: usize = 75; // Increased from 50 for better exploration
+const GENERATIONS: usize = 150; // Increased from 100 for more thorough evolution
+const GAMES_PER_EVAL: usize = 300; // Increased from 200 to further reduce variance
+const MUTATION_RATE: f64 = 0.5; // Reduced from 0.6 for more stable evolution
+const MUTATION_STRENGTH: f64 = 1.5; // Reduced from 2.0 for smoother parameter changes
+const CROSSOVER_RATE: f64 = 0.8; // Increased from 0.7 for more diversity
+const SEARCH_DEPTH: u8 = 1; // Using depth 1 for faster evolution while maintaining quality
+const ELITE_SIZE: usize = 3; // Keep top 3 individuals instead of just 1
+const TOURNAMENT_SIZE: usize = 7; // Increased from 5 for better selection pressure
 
 fn optimize_cpu_usage() {
     if cfg!(target_os = "macos") {
@@ -141,20 +143,8 @@ fn evaluate_params_tournament(
                 let mut rng = rand::thread_rng();
                 let evolved_is_player2 = rng.gen_bool(0.5);
 
-                // Create multiple opponent strategies for more challenging evaluation
-                let opponent_strategy = rng.gen_range(0..3);
-                let current_opponent_params = match opponent_strategy {
-                    0 => opponent_params.clone(),  // Previous generation's best
-                    1 => GeneticParams::default(), // Default parameters
-                    2 => {
-                        // Aggressive opponent
-                        let mut aggressive = opponent_params.clone();
-                        aggressive.threat_weight *= 1.5;
-                        aggressive.center_control_weight *= 1.3;
-                        aggressive
-                    }
-                    _ => opponent_params.clone(),
-                };
+                // Use consistent opponent strategy to reduce variance
+                let current_opponent_params = opponent_params.clone(); // Previous generation's best
 
                 // Create neutral game state
                 let mut game_state = GameState::new();
@@ -588,18 +578,18 @@ fn inject_diversity(population: &mut Vec<GeneticParams>, target_diversity: f64) 
         );
 
         // Replace some individuals with completely random ones
-        let num_to_replace = (population.len() as f64 * 0.4) as usize; // Increased from 30% to 40%
+        let num_to_replace = (population.len() as f64 * 0.3) as usize; // Reduced from 0.4 for more stability
 
         for _ in 0..num_to_replace {
             let replace_idx = rand::random::<usize>() % population.len();
             population[replace_idx] = GeneticParams::random();
         }
 
-        // Apply extra mutation to existing individuals with higher strength
+        // Apply extra mutation to existing individuals with moderate strength
         for individual in population.iter_mut() {
-            if rand::random::<f64>() < 0.7 {
-                // Increased from 0.5 to 0.7
-                *individual = individual.random_mutation(0.9, 6.0); // Increased strength from 4.0 to 6.0
+            if rand::random::<f64>() < 0.6 {
+                // Reduced from 0.7 for more stability
+                *individual = individual.random_mutation(0.8, 4.0); // Reduced strength from 6.0 to 4.0
             }
         }
 
@@ -1004,16 +994,20 @@ fn main() {
                 .unwrap()
         };
 
+        // Create sorted fitness indices for elitism and runner-up selection
+        let mut fitness_with_indices: Vec<(usize, f64)> = fitness_scores
+            .iter()
+            .enumerate()
+            .map(|(idx, &score)| (idx, score))
+            .collect();
+        fitness_with_indices.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
+
+        // Create best_indices for elitism
+        let best_indices: Vec<usize> = fitness_with_indices.iter().map(|(idx, _)| *idx).collect();
+
         // Find runner-up for reporting
-        let (runner_up_idx, runner_up_score) = {
-            let mut fitness_with_indices: Vec<(usize, f64)> = fitness_scores
-                .iter()
-                .enumerate()
-                .map(|(idx, &score)| (idx, score))
-                .collect();
-            fitness_with_indices.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
-            (fitness_with_indices[1].0, fitness_with_indices[1].1)
-        };
+        let (runner_up_idx, runner_up_score) =
+            (fitness_with_indices[1].0, fitness_with_indices[1].1);
 
         let runner_up_params = &population[runner_up_idx];
 
@@ -1190,13 +1184,17 @@ fn main() {
         // Selection: Use tournament selection with diversity preservation
         let mut new_population = Vec::new();
 
-        // Keep only the absolute best individual (elitism = 1)
+        // Keep top ELITE_SIZE individuals (elitism)
+        for i in 0..ELITE_SIZE.min(best_indices.len()) {
+            let elite_individual = population[best_indices[i]].clone();
+            new_population.push(elite_individual.clone());
+        }
+
         let best_individual = population[best_idx].clone();
-        new_population.push(best_individual.clone());
 
         // Check if we're stagnating (current generation winner is too similar to previous generation winner)
         let params_diff = calculate_params_difference(current_winner, &previous_best_params);
-        let is_stagnating = params_diff < 0.01; // Adjusted threshold for new normalization
+        let is_stagnating = params_diff < 0.005; // Reduced threshold for more sensitive stagnation detection
 
         if is_stagnating {
             consecutive_stagnation_count += 1;
@@ -1209,15 +1207,24 @@ fn main() {
             consecutive_stagnation_count = 0;
         }
 
-        // Adjust mutation parameters based on stagnation
-        let current_mutation_strength = if is_stagnating {
-            MUTATION_STRENGTH * 2.0 // Double mutation strength when stagnating
+        // Adjust mutation parameters based on stagnation and generation progress
+        let generation_progress = generation as f64 / GENERATIONS as f64;
+        let adaptive_mutation_strength = if generation_progress < 0.3 {
+            MUTATION_STRENGTH * 1.5 // Higher exploration in early generations
+        } else if generation_progress > 0.7 {
+            MUTATION_STRENGTH * 0.7 // Lower exploration in late generations
         } else {
             MUTATION_STRENGTH
         };
 
+        let current_mutation_strength = if is_stagnating {
+            adaptive_mutation_strength * 2.5 // Stronger mutation when stagnating
+        } else {
+            adaptive_mutation_strength
+        };
+
         let current_mutation_rate = if is_stagnating {
-            (MUTATION_RATE * 1.5).min(1.0) // Increase mutation rate when stagnating, but cap at 1.0
+            (MUTATION_RATE * 1.8).min(1.0) // Higher mutation rate when stagnating
         } else {
             MUTATION_RATE
         };
@@ -1256,7 +1263,7 @@ fn main() {
         // Fill the rest through tournament selection
         while new_population.len() < POPULATION_SIZE {
             // Tournament selection with diversity constraint
-            let tournament_size = 5; // Increased from 3 for better selection pressure
+            let tournament_size = TOURNAMENT_SIZE;
             let mut tournament = Vec::new();
 
             // Select tournament participants, avoiding recently used individuals
@@ -1312,20 +1319,31 @@ fn main() {
 
         // Check population diversity and inject diversity if needed
         let current_diversity = calculate_population_diversity(&new_population);
-        let target_diversity = if is_stagnating { 0.2 } else { 0.1 }; // Higher target when stagnating
+        let target_diversity = if is_stagnating { 0.25 } else { 0.15 }; // Higher targets for better exploration
 
         if current_diversity < target_diversity || is_stagnating {
             inject_diversity(&mut new_population, target_diversity);
         }
 
-        // Check for early stopping due to stagnation
-        if consecutive_stagnation_count >= 3 {
+        // Check for early stopping due to stagnation or convergence
+        if consecutive_stagnation_count >= 5 {
             println!(
                 "\n🛑 EARLY STOPPING: Stagnation detected for {} consecutive generations",
                 consecutive_stagnation_count
             );
             println!("   The evolution has converged and is no longer making meaningful progress.");
             println!("   Best fitness achieved: {:.3}", best_fitness);
+            break;
+        }
+
+        // Also stop if we achieve very high fitness consistently
+        if best_fitness >= 0.95 && generation > 50 {
+            println!(
+                "\n🏆 EARLY STOPPING: Excellent fitness achieved ({:.3}) after {} generations",
+                best_fitness,
+                generation + 1
+            );
+            println!("   The evolution has found a very strong solution.");
             break;
         }
 

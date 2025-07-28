@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use worker::*;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const AI_SEARCH_DEPTH: u8 = 1;
+const AI_SEARCH_DEPTH: u8 = 5;
 
 #[derive(Serialize)]
 struct HealthResponse {
