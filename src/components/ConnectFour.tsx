@@ -23,6 +23,7 @@ export default function ConnectFour() {
   const gameState = useGameState();
   const { makeAIMove, reset } = useGameActions();
   const aiThinking = useGameStore(state => state.aiThinking);
+  const gameMode = useGameStore(state => state.gameMode);
   const { errorModal } = useUIStore();
   const { hideError } = useUIStore(state => state.actions);
 
@@ -48,11 +49,13 @@ export default function ConnectFour() {
 
   // Handle AI moves
   useEffect(() => {
-    if (
+    const shouldMakeAIMove =
       gameState.gameStatus === 'playing' &&
-      gameState.currentPlayer === 'player2' &&
-      !aiThinking
-    ) {
+      !aiThinking &&
+      (gameMode === 'ai-vs-ai' ||
+        (gameMode === 'human-vs-ai' && gameState.currentPlayer === 'player2'));
+
+    if (shouldMakeAIMove) {
       const timer = setTimeout(() => {
         try {
           makeAIMove();
@@ -63,7 +66,7 @@ export default function ConnectFour() {
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [gameState.gameStatus, gameState.currentPlayer, aiThinking, makeAIMove]);
+  }, [gameState.gameStatus, gameState.currentPlayer, aiThinking, makeAIMove, gameMode]);
 
   // Handle game completion sounds
   useEffect(() => {
@@ -162,7 +165,7 @@ export default function ConnectFour() {
               <h1 className="text-4xl font-bold text-white mb-2 title-glow">Connect 4</h1>
               <p className="text-gray-300 text-sm">Choose your AI opponent and start playing!</p>
             </motion.div>
-            
+
             <AISelectionPanel onStartGame={handleStartGame} />
           </div>
         ) : (
@@ -190,6 +193,8 @@ export default function ConnectFour() {
               soundEnabled={soundEnabled}
               onToggleSound={toggleSound}
               onShowHowToPlay={handleShowHowToPlay}
+              watchMode={gameMode === 'ai-vs-ai'}
+              gameMode={gameMode}
               data-testid="game-board-component"
             />
           </div>

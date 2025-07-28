@@ -9,9 +9,14 @@ import { Crown, Zap, Trophy, XCircle } from 'lucide-react';
 interface GameStatusProps {
   gameState: GameState;
   aiThinking: boolean;
+  gameMode?: 'human-vs-human' | 'human-vs-ai' | 'ai-vs-ai';
 }
 
-export default function GameStatus({ gameState, aiThinking }: GameStatusProps) {
+export default function GameStatus({
+  gameState,
+  aiThinking,
+  gameMode = 'human-vs-ai',
+}: GameStatusProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -36,6 +41,13 @@ export default function GameStatus({ gameState, aiThinking }: GameStatusProps) {
     }
 
     if (gameState.currentPlayer === 'player1') {
+      if (gameMode === 'ai-vs-ai') {
+        return {
+          text: aiThinking ? 'Red AI thinking...' : "Red AI's turn",
+          icon: Crown,
+          color: 'text-red-400',
+        };
+      }
       return {
         text: "Red's turn",
         icon: Crown,
@@ -44,13 +56,13 @@ export default function GameStatus({ gameState, aiThinking }: GameStatusProps) {
     } else {
       if (aiThinking) {
         return {
-          text: 'Yellow thinking...',
+          text: gameMode === 'ai-vs-ai' ? 'Yellow AI thinking...' : 'Yellow thinking...',
           icon: Zap,
           color: 'text-yellow-400',
         };
       }
       return {
-        text: "Yellow's turn",
+        text: gameMode === 'ai-vs-ai' ? "Yellow AI's turn" : "Yellow's turn",
         icon: Zap,
         color: 'text-yellow-400',
       };

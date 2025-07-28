@@ -22,6 +22,7 @@ interface GameBoardProps {
   onToggleSound: () => void;
   onShowHowToPlay: () => void;
   watchMode?: boolean;
+  gameMode?: 'human-vs-human' | 'human-vs-ai' | 'ai-vs-ai';
 }
 
 export default function GameBoard({
@@ -32,6 +33,7 @@ export default function GameBoard({
   onToggleSound,
   onShowHowToPlay,
   watchMode = false,
+  gameMode = 'human-vs-ai',
 }: GameBoardProps) {
   const [celebrations, setCelebrations] = useState<
     Array<{ id: string; position: { x: number; y: number }; player: Player }>
@@ -158,7 +160,7 @@ export default function GameBoard({
           transition={{ duration: 0.5 }}
         >
           <div className="text-center mb-3">
-            <GameStatus gameState={gameState} aiThinking={aiThinking} />
+            <GameStatus gameState={gameState} aiThinking={aiThinking} gameMode={gameMode} />
           </div>
           <div className="grid grid-cols-7 gap-1 bg-black/20 p-2 rounded-lg backdrop-blur relative">
             {gameState.board.map((column, colIndex) => {

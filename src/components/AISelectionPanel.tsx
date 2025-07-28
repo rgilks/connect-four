@@ -36,6 +36,7 @@ export default function AISelectionPanel({ onStartGame }: AISelectionPanelProps)
 
   const handleAISelection = (aiType: AIType) => {
     actions.setAI(aiType);
+    actions.setGameMode('human-vs-ai');
     actions.reset();
     onStartGame?.();
   };

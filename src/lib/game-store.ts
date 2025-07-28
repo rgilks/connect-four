@@ -80,8 +80,15 @@ export const useGameStore = create<GameStore>()(
           });
         },
         makeAIMove: async () => {
-          const { gameState, selectedAI } = get();
-          if (gameState.gameStatus !== 'playing' || gameState.currentPlayer !== 'player2') return;
+          const { gameState, selectedAI, gameMode } = get();
+
+          // In AI vs AI mode, both players are AI
+          // In human vs AI mode, only player2 is AI
+          const isAITurn =
+            gameMode === 'ai-vs-ai' ||
+            (gameMode === 'human-vs-ai' && gameState.currentPlayer === 'player2');
+
+          if (gameState.gameStatus !== 'playing' || !isAITurn) return;
 
           set(state => {
             state.aiThinking = true;
@@ -90,19 +97,24 @@ export const useGameStore = create<GameStore>()(
           // Add a small delay to make AI thinking visible
           setTimeout(async () => {
             const currentState = get().gameState;
-            if (currentState.gameStatus === 'playing' && currentState.currentPlayer === 'player2') {
+            const currentGameMode = get().gameMode;
+            const isStillAITurn =
+              currentGameMode === 'ai-vs-ai' ||
+              (currentGameMode === 'human-vs-ai' && currentState.currentPlayer === 'player2');
+
+            if (currentState.gameStatus === 'playing' && isStillAITurn) {
               try {
                 const aiColumn = await makeAIMove(currentState, selectedAI);
                 // Set pending move for AI animation
                 set(state => {
-                  state.pendingMove = { column: aiColumn, player: 'player2' };
+                  state.pendingMove = { column: aiColumn, player: currentState.currentPlayer };
                   state.aiThinking = false;
                 });
 
                 // Complete the AI move after animation delay
                 setTimeout(() => {
                   const { gameState: updatedState, pendingMove } = get();
-                  if (pendingMove && pendingMove.player === 'player2') {
+                  if (pendingMove) {
                     const newState = makeMoveLogic(updatedState, pendingMove.column);
                     set(state => {
                       state.gameState = newState;
