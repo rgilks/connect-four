@@ -244,11 +244,8 @@ mod tests {
 
         // Set up a threat for Player 2
         state.make_move(0).unwrap();
-        state.current_player = Player::Player2;
         state.make_move(1).unwrap();
-        state.current_player = Player::Player2;
         state.make_move(2).unwrap();
-        state.current_player = Player::Player1; // Player 1's turn
 
         let response = ai.get_best_move(&state);
         // Should have a valid move (untrained ML AI may not choose optimal blocking move)

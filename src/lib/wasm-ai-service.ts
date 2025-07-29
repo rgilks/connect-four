@@ -147,7 +147,7 @@ class WASMAIService {
     };
   }
 
-  private async loadGeneticParams(): Promise<Record<string, number>> {
+  private async loadGeneticParams(): Promise<Record<string, string | number | string[]>> {
     try {
       // Try to load from the evolved.json file
       const response = await fetch('/ml/data/genetic_params/evolved.json');
@@ -158,14 +158,25 @@ class WASMAIService {
       console.warn('Failed to load evolved genetic parameters, using defaults:', error);
     }
 
-    // Fallback to default parameters
+    // Fallback to default parameters (matching Rust GeneticParams::default())
     return {
-      center_control_weight: 1.0,
-      piece_count_weight: 0.5,
-      threat_weight: 2.0,
-      mobility_weight: 0.8,
-      vertical_control_weight: 1.2,
-      horizontal_control_weight: 1.0,
+      id: 'default-fallback',
+      parent_ids: [],
+      generation: 0,
+      win_score: 10000,
+      loss_score: -10000,
+      center_column_value: 165,
+      adjacent_center_value: 97,
+      outer_column_value: 17,
+      edge_column_value: 6,
+      row_height_weight: 1.798,
+      center_control_weight: 2.022,
+      piece_count_weight: 0.965,
+      threat_weight: 1.588,
+      mobility_weight: 1.453,
+      vertical_control_weight: 2.862,
+      horizontal_control_weight: 1.344,
+      defensive_weight: 1.372,
     };
   }
 
