@@ -69,7 +69,7 @@ cargo test test_ml_v2_vs_minimax_ai -- --nocapture
 **Quick run**:
 
 ```bash
-# Default (50 games per match, EMM depths 1-6)
+# Default (50 games per match, MM depths 1-6)
 cargo test test_ai_matrix -- --nocapture
 
 # Fast test (10 games per match)
@@ -142,7 +142,7 @@ cargo test -- --nocapture
 ### **AI Comparison Tests** (Before Releases)
 
 ```bash
-# Default comparison (50 games per match, EMM depths 1-6)
+# Default comparison (50 games per match, MM depths 1-6)
 cargo test test_ai_matrix -- --nocapture
 
 # Quick comparison (10 games per match)
@@ -194,8 +194,8 @@ For the latest detailed performance results, see [AI-MATRIX-RESULTS.md](../../do
 
 Based on test results:
 
-- **Production**: EMM-3 (Depth 3) - Best overall performance (see [AI-MATRIX-RESULTS.md](../../docs/AI-MATRIX-RESULTS.md))
-- **Real-time**: EMM-1/2 - Very fast and suitable for interactive play
+- **Production**: MM-3 (Depth 3) - Best overall performance (see [AI-MATRIX-RESULTS.md](../../docs/AI-MATRIX-RESULTS.md))
+- **Real-time**: MM-1/2 - Very fast and suitable for interactive play
 - **ML Alternative**: PyTorch V5 - Strong ML performance
 - **Educational**: Heuristic AI - Good for understanding game strategy
 - **Testing**: Random AI - Baseline comparison

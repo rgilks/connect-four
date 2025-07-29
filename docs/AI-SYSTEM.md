@@ -80,9 +80,9 @@ The codebase contains a complete Rust/WASM AI system that's now integrated:
 - Updated transposition table lookup to consider player perspective
 
 **Results**: Now deeper AIs perform better as expected:
-- EMM-Depth6: 66.8% average win rate (best)
-- EMM-Depth5: 61.2% average win rate
-- EMM-Depth1: 58.8% average win rate
+- MM-Depth6: 66.8% average win rate (best)
+- MM-Depth5: 61.2% average win rate
+- MM-Depth1: 58.8% average win rate
 - Random: 25.8% average win rate (worst)
 
 ## Model File Management
@@ -114,15 +114,15 @@ ml/data/weights/
 
 Based on comprehensive testing:
 
-1. **EMM-Depth1**: 78.2% average win rate (Best performance)
-2. **EMM-Depth2**: 70.0% average win rate (Very fast)
-3. **EMM-Depth6**: 67.3% average win rate (Strong but slow)
+1. **MM-Depth1**: 78.2% average win rate (Best performance)
+2. **MM-Depth2**: 70.0% average win rate (Very fast)
+3. **MM-Depth6**: 67.3% average win rate (Strong but slow)
 4. **ML-Simple**: 45.5% average win rate (Fast, lightweight)
 
 ## Recommendations
 
-- **Production**: Use EMM-Depth2 for best performance
-- **Real-time**: Use EMM-Depth1 for speed
+- **Production**: Use MM-Depth2 for best performance
+- **Real-time**: Use MM-Depth1 for speed
 - **ML**: Use simple model for lightweight AI
 - **Testing**: Use Random AI for baseline
 

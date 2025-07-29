@@ -110,8 +110,8 @@ The game features a sophisticated dual AI system:
 
 Latest AI matrix test results show:
 
-- **EMM-Depth6**: 82.6% average win rate (strongest)
-- **EMM-Depth3**: 45.7% average win rate (balanced)
+- **MM-Depth6**: 82.6% average win rate (strongest)
+- **MM-Depth3**: 45.7% average win rate (balanced)
 - **Heuristic**: 34.3% average win rate (educational)
 
 See **[AI-MATRIX-RESULTS.md](./AI-MATRIX-RESULTS.md)** for detailed metrics.

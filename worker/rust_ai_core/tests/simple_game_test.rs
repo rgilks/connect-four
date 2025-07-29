@@ -7,8 +7,8 @@ fn test_simple_game() {
     let mut game = GameState::new();
     let mut ai = AI::new();
 
-    // Play a simple game: EMM-Depth6 vs Random
-    println!("Playing EMM-Depth6 vs Random...");
+    // Play a simple game: MM-Depth6 vs Random
+    println!("Playing MM-Depth6 vs Random...");
 
     for move_num in 1..=10 {
         let current_player = game.current_player;
@@ -20,9 +20,9 @@ fn test_simple_game() {
         );
 
         let best_move = if current_player == Player::Player1 {
-            // EMM AI (Player1)
+            // MM AI (Player1)
             let (move_result, evaluations) = ai.get_best_move(&game, 6);
-            println!("  EMM-Depth6 chooses: {:?}", move_result);
+            println!("  MM-Depth6 chooses: {:?}", move_result);
             println!("  Evaluations:");
             for eval in &evaluations[..evaluations.len().min(3)] {
                 println!("    Column {}: Score {:.2}", eval.column, eval.score);

@@ -18,7 +18,7 @@
   "ml_wins_playing_second": 30,
   "performance_rating": "⭐⭐⭐⭐⭐",
   "model_rank": 1,
-  "notes": "PyTorch V5 model shows excellent performance with 49% win rate against expectiminimax AI and 61.7% average win rate against other ML models. Ready for production use.",
+  "notes": "PyTorch V5 model shows excellent performance with 49% win rate against Minimax AI and 61.7% average win rate against other ML models. Ready for production use.",
   "training_config": {
     "epochs": 2000,
     "games_per_epoch": 100,

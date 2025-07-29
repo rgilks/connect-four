@@ -7,8 +7,8 @@ fn get_evolved_params() -> GeneticParams {
 }
 
 #[test]
-fn test_ml_vs_expectiminimax_ai() {
-    println!("🤖 ML vs Expectiminimax AI Test");
+fn test_ml_vs_minimax_ai() {
+    println!("🤖 ML vs Minimax AI Test");
     println!("{}", "=".repeat(40));
 
     let evolved_params = get_evolved_params();
@@ -23,17 +23,17 @@ fn test_ml_vs_expectiminimax_ai() {
     println!("🎮 Playing {} games...", num_games);
 
     let mut ml_wins = 0;
-    let mut emm_wins = 0;
+    let mut mm_wins = 0;
     let mut total_moves = 0;
     let mut ml_total_time = 0;
-    let mut emm_total_time = 0;
+    let mut mm_total_time = 0;
 
     for game_num in 0..num_games {
         let mut game_state = GameState::with_genetic_params(evolved_params.clone());
         let mut moves_played = 0;
         let max_moves = 42; // Maximum moves in Connect Four (6x7 board)
         let mut ml_time = 0;
-        let mut emm_time = 0;
+        let mut mm_time = 0;
 
         while !game_state.is_game_over() && moves_played < max_moves {
             let start_time = Instant::now();
@@ -41,8 +41,8 @@ fn test_ml_vs_expectiminimax_ai() {
                 let response = ml_ai.get_best_move(&game_state);
                 response.r#move
             } else {
-                let mut emm_ai = AI::new();
-                let (move_option, _) = emm_ai.get_best_move(&game_state, 3);
+                let mut mm_ai = AI::new();
+                let (move_option, _) = mm_ai.get_best_move(&game_state, 3);
                 move_option
             };
             let end_time = Instant::now();
@@ -51,7 +51,7 @@ fn test_ml_vs_expectiminimax_ai() {
             if game_state.current_player == Player::Player1 {
                 ml_time += move_time;
             } else {
-                emm_time += move_time;
+                mm_time += move_time;
             }
 
             if let Some(column) = best_move {
@@ -72,13 +72,13 @@ fn test_ml_vs_expectiminimax_ai() {
             if winner == Player::Player1 {
                 ml_wins += 1;
             } else {
-                emm_wins += 1;
+                mm_wins += 1;
             }
         } else {
             // Game ended in draw, evaluate final position
             let final_eval = game_state.evaluate();
             if final_eval > 0 {
-                emm_wins += 1; // EMM (Player2) wins
+                mm_wins += 1; // MM (Player2) wins
             } else {
                 ml_wins += 1; // ML (Player1) wins
             }
@@ -86,7 +86,7 @@ fn test_ml_vs_expectiminimax_ai() {
 
         total_moves += moves_played;
         ml_total_time += ml_time;
-        emm_total_time += emm_time;
+        mm_total_time += mm_time;
 
         if (game_num + 1) % 10 == 0 {
             println!("Completed {} games...", game_num + 1);
@@ -94,39 +94,39 @@ fn test_ml_vs_expectiminimax_ai() {
     }
 
     let ml_win_rate = (ml_wins as f64 / num_games as f64) * 100.0;
-    let emm_win_rate = (emm_wins as f64 / num_games as f64) * 100.0;
+    let mm_win_rate = (mm_wins as f64 / num_games as f64) * 100.0;
     let avg_moves = total_moves as f64 / num_games as f64;
     let ml_avg_time = ml_total_time as f64 / num_games as f64;
-    let emm_avg_time = emm_total_time as f64 / num_games as f64;
+    let mm_avg_time = mm_total_time as f64 / num_games as f64;
 
     println!("\n📊 Results:");
     println!("{}", "=".repeat(30));
     println!("ML AI wins: {} ({:.1}%)", ml_wins, ml_win_rate);
-    println!("EMM AI wins: {} ({:.1}%)", emm_wins, emm_win_rate);
+    println!("MM AI wins: {} ({:.1}%)", mm_wins, mm_win_rate);
     println!("Average moves per game: {:.1}", avg_moves);
     println!("ML AI avg time per game: {:.1}ms", ml_avg_time);
-    println!("EMM AI avg time per game: {:.1}ms", emm_avg_time);
+    println!("MM AI avg time per game: {:.1}ms", mm_avg_time);
 
     println!("\n🎯 Performance Analysis:");
     println!("{}", "=".repeat(25));
 
-    if ml_win_rate > emm_win_rate + 5.0 {
+    if ml_win_rate > mm_win_rate + 5.0 {
         println!("✅ ML AI shows significant advantage!");
-    } else if ml_win_rate > emm_win_rate {
+    } else if ml_win_rate > mm_win_rate {
         println!("✅ ML AI shows slight advantage");
-    } else if ml_win_rate < emm_win_rate - 5.0 {
-        println!("❌ EMM AI (with evolved params) shows significant advantage");
+    } else if ml_win_rate < mm_win_rate - 5.0 {
+        println!("❌ MM AI (with evolved params) shows significant advantage");
     } else {
         println!("🤝 AI performance is roughly equal");
     }
 
     println!("\n⚡ Speed Analysis:");
     println!("{}", "=".repeat(20));
-    if ml_avg_time < emm_avg_time * 0.5 {
+    if ml_avg_time < mm_avg_time * 0.5 {
         println!("🚀 ML AI is significantly faster");
-    } else if ml_avg_time < emm_avg_time {
+    } else if ml_avg_time < mm_avg_time {
         println!("⚡ ML AI is faster");
-    } else if ml_avg_time > emm_avg_time * 2.0 {
+    } else if ml_avg_time > mm_avg_time * 2.0 {
         println!("🐌 ML AI is significantly slower");
     } else {
         println!("⚖️  AI speeds are comparable");
@@ -134,7 +134,7 @@ fn test_ml_vs_expectiminimax_ai() {
 
     println!("\n📈 Recommendations:");
     println!("{}", "=".repeat(20));
-    if ml_win_rate > 55.0 && ml_avg_time < emm_avg_time {
+    if ml_win_rate > 55.0 && ml_avg_time < mm_avg_time {
         println!("🎉 ML AI is ready for production use!");
     } else if ml_win_rate > 50.0 {
         println!("✅ ML AI shows promise, consider further training");
@@ -142,5 +142,3 @@ fn test_ml_vs_expectiminimax_ai() {
         println!("🔧 ML AI needs improvement, review training data and parameters");
     }
 }
-
-

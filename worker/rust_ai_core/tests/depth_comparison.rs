@@ -3,7 +3,7 @@ use std::time::Instant;
 
 #[test]
 fn test_depth_comparison() {
-    println!("=== EMM Depth Comparison Test ===");
+    println!("=== MM Depth Comparison Test ===");
 
     let mut game = GameState::new();
     let mut ai_depth4 = AI::new();

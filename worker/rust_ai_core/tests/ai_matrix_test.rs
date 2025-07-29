@@ -52,14 +52,14 @@ fn get_evolved_params() -> GeneticParams {
 enum AIType {
     Random,
     Heuristic,
-    EMMDepth1,
-    EMMDepth2,
-    EMMDepth3,
-    EMMDepth4,
-    EMMDepth5,
-    EMMDepth6,
-    EMMDepth7,
-    EMMDepth20,
+    MMDepth1,
+    MMDepth2,
+    MMDepth3,
+    MMDepth4,
+    MMDepth5,
+    MMDepth6,
+    MMDepth7,
+    MMDepth20,
     MLSimple,
 }
 
@@ -68,14 +68,14 @@ impl AIType {
         match self {
             AIType::Random => "Random",
             AIType::Heuristic => "Heuristic",
-            AIType::EMMDepth1 => "EMM-Depth1",
-            AIType::EMMDepth2 => "EMM-Depth2",
-            AIType::EMMDepth3 => "EMM-Depth3",
-            AIType::EMMDepth4 => "EMM-Depth4",
-            AIType::EMMDepth5 => "EMM-Depth5",
-            AIType::EMMDepth6 => "EMM-Depth6",
-            AIType::EMMDepth7 => "EMM-Depth7",
-            AIType::EMMDepth20 => "EMM-Depth20",
+            AIType::MMDepth1 => "MM-Depth1",
+            AIType::MMDepth2 => "MM-Depth2",
+            AIType::MMDepth3 => "MM-Depth3",
+            AIType::MMDepth4 => "MM-Depth4",
+            AIType::MMDepth5 => "MM-Depth5",
+            AIType::MMDepth6 => "MM-Depth6",
+            AIType::MMDepth7 => "MM-Depth7",
+            AIType::MMDepth20 => "MM-Depth20",
             AIType::MLSimple => "ML-Simple",
         }
     }
@@ -136,12 +136,12 @@ impl AIPlayer for HeuristicAI {
     }
 }
 
-struct ExpectiminimaxAI {
+struct MinimaxAI {
     ai: AI,
     depth: u8,
 }
 
-impl ExpectiminimaxAI {
+impl MinimaxAI {
     fn new(depth: u8) -> Self {
         Self {
             ai: AI::new(),
@@ -150,7 +150,7 @@ impl ExpectiminimaxAI {
     }
 }
 
-impl AIPlayer for ExpectiminimaxAI {
+impl AIPlayer for MinimaxAI {
     fn get_move(&mut self, game_state: &GameState) -> Option<usize> {
         let (best_move, _) = self.ai.get_best_move(game_state, self.depth);
         best_move.map(|m| m as usize)
@@ -342,24 +342,24 @@ fn create_ai_player(ai_type: &AIType) -> Result<Box<dyn AIPlayer>, Box<dyn std::
     match ai_type {
         AIType::Random => Ok(Box::new(RandomAI)),
         AIType::Heuristic => Ok(Box::new(HeuristicAI)),
-        AIType::EMMDepth1 => Ok(Box::new(ExpectiminimaxAI::new(1))),
-        AIType::EMMDepth2 => Ok(Box::new(ExpectiminimaxAI::new(2))),
-        AIType::EMMDepth3 => Ok(Box::new(ExpectiminimaxAI::new(3))),
-        AIType::EMMDepth4 => Ok(Box::new(ExpectiminimaxAI::new(4))),
-        AIType::EMMDepth5 => Ok(Box::new(ExpectiminimaxAI::new(5))),
-        AIType::EMMDepth6 => Ok(Box::new(ExpectiminimaxAI::new(6))),
-        AIType::EMMDepth7 => {
+        AIType::MMDepth1 => Ok(Box::new(MinimaxAI::new(1))),
+        AIType::MMDepth2 => Ok(Box::new(MinimaxAI::new(2))),
+        AIType::MMDepth3 => Ok(Box::new(MinimaxAI::new(3))),
+        AIType::MMDepth4 => Ok(Box::new(MinimaxAI::new(4))),
+        AIType::MMDepth5 => Ok(Box::new(MinimaxAI::new(5))),
+        AIType::MMDepth6 => Ok(Box::new(MinimaxAI::new(6))),
+        AIType::MMDepth7 => {
             // Only run depth 7 if explicitly requested
             if std::env::var("RUN_SLOW_TESTS").is_ok() {
-                Ok(Box::new(ExpectiminimaxAI::new(7)))
+                Ok(Box::new(MinimaxAI::new(7)))
             } else {
                 Err("Depth 7 tests require RUN_SLOW_TESTS=1".into())
             }
         }
-        AIType::EMMDepth20 => {
+        AIType::MMDepth20 => {
             // Only run depth 20 if explicitly requested
             if std::env::var("RUN_SLOW_TESTS").is_ok() {
-                Ok(Box::new(ExpectiminimaxAI::new(20)))
+                Ok(Box::new(MinimaxAI::new(20)))
             } else {
                 Err("Depth 20 tests require RUN_SLOW_TESTS=1".into())
             }
@@ -430,7 +430,7 @@ fn generate_recommendations(
     }
 
     // General recommendations
-    recommendations.push("Use EMM-Depth3 for best performance/speed balance".to_string());
+    recommendations.push("Use MM-Depth3 for best performance/speed balance".to_string());
     recommendations.push("Use Random AI for baseline testing".to_string());
     recommendations.push("Use Heuristic AI for educational purposes".to_string());
 
@@ -461,19 +461,19 @@ fn test_ai_matrix() {
     let mut ai_types = vec![
         AIType::Random,
         AIType::Heuristic,
-        AIType::EMMDepth1,
-        AIType::EMMDepth2,
-        AIType::EMMDepth3,
-        AIType::EMMDepth4,
-        AIType::EMMDepth5,
-        AIType::EMMDepth6,
+        AIType::MMDepth1,
+        AIType::MMDepth2,
+        AIType::MMDepth3,
+        AIType::MMDepth4,
+        AIType::MMDepth5,
+        AIType::MMDepth6,
         AIType::MLSimple,
     ];
 
     // Add depth 7 and 20 only if slow tests are enabled
     if std::env::var("RUN_SLOW_TESTS").is_ok() {
-        ai_types.push(AIType::EMMDepth7);
-        ai_types.push(AIType::EMMDepth20);
+        ai_types.push(AIType::MMDepth7);
+        ai_types.push(AIType::MMDepth20);
     }
 
     println!("Testing {} AI types:", ai_types.len());

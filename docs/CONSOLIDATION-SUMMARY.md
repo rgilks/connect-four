@@ -15,7 +15,7 @@ The documentation has been consolidated from 12+ scattered files into a clean, o
 | `CURRENT-STATE.md`              | `README.md` + `DEVELOPMENT.md` | Status information distributed to relevant docs   |
 | `INTEGRATION-COMPLETE.md`       | `DEVELOPMENT.md`               | Integration status moved to development guide     |
 | `WASM-INTEGRATION-PLAN.md`      | `DEVELOPMENT.md`               | Integration details moved to development guide    |
-| `EMM-VS-HEURISTIC-ANALYSIS.md`  | `AI-SYSTEM.md`                 | Analysis results moved to AI system documentation |
+| `MM-VS-HEURISTIC-ANALYSIS.md`  | `AI-SYSTEM.md`                 | Analysis results moved to AI system documentation |
 
 ### ✅ Updated Files
 

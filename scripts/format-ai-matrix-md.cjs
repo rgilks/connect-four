@@ -119,7 +119,7 @@ function formatMatrixTable(matrixLines) {
   const headerLine = matrixLines[headerIdx];
 
   // Parse fixed-width columns more carefully
-  // The format is: "AI Type         Random     Heuristic  EMM-Depth1 EMM-Depth2 EMM-Depth3 ML-Fast    ML-V2      ML-V4      ML-Hybrid  ML-PyTorch-V5"
+  // The format is: "AI Type         Random     Heuristic  MM-Depth1 MM-Depth2 MM-Depth3 ML-Fast    ML-V2      ML-V4      ML-Hybrid  ML-PyTorch-V5"
   const colNames = [];
   let current = '';
   let inWord = false;

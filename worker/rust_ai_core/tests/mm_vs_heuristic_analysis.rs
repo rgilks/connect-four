@@ -2,8 +2,8 @@ use connect_four_ai_core::{GameState, HeuristicAI, AI};
 use std::time::Instant;
 
 #[test]
-fn test_emm_vs_heuristic_analysis() {
-    println!("🔍 EMM vs Heuristic Analysis");
+fn test_mm_vs_heuristic_analysis() {
+    println!("🔍 MM vs Heuristic Analysis");
     println!("{}", "=".repeat(50));
 
     // Test early game positions where strategic concepts matter
@@ -65,24 +65,24 @@ fn test_evaluation_differences() {
 
     // Test what each AI sees
     let mut heuristic_ai = HeuristicAI::new();
-    let mut emm_ai = AI::new();
+    let mut mm_ai = AI::new();
 
     let (heuristic_move, heuristic_evals) = heuristic_ai.get_best_move(&game);
-    let (emm_move, emm_evals) = emm_ai.get_best_move(&game, 3);
+    let (mm_move, mm_evals) = mm_ai.get_best_move(&game, 3);
 
     println!("\nHeuristic AI evaluations:");
     for eval in &heuristic_evals {
         println!("  Column {}: Score {:.2}", eval.column, eval.score);
     }
 
-    println!("\nEMM-Depth3 evaluations:");
-    for eval in &emm_evals {
+    println!("\nMM-Depth3 evaluations:");
+    for eval in &mm_evals {
         println!("  Column {}: Score {:.2}", eval.column, eval.score);
     }
 
     println!("\nChoices:");
     println!("  Heuristic: {:?}", heuristic_move);
-    println!("  EMM-Depth3: {:?}", emm_move);
+    println!("  MM-Depth3: {:?}", mm_move);
 
     // This demonstrates that evaluation function quality is crucial
     // A good heuristic can make better decisions than deeper search with poor evaluation
@@ -142,19 +142,19 @@ fn test_position(game: &GameState, description: &str) {
     println!("{} - Evaluation: {}", description, game.evaluate());
 
     let mut heuristic_ai = HeuristicAI::new();
-    let mut emm_ai = AI::new();
+    let mut mm_ai = AI::new();
 
     let (heuristic_move, _) = heuristic_ai.get_best_move(game);
-    let (emm_move, _) = emm_ai.get_best_move(game, 3);
+    let (mm_move, _) = mm_ai.get_best_move(game, 3);
 
     println!(
-        "Heuristic: {:?}, EMM-Depth3: {:?}",
-        heuristic_move, emm_move
+        "Heuristic: {:?}, MM-Depth3: {:?}",
+        heuristic_move, mm_move
     );
 
     // Show evaluation differences if they exist
-    if heuristic_move != emm_move {
-        println!("⚠️  DIFFERENCE DETECTED: Heuristics and EMM disagree!");
+    if heuristic_move != mm_move {
+        println!("⚠️  DIFFERENCE DETECTED: Heuristics and MM disagree!");
         println!("   This demonstrates how heuristics can capture strategic concepts");
         println!("   that tactical search might miss.");
     }

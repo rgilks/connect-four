@@ -7,8 +7,8 @@ fn get_evolved_params() -> GeneticParams {
 }
 
 #[test]
-fn test_expectiminimax_diagnostic() {
-    println!("🔍 Expectiminimax Diagnostic Test");
+fn test_minimax_diagnostic() {
+    println!("🔍 Minimax Diagnostic Test");
     println!("{}", "=".repeat(40));
 
     let evolved_params = get_evolved_params();

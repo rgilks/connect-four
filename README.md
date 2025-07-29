@@ -94,12 +94,12 @@ python3 ml/scripts/simple_train.py --epochs 50 --num-games 1000 --batch-size 64 
 
 Based on comprehensive testing:
 
-1. **EMM-Depth1**: 81.8% average win rate (Best performance)
-2. **EMM-Depth2**: 81.8% average win rate (Very fast)
-3. **EMM-Depth3**: 65.9% average win rate (Fast)
-4. **EMM-Depth5**: 63.6% average win rate (Moderate)
-5. **EMM-Depth4**: 63.6% average win rate (Moderate)
-6. **EMM-Depth6**: 56.8% average win rate (Strong but slow)
+1. **MM-Depth1**: 81.8% average win rate (Best performance)
+2. **MM-Depth2**: 81.8% average win rate (Very fast)
+3. **MM-Depth3**: 65.9% average win rate (Fast)
+4. **MM-Depth5**: 63.6% average win rate (Moderate)
+5. **MM-Depth4**: 63.6% average win rate (Moderate)
+6. **MM-Depth6**: 56.8% average win rate (Strong but slow)
 7. **Heuristic**: 56.8% average win rate (Educational)
 8. **ML-Default**: 38.6% average win rate (Fast, lightweight)
 9. **ML-PolicyFix**: 34.1% average win rate (Fast, lightweight)
