@@ -60,10 +60,7 @@ enum AIType {
     EMMDepth6,
     EMMDepth7,
     EMMDepth20,
-    MLDefault,
-    MLSelfPlay,
-    MLIntensive,
-    MLPolicyFix,
+    MLSimple,
 }
 
 impl AIType {
@@ -79,10 +76,7 @@ impl AIType {
             AIType::EMMDepth6 => "EMM-Depth6",
             AIType::EMMDepth7 => "EMM-Depth7",
             AIType::EMMDepth20 => "EMM-Depth20",
-            AIType::MLDefault => "ML-Default",
-            AIType::MLSelfPlay => "ML-SelfPlay",
-            AIType::MLIntensive => "ML-Intensive",
-            AIType::MLPolicyFix => "ML-PolicyFix",
+            AIType::MLSimple => "ML-Simple",
         }
     }
 }
@@ -167,54 +161,28 @@ impl AIPlayer for ExpectiminimaxAI {
     }
 }
 
-struct MLDefaultAI {
+struct MLSimpleAI {
     ai: MLAI,
 }
 
-impl MLDefaultAI {
-    fn new() -> Self {
-        Self { ai: MLAI::new() }
-    }
-}
-
-impl AIPlayer for MLDefaultAI {
-    fn get_move(&mut self, game_state: &GameState) -> Option<usize> {
-        let response = self.ai.get_best_move(game_state);
-        response.r#move.map(|m| m as usize)
-    }
-
-    fn reset(&mut self) {
-        // ML AI doesn't need reset
-    }
-}
-
-struct MLSelfPlayAI {
-    ai: MLAI,
-}
-
-impl MLSelfPlayAI {
+impl MLSimpleAI {
     fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let mut ai = MLAI::new();
 
-        // Try to load self-play weights
-        let weights_path = "ml/data/weights/ml_ai_weights_self_play.json";
+        // Try to load simple model weights
+        let weights_path = "ml/data/weights/simple_model_enhanced.json";
         if let Ok(weights_data) = std::fs::read_to_string(weights_path) {
             if let Ok(weights) = serde_json::from_str::<serde_json::Value>(&weights_data) {
-                if let (Some(value_weights), Some(policy_weights)) = (
-                    weights.get("value_weights").and_then(|w| w.as_array()),
-                    weights.get("policy_weights").and_then(|w| w.as_array()),
-                ) {
-                    let value_weights: Vec<f32> = value_weights
-                        .iter()
-                        .filter_map(|w| w.as_f64().map(|f| f as f32))
-                        .collect();
-                    let policy_weights: Vec<f32> = policy_weights
-                        .iter()
-                        .filter_map(|w| w.as_f64().map(|f| f as f32))
-                        .collect();
+                if let (Some(value_network), Some(policy_network)) =
+                    (weights.get("value_network"), weights.get("policy_network"))
+                {
+                    // Extract weights from the network structure
+                    let value_weights = extract_weights_from_network(value_network);
+                    let policy_weights = extract_weights_from_network(policy_network);
 
                     if !value_weights.is_empty() && !policy_weights.is_empty() {
                         ai.load_weights(&value_weights, &policy_weights);
+                        println!("✅ Loaded simple model (297KB, 50 epochs, 1000 games)");
                     }
                 }
             }
@@ -224,115 +192,31 @@ impl MLSelfPlayAI {
     }
 }
 
-impl AIPlayer for MLSelfPlayAI {
-    fn get_move(&mut self, game_state: &GameState) -> Option<usize> {
-        let response = self.ai.get_best_move(game_state);
-        response.r#move.map(|m| m as usize)
-    }
+fn extract_weights_from_network(network: &serde_json::Value) -> Vec<f32> {
+    let mut weights = Vec::new();
 
-    fn reset(&mut self) {
-        // ML AI doesn't need reset
-    }
-}
-
-struct MLIntensiveAI {
-    ai: MLAI,
-}
-
-impl MLIntensiveAI {
-    fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let mut ai = MLAI::new();
-
-        // Try to load intensive training weights
-        let weights_path = "ml/data/weights/ml_ai_weights_intensive_13min.json";
-        if let Ok(weights_data) = std::fs::read_to_string(weights_path) {
-            if let Ok(weights) = serde_json::from_str::<serde_json::Value>(&weights_data) {
-                if let (Some(value_weights), Some(policy_weights)) = (
-                    weights
-                        .get("value_network")
-                        .and_then(|w| w.get("weights"))
-                        .and_then(|w| w.as_array()),
-                    weights
-                        .get("policy_network")
-                        .and_then(|w| w.get("weights"))
-                        .and_then(|w| w.as_array()),
-                ) {
-                    let value_weights: Vec<f32> = value_weights
-                        .iter()
-                        .filter_map(|w| w.as_f64().map(|f| f as f32))
-                        .collect();
-                    let policy_weights: Vec<f32> = policy_weights
-                        .iter()
-                        .filter_map(|w| w.as_f64().map(|f| f as f32))
-                        .collect();
-
-                    if !value_weights.is_empty() && !policy_weights.is_empty() {
-                        ai.load_weights(&value_weights, &policy_weights);
-                        println!("✅ Loaded intensive training model (0.5975 validation loss)");
+    if let Some(layers) = network.as_object() {
+        for (layer_name, layer_data) in layers {
+            if layer_name.contains("weight") {
+                if let Some(weight_array) = layer_data.as_array() {
+                    for row in weight_array {
+                        if let Some(row_array) = row.as_array() {
+                            for weight in row_array {
+                                if let Some(weight_value) = weight.as_f64() {
+                                    weights.push(weight_value as f32);
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
-
-        Ok(Self { ai })
-    }
-}
-
-impl AIPlayer for MLIntensiveAI {
-    fn get_move(&mut self, game_state: &GameState) -> Option<usize> {
-        let response = self.ai.get_best_move(game_state);
-        response.r#move.map(|m| m as usize)
     }
 
-    fn reset(&mut self) {
-        // ML AI doesn't need reset
-    }
+    weights
 }
 
-struct MLPolicyFixAI {
-    ai: MLAI,
-}
-
-impl MLPolicyFixAI {
-    fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let mut ai = MLAI::new();
-
-        // Try to load policy fix weights
-        let weights_path = "ml/data/weights/test_policy_fix.json";
-        if let Ok(weights_data) = std::fs::read_to_string(weights_path) {
-            if let Ok(weights) = serde_json::from_str::<serde_json::Value>(&weights_data) {
-                if let (Some(value_weights), Some(policy_weights)) = (
-                    weights
-                        .get("value_network")
-                        .and_then(|w| w.get("weights"))
-                        .and_then(|w| w.as_array()),
-                    weights
-                        .get("policy_network")
-                        .and_then(|w| w.get("weights"))
-                        .and_then(|w| w.as_array()),
-                ) {
-                    let value_weights: Vec<f32> = value_weights
-                        .iter()
-                        .filter_map(|w| w.as_f64().map(|f| f as f32))
-                        .collect();
-                    let policy_weights: Vec<f32> = policy_weights
-                        .iter()
-                        .filter_map(|w| w.as_f64().map(|f| f as f32))
-                        .collect();
-
-                    if !value_weights.is_empty() && !policy_weights.is_empty() {
-                        ai.load_weights(&value_weights, &policy_weights);
-                        println!("✅ Loaded policy fix model (0.5235 validation loss)");
-                    }
-                }
-            }
-        }
-
-        Ok(Self { ai })
-    }
-}
-
-impl AIPlayer for MLPolicyFixAI {
+impl AIPlayer for MLSimpleAI {
     fn get_move(&mut self, game_state: &GameState) -> Option<usize> {
         let response = self.ai.get_best_move(game_state);
         response.r#move.map(|m| m as usize)
@@ -480,18 +364,9 @@ fn create_ai_player(ai_type: &AIType) -> Result<Box<dyn AIPlayer>, Box<dyn std::
                 Err("Depth 20 tests require RUN_SLOW_TESTS=1".into())
             }
         }
-        AIType::MLDefault => Ok(Box::new(MLDefaultAI::new())),
-        AIType::MLSelfPlay => match MLSelfPlayAI::new() {
+        AIType::MLSimple => match MLSimpleAI::new() {
             Ok(ai) => Ok(Box::new(ai)),
-            Err(e) => Err(format!("Failed to load self-play model: {}", e).into()),
-        },
-        AIType::MLIntensive => match MLIntensiveAI::new() {
-            Ok(ai) => Ok(Box::new(ai)),
-            Err(e) => Err(format!("Failed to load intensive training model: {}", e).into()),
-        },
-        AIType::MLPolicyFix => match MLPolicyFixAI::new() {
-            Ok(ai) => Ok(Box::new(ai)),
-            Err(e) => Err(format!("Failed to load policy fix model: {}", e).into()),
+            Err(e) => Err(format!("Failed to load simple model: {}", e).into()),
         },
     }
 }
@@ -592,10 +467,7 @@ fn test_ai_matrix() {
         AIType::EMMDepth4,
         AIType::EMMDepth5,
         AIType::EMMDepth6,
-        AIType::MLDefault,
-        AIType::MLSelfPlay,
-        AIType::MLIntensive,
-        AIType::MLPolicyFix,
+        AIType::MLSimple,
     ];
 
     // Add depth 7 and 20 only if slow tests are enabled

@@ -8,8 +8,8 @@ pub mod wasm_api;
 
 pub mod features;
 pub mod genetic_params;
-pub mod ml_ai;
 pub mod mcts;
+pub mod ml_ai;
 pub mod neural_network;
 pub mod self_play;
 pub mod training;
@@ -646,6 +646,7 @@ impl GameState {
 struct TranspositionEntry {
     evaluation: f32,
     depth: u8,
+    player: Player,
 }
 
 pub struct AI {
@@ -819,7 +820,7 @@ impl AI {
         let state_hash = state.hash();
 
         if let Some(entry) = self.transposition_table.get(&state_hash) {
-            if entry.depth >= depth {
+            if entry.depth >= depth && entry.player == state.current_player {
                 self.transposition_hits += 1;
                 return entry.evaluation;
             }
@@ -827,26 +828,42 @@ impl AI {
 
         if depth == 0 {
             let eval = state.evaluate() as f32;
+            // The evaluation is always from Player1's perspective
+            // We need to adjust it based on the current player
+            let adjusted_eval = if state.current_player == Player::Player1 {
+                eval
+            } else {
+                -eval
+            };
             self.transposition_table.insert(
                 state_hash,
                 TranspositionEntry {
-                    evaluation: eval,
+                    evaluation: adjusted_eval,
                     depth,
+                    player: state.current_player,
                 },
             );
-            return eval;
+            return adjusted_eval;
         }
 
         if state.is_game_over() {
             let eval = state.evaluate() as f32;
+            // The evaluation is always from Player1's perspective
+            // We need to adjust it based on the current player
+            let adjusted_eval = if state.current_player == Player::Player1 {
+                eval
+            } else {
+                -eval
+            };
             self.transposition_table.insert(
                 state_hash,
                 TranspositionEntry {
-                    evaluation: eval,
+                    evaluation: adjusted_eval,
                     depth,
+                    player: state.current_player,
                 },
             );
-            return eval;
+            return adjusted_eval;
         }
 
         self.nodes_evaluated += 1;
@@ -890,6 +907,7 @@ impl AI {
             TranspositionEntry {
                 evaluation: best_score,
                 depth,
+                player: state.current_player,
             },
         );
 

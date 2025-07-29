@@ -609,13 +609,12 @@ class SelfPlayTrainer:
             if val_total_loss < best_val_loss:
                 best_val_loss = val_total_loss
                 patience_counter = 0
-                # Save best model
+                # Save best model (without training_history for smaller file size)
                 self.save_weights(
                     "best_model.json",
                     {
                         "epoch": epoch + 1,
                         "val_loss": val_total_loss,
-                        "training_history": self.training_history,
                     },
                 )
             else:
@@ -624,15 +623,27 @@ class SelfPlayTrainer:
                     logger.info(f"Early stopping at epoch {epoch + 1}")
                     break
 
-        # Save final model
+        # Save final model (without training_history for smaller file size)
         self.save_weights(
             self.config.output_file,
             {
                 "epochs_completed": len(self.training_history["total_loss"]),
                 "final_val_loss": val_total_loss,
-                "training_history": self.training_history,
             },
         )
+        
+        # Save training history separately
+        history_file = Path(self.config.output_file).parent / f"{Path(self.config.output_file).stem}_training_history.json"
+        with open(history_file, 'w') as f:
+            json.dump({
+                "metadata": {
+                    "source_model": Path(self.config.output_file).name,
+                    "epochs": len(self.training_history["total_loss"]),
+                    "final_val_loss": val_total_loss,
+                },
+                "training_history": self.training_history
+            }, f, indent=2)
+        logger.info(f"📊 Training history saved separately: {history_file}")
 
         # Plot training history
         self.plot_training_history()
