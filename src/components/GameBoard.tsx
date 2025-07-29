@@ -148,7 +148,11 @@ export default function GameBoard({
       </AnimatePresence>
       <AnimatePresence>
         {gameState.gameStatus === 'finished' && showWinnerModal && (
-          <GameCompletionOverlay gameState={gameState} onResetGame={onResetGame} />
+          <GameCompletionOverlay
+            gameState={gameState}
+            onResetGame={onResetGame}
+            gameMode={gameMode}
+          />
         )}
       </AnimatePresence>
       <motion.div className="w-full max-w-md mx-auto space-y-3" data-testid="game-board">

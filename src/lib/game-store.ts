@@ -14,6 +14,8 @@ type GameStore = {
   pendingMove: { column: number; player: 'player1' | 'player2' } | null;
   showWinnerModal: boolean;
   selectedAI: AIType;
+  player1AI: AIType;
+  player2AI: AIType;
   gameMode: GameMode;
   actions: {
     initialize: (fromStorage?: boolean) => void;
@@ -24,6 +26,8 @@ type GameStore = {
     reset: () => void;
     showWinnerModal: () => void;
     setAI: (aiType: AIType) => void;
+    setPlayer1AI: (aiType: AIType) => void;
+    setPlayer2AI: (aiType: AIType) => void;
     setGameMode: (mode: GameMode) => void;
   };
 };
@@ -43,6 +47,8 @@ export const useGameStore = create<GameStore>()(
       pendingMove: null,
       showWinnerModal: false,
       selectedAI: 'classic' as AIType,
+      player1AI: 'classic' as AIType,
+      player2AI: 'classic' as AIType,
       gameMode: 'human-vs-ai' as GameMode,
       actions: {
         initialize: () => {
@@ -89,7 +95,7 @@ export const useGameStore = create<GameStore>()(
           });
         },
         makeAIMove: async () => {
-          const { gameState, selectedAI, gameMode } = get();
+          const { gameState, selectedAI, player1AI, player2AI, gameMode } = get();
 
           // In AI vs AI mode, both players are AI
           // In human vs AI mode, only player2 is AI
@@ -113,7 +119,15 @@ export const useGameStore = create<GameStore>()(
 
             if (currentState.gameStatus === 'playing' && isStillAITurn) {
               try {
-                const aiColumn = await makeAIMove(currentState, selectedAI);
+                // Determine which AI to use based on current player
+                let aiTypeToUse: AIType;
+                if (currentGameMode === 'ai-vs-ai') {
+                  aiTypeToUse = currentState.currentPlayer === 'player1' ? player1AI : player2AI;
+                } else {
+                  aiTypeToUse = selectedAI; // For human vs AI, use the selected AI
+                }
+
+                const aiColumn = await makeAIMove(currentState, aiTypeToUse);
                 // Set pending move for AI animation
                 set(state => {
                   state.pendingMove = { column: aiColumn, player: currentState.currentPlayer };
@@ -156,7 +170,7 @@ export const useGameStore = create<GameStore>()(
         },
         reset: () => {
           set(state => {
-            state.gameState = { 
+            state.gameState = {
               board: Array.from({ length: 7 }, () => Array.from({ length: 6 }, () => null)),
               currentPlayer: 'player1',
               gameStatus: 'not_started' as const,
@@ -177,6 +191,18 @@ export const useGameStore = create<GameStore>()(
         setAI: (aiType: AIType) => {
           set(state => {
             state.selectedAI = aiType;
+            // For human vs AI mode, set player2AI to the selected AI
+            state.player2AI = aiType;
+          });
+        },
+        setPlayer1AI: (aiType: AIType) => {
+          set(state => {
+            state.player1AI = aiType;
+          });
+        },
+        setPlayer2AI: (aiType: AIType) => {
+          set(state => {
+            state.player2AI = aiType;
           });
         },
         setGameMode: (mode: GameMode) => {

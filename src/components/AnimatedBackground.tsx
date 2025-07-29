@@ -34,6 +34,11 @@ export default function AnimatedBackground() {
       direction: { x: number; y: number };
       pulse: number;
       pulseSpeed: number;
+      fadeOut: boolean;
+      targetX: number;
+      targetY: number;
+      targetSize: number;
+      targetOpacity: number;
     }> = [];
 
     const colors = [
@@ -71,6 +76,11 @@ export default function AnimatedBackground() {
         },
         pulse: Math.random() * Math.PI * 2,
         pulseSpeed: Math.random() * 0.05 + 0.02,
+        fadeOut: false,
+        targetX: 0,
+        targetY: 0,
+        targetSize: 0,
+        targetOpacity: 0,
       };
     };
 
@@ -89,6 +99,8 @@ export default function AnimatedBackground() {
       color: string;
       life: number;
       width: number;
+      fadeOut: boolean;
+      targetOpacity: number;
     }> = [];
 
     const createLine = () => ({
@@ -100,6 +112,8 @@ export default function AnimatedBackground() {
       color: colors[Math.floor(Math.random() * colors.length)],
       life: 1.0,
       width: Math.random() * 2 + 1,
+      fadeOut: false,
+      targetOpacity: 0,
     });
 
     for (let i = 0; i < 20; i++) {
@@ -115,6 +129,8 @@ export default function AnimatedBackground() {
       color: string;
       life: number;
       direction: { x: number; y: number };
+      fadeOut: boolean;
+      targetOpacity: number;
     }> = [];
 
     const createParticle = () => ({
@@ -128,6 +144,8 @@ export default function AnimatedBackground() {
         x: (Math.random() - 0.5) * 0.3,
         y: (Math.random() - 0.5) * 0.3,
       },
+      fadeOut: false,
+      targetOpacity: 0,
     });
 
     for (let i = 0; i < 40; i++) {
@@ -153,10 +171,31 @@ export default function AnimatedBackground() {
         if (particle.y < -particle.size) particle.y = canvas.height + particle.size;
         if (particle.y > canvas.height + particle.size) particle.y = -particle.size;
 
-        if (particle.life <= 0) {
-          particles.splice(i, 1);
-          particles.push(createParticle());
-          continue;
+        // Smooth fade out when life is low
+        if (particle.life <= 0.1 && !particle.fadeOut) {
+          particle.fadeOut = true;
+          particle.targetOpacity = 0;
+        }
+
+        if (particle.fadeOut) {
+          particle.opacity = Math.max(0, particle.opacity - 0.02);
+          if (particle.opacity <= 0) {
+            particles.splice(i, 1);
+            const newParticle = createParticle();
+            // Smooth transition to new position
+            newParticle.x = particle.x;
+            newParticle.y = particle.y;
+            newParticle.opacity = 0;
+            newParticle.targetOpacity = newParticle.opacity;
+            particles.push(newParticle);
+            continue;
+          }
+        } else {
+          // Smooth fade in
+          particle.opacity = Math.min(
+            particle.opacity + 0.01,
+            particle.targetOpacity || particle.opacity
+          );
         }
 
         ctx.save();
@@ -174,10 +213,26 @@ export default function AnimatedBackground() {
 
         line.life -= 0.002;
 
-        if (line.life <= 0) {
-          lines.splice(i, 1);
-          lines.push(createLine());
-          continue;
+        // Smooth fade out when life is low
+        if (line.life <= 0.1 && !line.fadeOut) {
+          line.fadeOut = true;
+          line.targetOpacity = 0;
+        }
+
+        if (line.fadeOut) {
+          line.opacity = Math.max(0, line.opacity - 0.02);
+          if (line.opacity <= 0) {
+            lines.splice(i, 1);
+            const newLine = createLine();
+            // Smooth transition
+            newLine.opacity = 0;
+            newLine.targetOpacity = newLine.opacity;
+            lines.push(newLine);
+            continue;
+          }
+        } else {
+          // Smooth fade in
+          line.opacity = Math.min(line.opacity + 0.01, line.targetOpacity || line.opacity);
         }
 
         ctx.save();
@@ -208,10 +263,33 @@ export default function AnimatedBackground() {
         if (shape.y < -shape.size) shape.y = canvas.height + shape.size;
         if (shape.y > canvas.height + shape.size) shape.y = -shape.size;
 
-        if (shape.life <= 0) {
-          shapes.splice(i, 1);
-          shapes.push(createShape());
-          continue;
+        // Smooth fade out when life is low
+        if (shape.life <= 0.1 && !shape.fadeOut) {
+          shape.fadeOut = true;
+          shape.targetOpacity = 0;
+          shape.targetSize = shape.size * 0.5;
+        }
+
+        if (shape.fadeOut) {
+          shape.opacity = Math.max(0, shape.opacity - 0.02);
+          shape.size = Math.max(shape.size * 0.98, shape.targetSize);
+          if (shape.opacity <= 0) {
+            shapes.splice(i, 1);
+            const newShape = createShape();
+            // Smooth transition to new position
+            newShape.x = shape.x;
+            newShape.y = shape.y;
+            newShape.opacity = 0;
+            newShape.size = shape.size * 0.5;
+            newShape.targetOpacity = newShape.opacity;
+            newShape.targetSize = newShape.size;
+            shapes.push(newShape);
+            continue;
+          }
+        } else {
+          // Smooth fade in and size transition
+          shape.opacity = Math.min(shape.opacity + 0.01, shape.targetOpacity || shape.opacity);
+          shape.size = Math.min(shape.size * 1.01, shape.targetSize || shape.size);
         }
 
         const pulseScale = 1 + Math.sin(shape.pulse) * 0.2;

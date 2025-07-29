@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { GameState } from '@/lib/types';
-import { Crown, Zap, Trophy, XCircle } from 'lucide-react';
+import { Crown, Zap, Trophy, XCircle, Brain, Cpu } from 'lucide-react';
+import { useGameStore } from '@/lib/game-store';
 
 interface GameStatusProps {
   gameState: GameState;
@@ -18,10 +19,22 @@ export default function GameStatus({
   gameMode = 'human-vs-ai',
 }: GameStatusProps) {
   const [isMounted, setIsMounted] = useState(false);
+  const { player1AI, player2AI } = useGameStore();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const getAITypeLabel = (aiType: string) => {
+    switch (aiType) {
+      case 'classic':
+        return 'Classic AI';
+      case 'ml':
+        return 'ML AI';
+      default:
+        return 'AI';
+    }
+  };
 
   const getStatusMessage = () => {
     if (gameState.gameStatus === 'not_started') {
@@ -34,6 +47,17 @@ export default function GameStatus({
 
     if (gameState.gameStatus === 'finished') {
       if (gameState.winner) {
+        if (gameMode === 'ai-vs-ai') {
+          const winnerAI = getAITypeLabel(gameState.winner === 'player1' ? player1AI : player2AI);
+          return {
+            text:
+              gameState.winner === 'player1'
+                ? `${winnerAI} (Red) Wins!`
+                : `${winnerAI} (Yellow) Wins!`,
+            icon: gameState.winner === 'player1' ? Trophy : Zap,
+            color: gameState.winner === 'player1' ? 'text-red-400' : 'text-yellow-400',
+          };
+        }
         return {
           text: gameState.winner === 'player1' ? 'Red Wins!' : 'Yellow Wins!',
           icon: gameState.winner === 'player1' ? Trophy : Zap,
@@ -50,9 +74,10 @@ export default function GameStatus({
 
     if (gameState.currentPlayer === 'player1') {
       if (gameMode === 'ai-vs-ai') {
+        const aiLabel = getAITypeLabel(player1AI);
         return {
-          text: aiThinking ? 'Red AI thinking...' : "Red AI's turn",
-          icon: Crown,
+          text: aiThinking ? `${aiLabel} (Red) thinking...` : `${aiLabel} (Red)'s turn`,
+          icon: player1AI === 'ml' ? Brain : Cpu,
           color: 'text-red-400',
         };
       }
@@ -62,15 +87,23 @@ export default function GameStatus({
         color: 'text-red-400',
       };
     } else {
+      if (gameMode === 'ai-vs-ai') {
+        const aiLabel = getAITypeLabel(player2AI);
+        return {
+          text: aiThinking ? `${aiLabel} (Yellow) thinking...` : `${aiLabel} (Yellow)'s turn`,
+          icon: player2AI === 'ml' ? Brain : Cpu,
+          color: 'text-yellow-400',
+        };
+      }
       if (aiThinking) {
         return {
-          text: gameMode === 'ai-vs-ai' ? 'Yellow AI thinking...' : 'Yellow thinking...',
+          text: 'Yellow thinking...',
           icon: Zap,
           color: 'text-yellow-400',
         };
       }
       return {
-        text: gameMode === 'ai-vs-ai' ? "Yellow AI's turn" : "Yellow's turn",
+        text: "Yellow's turn",
         icon: Zap,
         color: 'text-yellow-400',
       };
@@ -113,6 +146,18 @@ export default function GameStatus({
             {status.text}
           </span>
         </motion.div>
+
+        {/* AI vs AI mode indicator */}
+        {gameMode === 'ai-vs-ai' && gameState.gameStatus === 'playing' && (
+          <motion.div
+            className="text-xs text-gray-400 mt-1"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            {getAITypeLabel(player1AI)} vs {getAITypeLabel(player2AI)}
+          </motion.div>
+        )}
 
         <AnimatePresence>
           {aiThinking && (

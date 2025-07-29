@@ -127,8 +127,22 @@ python3 ml/scripts/simple_train.py --epochs 50 --num-games 1000 --batch-size 64 
 
 - **All lint, type checks, and tests pass** as of the latest commit.
 - **AI Matrix**: All AI types tested, with MM-Depth6 and ML-Simple showing strong performance. See `docs/AI-MATRIX-RESULTS.md` for details.
-- **Coverage**: 71% statements, 83% branches, 80% functions. All core logic and AI modules are well covered.
+- **Coverage**: 70% statements, 82% branches, 77% functions. All core logic and AI modules are well covered.
 - **E2E**: All Playwright end-to-end tests pass.
+- **AI vs AI Mode**: Now supports Classic AI vs ML AI battles with clear visual indicators.
+
+## Features
+
+### AI Opponents
+
+- **Classic AI**: Minimax + Alpha-Beta (Depth 5) - Plays with classic board game strategy for a strong challenge.
+- **ML AI**: Policy + Value Neural Network - Uses machine learning for fast, smart moves and adaptive play.
+
+### Game Modes
+
+- **Human vs AI**: Play against either Classic or ML AI
+- **AI vs AI**: Watch Classic AI battle ML AI with clear visual indicators
+- **Smooth Animations**: Enhanced animated background with no abrupt transitions
 
 ## Development
 

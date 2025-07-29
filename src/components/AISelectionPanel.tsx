@@ -10,7 +10,7 @@ const AI_OPTIONS = [
   {
     aiType: 'classic' as AIType,
     title: 'Classic AI',
-    description: 'Traditional minimax algorithm with alpha-beta pruning. Depth 5 for strong play.',
+    description: 'Plays with classic board game strategy for a strong challenge.',
     subtitle: 'Minimax + Alpha-Beta (Depth 5)',
     colorClass: 'text-green-400',
     borderColorClass: 'border-green-500/50',
@@ -19,8 +19,8 @@ const AI_OPTIONS = [
   {
     aiType: 'ml' as AIType,
     title: 'ML AI',
-    description: 'Monte Carlo Tree Search with neural network evaluation. Advanced strategic play.',
-    subtitle: 'MCTS + Neural Network',
+    description: 'Uses machine learning for fast, smart moves and adaptive play.',
+    subtitle: 'Policy + Value Neural Network',
     colorClass: 'text-blue-400',
     borderColorClass: 'border-blue-500/50',
     icon: '🤖',
@@ -74,7 +74,8 @@ export default function AISelectionPanel({ onStartGame }: AISelectionPanelProps)
         <p className="text-gray-400 text-sm">Or watch them play against each other</p>
         <motion.button
           onClick={() => {
-            actions.setAI('classic');
+            actions.setPlayer1AI('classic');
+            actions.setPlayer2AI('ml');
             actions.setGameMode('ai-vs-ai');
             actions.reset();
             onStartGame?.();
@@ -84,7 +85,7 @@ export default function AISelectionPanel({ onStartGame }: AISelectionPanelProps)
           whileTap={{ scale: 0.95 }}
           data-testid="ai-vs-ai-button"
         >
-          Watch AI vs AI
+          Watch Classic AI vs ML AI
         </motion.button>
       </div>
     </motion.div>
