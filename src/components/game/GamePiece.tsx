@@ -8,26 +8,28 @@ interface GamePieceProps {
   isClickable?: boolean;
 }
 
-const GamePiece = React.memo(function GamePiece({ player, isClickable }: GamePieceProps) {
+const GamePiece = React.memo(function GamePiece({
+  player,
+  isClickable = false,
+  isWinning = false,
+}: GamePieceProps & { isWinning?: boolean }) {
   const isPlayer1 = player === 'player1';
   const colors = isPlayer1
     ? {
-        bg: 'bg-gradient-to-br from-red-500 to-red-600',
+        bg: 'bg-red-500',
         border: 'border-red-400',
-        shadow: 'shadow-red-500/50',
-        glow: 'shadow-red-400',
-        inner: 'bg-gradient-to-br from-red-300 to-red-400',
-        pulse: 'shadow-red-400/60',
-        highlight: 'from-red-200/40 to-transparent',
+        shadow: 'shadow-red-400/40',
+        glow: 'rgba(239,68,68,0.8)',
+        pulse: 'rgba(239,68,68,0.5)',
+        highlight: 'from-red-400/40 to-transparent',
       }
     : {
-        bg: 'bg-gradient-to-br from-yellow-500 to-yellow-600',
-        border: 'border-yellow-400',
-        shadow: 'shadow-yellow-500/50',
-        glow: 'shadow-yellow-400',
-        inner: 'bg-gradient-to-br from-yellow-300 to-yellow-400',
-        pulse: 'shadow-yellow-400/60',
-        highlight: 'from-yellow-200/40 to-transparent',
+        bg: 'bg-yellow-400',
+        border: 'border-yellow-300',
+        shadow: 'shadow-yellow-300/40',
+        glow: 'rgba(234,179,8,0.8)',
+        pulse: 'rgba(234,179,8,0.5)',
+        highlight: 'from-yellow-300/40 to-transparent',
       };
 
   return (
@@ -37,20 +39,39 @@ const GamePiece = React.memo(function GamePiece({ player, isClickable }: GamePie
       } ${colors.bg} ${colors.border} ${colors.shadow}`}
       whileHover={isClickable ? { scale: 1.1, boxShadow: `0 0 20px ${colors.glow}` } : {}}
       whileTap={isClickable ? { scale: 0.95 } : {}}
-      animate={{
-        boxShadow: [
-          `0 0 8px ${colors.pulse}`,
-          `0 0 16px ${colors.pulse}`,
-          `0 0 8px ${colors.pulse}`,
-        ],
-      }}
+      animate={
+        isWinning
+          ? {
+              scale: [1, 1.15, 1],
+              boxShadow: [
+                `0 0 32px 12px ${colors.glow}, 0 0 64px 24px ${colors.glow}`,
+                `0 0 48px 18px ${colors.glow}, 0 0 96px 36px ${colors.glow}`,
+                `0 0 32px 12px ${colors.glow}, 0 0 64px 24px ${colors.glow}`,
+              ],
+            }
+          : {
+              scale: 1,
+              boxShadow: [
+                `0 0 8px ${colors.pulse}`,
+                `0 0 16px ${colors.pulse}`,
+                `0 0 8px ${colors.pulse}`,
+              ],
+            }
+      }
       transition={{
         type: 'spring',
         stiffness: 400,
         damping: 25,
+        scale: {
+          duration: isWinning ? 1.2 : 0.2,
+          repeat: isWinning ? Infinity : 0,
+          repeatType: 'loop',
+          ease: 'easeInOut',
+        },
         boxShadow: {
-          duration: 2,
-          repeat: Infinity,
+          duration: isWinning ? 1.2 : 2,
+          repeat: isWinning ? Infinity : 0,
+          repeatType: 'loop',
           ease: 'easeInOut',
         },
       }}
@@ -60,7 +81,6 @@ const GamePiece = React.memo(function GamePiece({ player, isClickable }: GamePie
       <div className={`absolute inset-0 bg-gradient-to-br ${colors.highlight}`} />
       <div className="absolute inset-0 bg-gradient-to-tl from-black/30 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent" />
-
       {/* Animated inner glow */}
       <motion.div
         className="absolute inset-0 rounded-full"
@@ -96,7 +116,7 @@ const GamePiece = React.memo(function GamePiece({ player, isClickable }: GamePie
       {/* Enhanced center highlight */}
       <div className="absolute inset-0 flex items-center justify-center">
         <motion.div
-          className={`w-1/3 h-1/3 rounded-full ${colors.inner} shadow-inner`}
+          className={`w-1/3 h-1/3 rounded-full ${isPlayer1 ? 'bg-red-300' : 'bg-yellow-300'} shadow-inner`}
           animate={{
             boxShadow: [
               'inset 0 2px 4px rgba(0, 0, 0, 0.3)',

@@ -135,6 +135,12 @@ export default function GameBoard({
     }, 500); // Small delay for smooth transition
   };
 
+  const winningSet = new Set(
+    Array.isArray(gameState.winningLine?.positions)
+      ? gameState.winningLine.positions.map(pos => `${pos.column},${pos.row}`)
+      : []
+  );
+
   return (
     <>
       <AnimatePresence>
@@ -194,6 +200,7 @@ export default function GameBoard({
                       player={cell}
                       isClickable={false} // Individual squares are not clickable
                       onColumnClick={handleColumnClick}
+                      isWinning={winningSet.has(`${colIndex},${rowIndex}`)}
                     />
                   ))}
 
@@ -250,11 +257,7 @@ export default function GameBoard({
             {/* Connect Four Win Animation */}
             <AnimatePresence>
               {showWinAnimation && gameState.winningLine && gameState.winner && (
-                <ConnectFourWin
-                  winningLine={gameState.winningLine.positions}
-                  player={gameState.winner}
-                  onComplete={handleWinAnimationComplete}
-                />
+                <ConnectFourWin onComplete={handleWinAnimationComplete} />
               )}
             </AnimatePresence>
           </div>

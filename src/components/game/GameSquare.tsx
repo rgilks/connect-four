@@ -20,7 +20,8 @@ export default function GameSquare({
   player,
   isClickable,
   onColumnClick,
-}: GameSquareProps) {
+  isWinning = false,
+}: GameSquareProps & { isWinning?: boolean }) {
   const handleSquareClick = () => {
     if (isClickable) {
       onColumnClick(column);
@@ -57,11 +58,7 @@ export default function GameSquare({
             layoutId={`piece-${player}-${column}-${row}`}
             data-testid={`piece-${column}-${row}`}
           >
-            <GamePiece
-              player={player}
-              isClickable={false}
-              
-            />
+            <GamePiece player={player} isClickable={false} isWinning={isWinning} />
           </motion.div>
         )}
       </AnimatePresence>

@@ -11,6 +11,8 @@ A modern, AI-powered implementation of the classic Connect Four game, built with
 - **Offline-First**: Works completely offline once loaded
 - **Mobile Optimized**: Responsive design for all devices
 - **PWA Support**: Install as a native app
+- **Elegant Win Animation**: Clean, professional highlighting of winning pieces
+- **Improved UI**: Compact start screen with AI icons and better visual hierarchy
 
 ## Quick Start
 

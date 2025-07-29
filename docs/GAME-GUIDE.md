@@ -43,16 +43,15 @@ Connect Four is a strategic two-player game where players take turns dropping co
 
 ### Win Animation
 
-When a player wins, the game features an **awesome animation sequence**:
+When a player wins, the game features an **elegant animation sequence**:
 
-1. **Winning Line Highlight**: The 4 connected pieces are highlighted with pulsing effects
-2. **Particle Effects**: Victory particles burst from the winning positions
-3. **Victory Text**: Dramatic "RED WINS!" or "YELLOW WINS!" text appears with glowing effects
+1. **Winning Pieces Highlight**: The 4 connected pieces glow with a strong, pulsing colored effect
+2. **Scale Animation**: Winning pieces pulse with a subtle scale animation for excitement
+3. **Victory Celebration**: Simple text popup appears briefly
 4. **Sound Effects**: Triumphant audio sequence plays with ascending notes
-5. **Pause**: A brief pause allows players to appreciate the victory
-6. **Winner Modal**: The final winner modal appears with additional celebration
+5. **Winner Modal**: The final winner modal appears with additional celebration
 
-This creates a satisfying and memorable victory experience that celebrates the achievement of connecting four pieces.
+The winning pieces now have a clean, professional glow effect that clearly highlights the winning line without any distracting overlays or misaligned rings.
 
 ### Draw Condition
 
