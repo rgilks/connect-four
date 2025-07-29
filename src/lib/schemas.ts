@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const PlayerSchema = z.enum(['player1', 'player2']);
 export type Player = z.infer<typeof PlayerSchema>;
 
-export const GameStatusSchema = z.enum(['waiting', 'playing', 'finished']);
+export const GameStatusSchema = z.enum(['not_started', 'waiting', 'playing', 'finished']);
 export type GameStatus = z.infer<typeof GameStatusSchema>;
 
 export const BoardSchema = z.array(z.array(PlayerSchema.nullable()).length(6)).length(7);

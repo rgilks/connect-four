@@ -37,3 +37,4 @@ When I just type 'p' that means "proceed"
 Dont give me a list of options to choose, devise the best plan you can and proceed with it.
 Always run training and other long running scripts using caffeinate.
 Refer to this working game I made for inspiration or if you get stuck: https://github.com/rgilks/rgou-cloudflare
+When deleting temporary test files, consider how they might be integrated into more permanent tests.

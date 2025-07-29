@@ -24,6 +24,14 @@ export default function GameStatus({
   }, []);
 
   const getStatusMessage = () => {
+    if (gameState.gameStatus === 'not_started') {
+      return {
+        text: 'Select AI and start game',
+        icon: Crown,
+        color: 'text-gray-400',
+      };
+    }
+
     if (gameState.gameStatus === 'finished') {
       if (gameState.winner) {
         return {

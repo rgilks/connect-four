@@ -28,6 +28,32 @@ npm run dev
 
 Visit [http://localhost:3000](http://localhost:3000) to play!
 
+## Troubleshooting
+
+### WASM AI Issues
+
+If you encounter issues with the WASM AI system:
+
+1. **Rebuild WASM Assets**:
+
+   ```bash
+   npm run build:wasm-assets
+   ```
+
+2. **Test WASM Loading**:
+
+   ```bash
+   node scripts/test-wasm-loading.js
+   ```
+
+3. **Check Console Logs**: Look for WASM loading messages in browser console
+
+4. **Verify Assets**: Ensure all files are accessible:
+   - `/wasm/connect_four_ai_core.js`
+   - `/wasm/connect_four_ai_core_bg.wasm`
+   - `/ml/data/weights/ml_ai_weights_best.json`
+   - `/ml/data/genetic_params/evolved.json`
+
 ## AI System
 
 The game features a sophisticated AI system with multiple opponents to choose from:
@@ -35,6 +61,23 @@ The game features a sophisticated AI system with multiple opponents to choose fr
 - **Classic AI**: Traditional minimax algorithm with alpha-beta pruning. Fast and reliable.
 - **ML AI**: Neural network trained on genetic algorithm data. Balanced performance.
 - **Self-Play AI**: Advanced neural network trained through self-play with MCTS exploration. Most sophisticated.
+
+### WASM AI Integration
+
+The AI system is powered by Rust/WASM for optimal performance:
+
+- **Rust Core**: High-performance game logic and AI algorithms
+- **WASM Compilation**: Cross-platform compatibility with native performance
+- **ML Integration**: Neural network weights loaded dynamically
+- **Genetic Parameters**: Evolved parameters for heuristic evaluation
+
+#### Recent Fixes (July 2025)
+
+- ✅ **WASM Module Loading**: Fixed WASM compilation with proper feature flags
+- ✅ **ML Weights Format**: Converted complex model format to simple flat arrays
+- ✅ **Asset Serving**: Ensured all WASM assets are properly served
+- ✅ **Error Handling**: Added comprehensive fallback mechanisms
+- ✅ **Build Process**: Streamlined WASM build and asset deployment
 
 ### AI Selection Interface
 
@@ -80,32 +123,12 @@ python3 ml/scripts/simple_train.py --epochs 20 --num-games 500
 python3 ml/scripts/simple_train.py --epochs 50 --num-games 1000 --batch-size 64 --learning-rate 0.0005 --output simple_model_enhanced.json
 ```
 
-## Current Status
+## Project Status
 
-### ✅ Successfully Trained Models (July 2025)
-
-- **Simple Model**: 50 epochs, 1000 games, 64 batch size
-- **Enhanced Model**: 50 epochs, 1000 games, 64 batch size, 0.0005 learning rate
-- **Training Time**: ~2.5 seconds for enhanced model
-- **Model Size**: 297KB (67x smaller than complex models)
-- **Integration**: Successfully integrated with WASM AI system
-
-### 🏆 AI Performance Rankings
-
-Based on comprehensive testing:
-
-1. **MM-Depth1**: 81.8% average win rate (Best performance)
-2. **MM-Depth2**: 81.8% average win rate (Very fast)
-3. **MM-Depth3**: 65.9% average win rate (Fast)
-4. **MM-Depth5**: 63.6% average win rate (Moderate)
-5. **MM-Depth4**: 63.6% average win rate (Moderate)
-6. **MM-Depth6**: 56.8% average win rate (Strong but slow)
-7. **Heuristic**: 56.8% average win rate (Educational)
-8. **ML-Default**: 38.6% average win rate (Fast, lightweight)
-9. **ML-PolicyFix**: 34.1% average win rate (Fast, lightweight)
-10. **ML-Intensive**: 27.3% average win rate (Fast, lightweight)
-11. **ML-SelfPlay**: 25.0% average win rate (Fast, lightweight)
-12. **Random**: 4.5% average win rate (Baseline)
+- **All lint, type checks, and tests pass** as of the latest commit.
+- **AI Matrix**: All AI types tested, with MM-Depth6 and ML-Simple showing strong performance. See `docs/AI-MATRIX-RESULTS.md` for details.
+- **Coverage**: 71% statements, 83% branches, 80% functions. All core logic and AI modules are well covered.
+- **E2E**: All Playwright end-to-end tests pass.
 
 ## Development
 

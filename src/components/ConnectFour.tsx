@@ -21,7 +21,7 @@ function isStandalonePWA() {
 
 export default function ConnectFour() {
   const gameState = useGameState();
-  const { makeAIMove, reset } = useGameActions();
+  const { makeAIMove, reset, startGame } = useGameActions();
   const aiThinking = useGameStore(state => state.aiThinking);
   const gameMode = useGameStore(state => state.gameMode);
   const { errorModal } = useUIStore();
@@ -100,6 +100,7 @@ export default function ConnectFour() {
   };
 
   const handleStartGame = () => {
+    startGame();
     setShowAISelection(false);
   };
 
@@ -120,6 +121,7 @@ export default function ConnectFour() {
             style={{ border: '0px', height: '36px' }}
             src="https://storage.ko-fi.com/cdn/kofi2.png?v=6"
             alt="Buy Me a Coffee at ko-fi.com"
+            priority
           />
         </a>
       </div>

@@ -141,7 +141,7 @@ describe('Game Store', () => {
       store.actions.reset();
       
       const newState = useGameStore.getState();
-      expect(newState.gameState.gameStatus).toBe('playing');
+      expect(newState.gameState.gameStatus).toBe('not_started');
       expect(newState.gameState.winner).toBe(null);
       expect(newState.aiThinking).toBe(false);
       expect(newState.pendingMove).toBe(null);

@@ -17,6 +17,7 @@ type GameStore = {
   gameMode: GameMode;
   actions: {
     initialize: (fromStorage?: boolean) => void;
+    startGame: () => void;
     makeMove: (column: number) => void;
     completeMove: () => void;
     makeAIMove: () => void;
@@ -30,7 +31,14 @@ type GameStore = {
 export const useGameStore = create<GameStore>()(
   persist(
     immer((set, get) => ({
-      gameState: { ...initializeGame() },
+      gameState: {
+        board: Array.from({ length: 7 }, () => Array.from({ length: 6 }, () => null)),
+        currentPlayer: 'player1',
+        gameStatus: 'not_started' as const,
+        winner: null,
+        history: [],
+        winningLine: null,
+      },
       aiThinking: false,
       pendingMove: null,
       showWinnerModal: false,
@@ -38,17 +46,18 @@ export const useGameStore = create<GameStore>()(
       gameMode: 'human-vs-ai' as GameMode,
       actions: {
         initialize: () => {
-          // Always create a fresh game with new random starting player
+          // Initialize WASM AI in the background
+          initializeWASMAI().catch(error => {
+            console.warn('Failed to initialize WASM AI:', error);
+          });
+        },
+        startGame: () => {
+          // Create a fresh game with new random starting player
           set(state => {
             state.gameState = { ...initializeGame() };
             state.aiThinking = false;
             state.showWinnerModal = false;
             state.pendingMove = null;
-          });
-
-          // Initialize WASM AI in the background
-          initializeWASMAI().catch(error => {
-            console.warn('Failed to initialize WASM AI:', error);
           });
         },
         makeMove: (column: number) => {
@@ -147,7 +156,14 @@ export const useGameStore = create<GameStore>()(
         },
         reset: () => {
           set(state => {
-            state.gameState = { ...initializeGame() };
+            state.gameState = { 
+              board: Array.from({ length: 7 }, () => Array.from({ length: 6 }, () => null)),
+              currentPlayer: 'player1',
+              gameStatus: 'not_started' as const,
+              winner: null,
+              history: [],
+              winningLine: null,
+            };
             state.aiThinking = false;
             state.pendingMove = null;
             state.showWinnerModal = false;
