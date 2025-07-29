@@ -105,7 +105,7 @@ class WASMAIService {
       // Use a runtime import that won't be resolved at build time
       const wasmModulePath = '/wasm/connect_four_ai_core.js';
       console.log('🔄 Attempting to load WASM module from:', wasmModulePath);
-      
+
       const wasmModule = (await import(/* webpackIgnore: true */ wasmModulePath)) as WASMModule;
 
       console.log('🔄 WASM module imported, initializing...');
@@ -117,12 +117,14 @@ class WASMAIService {
     } catch (error) {
       console.error('❌ Failed to load WASM AI:', error);
       console.error('❌ Error details:', error instanceof Error ? error.stack : error);
-      
+
       // Try to provide more specific error information
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        console.error('❌ This might be a network issue - check if the WASM files are being served correctly');
+        console.error(
+          '❌ This might be a network issue - check if the WASM files are being served correctly'
+        );
       }
-      
+
       throw new Error(`Failed to load WASM AI: ${error}`);
     }
   }
@@ -402,10 +404,12 @@ export async function initializeWASMAI(): Promise<void> {
 
   // Try to load ML weights (trained Connect Four model)
   try {
-          console.log('🔍 Loading ML weights from /ml/data/weights/ml_ai_weights_best.json...');
-            const weightsResponse = await fetch('/ml/data/weights/ml_ai_weights_best.json');
+    console.log('🔍 Loading ML weights from /ml/data/weights/ml_ai_weights_best.json...');
+    const weightsResponse = await fetch('/ml/data/weights/ml_ai_weights_best.json');
     console.log('🔍 Weights response status:', weightsResponse.status, weightsResponse.ok);
-    
+
+    let weightsLoaded = false;
+
     if (weightsResponse.ok) {
       const model = (await weightsResponse.json()) as {
         value_network?: { weights: number[] };
@@ -416,15 +420,18 @@ export async function initializeWASMAI(): Promise<void> {
       console.log('🔍 Policy network exists:', !!model.policy_network);
       console.log('🔍 Value weights length:', model.value_network?.weights?.length);
       console.log('🔍 Policy weights length:', model.policy_network?.weights?.length);
-      
+
       if (model.value_network?.weights && model.policy_network?.weights) {
         await service.loadMLWeights(model.value_network.weights, model.policy_network.weights);
         console.log('✅ ML weights loaded successfully (trained Connect Four model)');
+        weightsLoaded = true;
       } else {
         console.warn('Model format not recognized - missing weights arrays');
       }
-    } else {
-      console.error('Failed to fetch best ML weights, trying simple model...');
+    }
+
+    if (!weightsLoaded) {
+      console.log('🔍 Trying simple model fallback...');
       // Fallback to simple model
       try {
         const simpleResponse = await fetch('/ml/data/weights/ml_ai_weights_simple.json');
@@ -433,19 +440,31 @@ export async function initializeWASMAI(): Promise<void> {
             value_network?: { weights: number[] };
             policy_network?: { weights: number[] };
           };
-          
+
           if (simpleModel.value_network?.weights && simpleModel.policy_network?.weights) {
-            await service.loadMLWeights(simpleModel.value_network.weights, simpleModel.policy_network.weights);
+            await service.loadMLWeights(
+              simpleModel.value_network.weights,
+              simpleModel.policy_network.weights
+            );
             console.log('✅ ML weights loaded successfully (simple model fallback)');
+            weightsLoaded = true;
           } else {
             console.warn('Simple model format not recognized - missing weights arrays');
           }
         } else {
-          console.error('Failed to fetch simple ML weights:', simpleResponse.status, simpleResponse.statusText);
+          console.error(
+            'Failed to fetch simple ML weights:',
+            simpleResponse.status,
+            simpleResponse.statusText
+          );
         }
       } catch (fallbackError) {
         console.error('Could not load simple ML weights:', fallbackError);
       }
+    }
+
+    if (!weightsLoaded) {
+      console.warn('⚠️ No ML weights loaded - ML AI will use random weights');
     }
   } catch (error) {
     console.error('Could not load ML weights:', error);

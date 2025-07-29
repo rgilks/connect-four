@@ -1,5 +1,6 @@
 use connect_four_ai_core::{genetic_params::GeneticParams, ml_ai::MLAI, GameState, Player, AI};
 use std::time::Instant;
+use serde_json;
 
 fn get_evolved_params() -> GeneticParams {
     GeneticParams::load_from_file("ml/data/genetic_params/evolved.json")
@@ -15,6 +16,53 @@ fn test_ml_vs_minimax_ai() {
     println!("📋 Using evolved genetic parameters");
 
     let mut ml_ai = MLAI::new();
+    
+    // Try to load trained weights
+    if let Ok(weights_data) = std::fs::read_to_string("../../ml/data/weights/simple_model_enhanced.json") {
+        if let Ok(weights) = serde_json::from_str::<serde_json::Value>(&weights_data) {
+            if let (Some(value_network), Some(policy_network)) =
+                (weights.get("value_network"), weights.get("policy_network"))
+            {
+                // Extract weights from the network structure
+                let value_weights = extract_weights_from_network(value_network);
+                let policy_weights = extract_weights_from_network(policy_network);
+
+                if !value_weights.is_empty() && !policy_weights.is_empty() {
+                    ml_ai.load_weights(&value_weights, &policy_weights);
+                    println!("✅ Loaded trained ML weights");
+                    println!("   Value weights: {} values", value_weights.len());
+                    println!("   Policy weights: {} values", policy_weights.len());
+                } else {
+                    println!("❌ Failed to extract weights from model");
+                    println!("   Value weights: {} values", value_weights.len());
+                    println!("   Policy weights: {} values", policy_weights.len());
+                }
+            }
+        }
+    }
+    
+    // Helper function to extract weights from network structure
+    fn extract_weights_from_network(network: &serde_json::Value) -> Vec<f32> {
+        let mut weights = Vec::new();
+        if let Some(layers) = network.as_object() {
+            for (layer_name, layer_data) in layers {
+                if layer_name.contains("weight") {
+                    if let Some(weight_array) = layer_data.as_array() {
+                        for row in weight_array {
+                            if let Some(row_array) = row.as_array() {
+                                for weight in row_array {
+                                    if let Some(weight_value) = weight.as_f64() {
+                                        weights.push(weight_value as f32);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        weights
+    }
     let num_games = std::env::var("NUM_GAMES")
         .unwrap_or_else(|_| "20".to_string())
         .parse::<usize>()
@@ -38,6 +86,7 @@ fn test_ml_vs_minimax_ai() {
         while !game_state.is_game_over() && moves_played < max_moves {
             let start_time = Instant::now();
             let best_move = if game_state.current_player == Player::Player1 {
+                // ML AI uses the same evolved genetic parameters as the game state
                 let response = ml_ai.get_best_move(&game_state);
                 response.r#move
             } else {

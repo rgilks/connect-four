@@ -132,9 +132,9 @@ impl GameFeatures {
             for row in 0..ROWS {
                 if state.board[col][row] == Cell::from_player(player) {
                     score += match col {
-                        3 => 3,     // Center column
-                        2 | 4 => 2, // Adjacent to center
-                        _ => 1,
+                        3 => state.genetic_params.center_column_value,     // Center column
+                        2 | 4 => state.genetic_params.adjacent_center_value, // Adjacent to center
+                        _ => state.genetic_params.outer_column_value,
                     };
                 }
             }
@@ -309,7 +309,7 @@ impl GameFeatures {
             for row in 0..ROWS {
                 if state.board[col][row] == Cell::from_player(player) {
                     // Higher pieces (lower row numbers) are more valuable
-                    score += (ROWS - row) as i32;
+                    score += ((ROWS - row) as f64 * state.genetic_params.row_height_weight) as i32;
                 }
             }
         }
@@ -327,7 +327,9 @@ impl GameFeatures {
         let height_score = Self::height_advantage_score(state, player) as f32;
         let threat_score = Self::threat_score(state, player) as f32;
 
-        (center_score * 0.3 + height_score * 0.2 + threat_score * 0.5) / 100.0
+        (center_score * state.genetic_params.center_control_weight as f32 + 
+         height_score * state.genetic_params.row_height_weight as f32 + 
+         threat_score * state.genetic_params.threat_weight as f32) / 100.0
     }
 
     fn endgame_evaluation(state: &GameState, player: Player) -> f32 {

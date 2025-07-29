@@ -1,6 +1,6 @@
 use super::features::GameFeatures;
 use super::neural_network::{NetworkConfig, NeuralNetwork};
-use super::{GameState, Player, COLS};
+use super::{GameState, COLS};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -99,20 +99,50 @@ impl MLAI {
 
                 let mut score = next_value[0] * 0.7 + policy_outputs[col as usize] * 0.3;
 
-                // Bonus for center columns (strategic advantage)
+                // Use evolved genetic parameters for center control bonuses
+                let center_control_weight = state.genetic_params.center_control_weight as f32;
                 match col {
-                    3 => score += 0.1,      // Center column
-                    2 | 4 => score += 0.05, // Adjacent to center
+                    3 => score += center_control_weight * 0.1, // Center column
+                    2 | 4 => score += center_control_weight * 0.05, // Adjacent to center
                     _ => {}
                 }
 
-                // Bonus for creating threats
+                // Check for immediate threats using evolved genetic parameters
                 if next_state.has_winner() {
-                    score += 10.0; // Winning move
+                    score += 100.0; // Winning move - highest priority
                 } else {
-                    // Check for immediate threats
-                    let threat_score = self.evaluate_threats(&next_state, state.current_player);
-                    score += threat_score * 0.1;
+                    // Check for opponent threats that need blocking using evolved threat weight
+                    let opponent = state.current_player.opponent();
+                    let mut opponent_can_win = false;
+                    let mut opponent_winning_column = None;
+
+                    for opp_col in 0..COLS {
+                        if state.can_place_in_column(opp_col) {
+                            let mut test_state = state.clone();
+                            if test_state.make_move(opp_col as u8).is_ok() {
+                                if test_state.has_winner()
+                                    && test_state.get_winner() == Some(opponent)
+                                {
+                                    opponent_can_win = true;
+                                    opponent_winning_column = Some(opp_col);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // If opponent can win next move, this move must block
+                    if opponent_can_win {
+                        // Check if this move blocks the opponent's winning move
+                        if col == opponent_winning_column.unwrap() as u8 {
+                            // This move blocks the opponent's winning move
+                            let threat_weight = state.genetic_params.threat_weight;
+                            score += (threat_weight * 10.0) as f32; // Use evolved threat weight
+                        } else {
+                            // This move doesn't block - heavily penalize it
+                            score -= 1000.0; // Much stronger penalty
+                        }
+                    }
                 }
 
                 move_evaluations.push(MLMoveEvaluation {
@@ -146,36 +176,7 @@ impl MLAI {
         }
     }
 
-    fn evaluate_threats(&self, state: &GameState, player: Player) -> f32 {
-        let mut threat_score = 0.0;
 
-        // Check for immediate winning opportunities
-        for col in 0..COLS {
-            if state.can_place_in_column(col) {
-                let mut test_state = state.clone();
-                if test_state.make_move(col as u8).is_ok() {
-                    if test_state.has_winner() && test_state.get_winner() == Some(player) {
-                        threat_score += 100.0; // Immediate win
-                    }
-                }
-            }
-        }
-
-        // Check for opponent threats that need blocking
-        let opponent = player.opponent();
-        for col in 0..COLS {
-            if state.can_place_in_column(col) {
-                let mut test_state = state.clone();
-                if test_state.make_move(col as u8).is_ok() {
-                    if test_state.has_winner() && test_state.get_winner() == Some(opponent) {
-                        threat_score += 50.0; // Need to block
-                    }
-                }
-            }
-        }
-
-        threat_score
-    }
 
     pub fn evaluate_position(&self, state: &GameState) -> f32 {
         let features = GameFeatures::from_game_state(state);

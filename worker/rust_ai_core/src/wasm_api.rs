@@ -1,7 +1,6 @@
 use super::genetic_params::GeneticParams;
 use super::{GameState, HeuristicAI, AI};
 use super::ml_ai::MLAI;
-use super::mcts::MCTS;
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen;
 
@@ -10,7 +9,6 @@ pub struct ConnectFourAI {
     ai: AI,
     heuristic_ai: HeuristicAI,
     ml_ai: MLAI,
-    mcts: MCTS,
 }
 
 #[wasm_bindgen]
@@ -21,7 +19,6 @@ impl ConnectFourAI {
             ai: AI::new(),
             heuristic_ai: HeuristicAI::new(),
             ml_ai: MLAI::new(),
-            mcts: MCTS::new(1.0, 100),
         }
     }
 
